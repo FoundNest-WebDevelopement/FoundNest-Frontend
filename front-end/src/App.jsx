@@ -1,4 +1,4 @@
-import Dock from "./components/dock"
+import Dock from "./components/Dock"
 import Home from "./pages/Home";
 import Map from "./pages/Map";
 import Report from "./pages/Report";
