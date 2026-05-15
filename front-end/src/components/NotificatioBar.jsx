@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 
 export default function NotificationBar() {
   return (
-    <div className="navbar bg-base-100 shadow-sm">
+    <div className="navbar bg-base-100 shadow-sm fixed top-0 left-0 ">
 
       <div className="navbar-start">
         <img

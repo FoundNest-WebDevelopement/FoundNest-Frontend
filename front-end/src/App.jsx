@@ -16,7 +16,7 @@ function App() {
     <>
     
      <BrowserRouter>
-     <NotificationBar/>
+      <NotificationBar/>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/map" element={<Map />} />
