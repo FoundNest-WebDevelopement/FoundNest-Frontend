@@ -1,82 +1,97 @@
-import { Home, Map, Search, User, StickyNotePlus } from "lucide-react";
+import { Home, MapPin, Search, User, StickyNotePlus } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import reportIconInactive from "../assets/report_icon_inactive.png"
+import reportIconActive from "../assets/report_icon_active.png"
 
 export default function Dock() {
   return (
     <>
-      <div className="dock dock-lg bg-white rounded-t-xl">
-
+      <div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white">
         <NavLink
           to="/"
           className={({ isActive }) =>
             isActive
-              ? "dock-active text-(--color-primary)"
+              ? "text-(--color-primary)"
               : "text-(--color-primary) opacity-60"
           }
         >
-
-          <Home className="size-6" />
-          <span className="dock-label">Home</span>
-
+          {({ isActive }) => (
+            <>
+              {isActive ? (
+                <i className="fa-solid fa-house text-(--color-primary) text-2xl"></i>
+              ) : (
+                <i className="fa-regular fa-house text-(--color-primary) text-2xl"></i>
+              )}
+              <span className="dock-label">Home</span>
+            </>
+          )}
         </NavLink>
-
         <NavLink
           to="/map"
           className={({ isActive }) =>
             isActive
-              ? "dock-active text-(--color-primary)"
+              ? "text-(--color-primary)"
               : "text-(--color-primary) opacity-60"
           }
         >
-          <Map className="size-6" />
-          <span className="dock-label">Map</span>
+          {({ isActive }) => (
+            <>
+              {isActive ? (
+                <i class="fa-solid fa-location-dot text-2xl"></i>
+              ) : (
+                <MapPin className="size-10" />
+              )}
+              <span className="dock-label">Map</span>
+            </>
+          )}
         </NavLink>
-
-        {/* <NavLink
-        to="/report"
-        className={({ isActive }) =>
-          isActive
-            ? "dock-active text-[#990000]"
-            : "text-[#990000]"
-        }
-      >
-        <File className="size-6" />
-        <span className="dock-label">Report</span>
-      </NavLink> */}
         <div></div>
-
         <NavLink
           to="/find"
           className={({ isActive }) =>
             isActive
-              ? "dock-active text-(--color-primary)"
+              ? " text-(--color-primary)"
               : "text-(--color-primary) opacity-60"
           }
         >
-          <Search className="size-6" />
-          <span className="dock-label">Find</span>
-        </NavLink>
+          {({ isActive }) => (
+            <>
+              {isActive ? (
+                <Search className="size-6 stroke-3" />
+              ) : (
+                <Search className="size-6" />
+              )}
 
+              <span className="dock-label">Find</span>
+            </>
+          )}
+        </NavLink>
         <NavLink
           to="/profile"
           className={({ isActive }) =>
             isActive
-              ? "dock-active text-(--color-primary)"
+              ? " text-(--color-primary)"
               : "text-(--color-primary) opacity-60"
           }
         >
-          <User className="size-6" />
-          <span className="dock-label">Profile</span>
+          {({ isActive }) => (
+            <>
+              {isActive ? (
+                <i class="fa-solid fa-circle-user text-(--color-primary) text-2xl"></i>
+              ) : (
+                <i class="fa-regular fa-circle-user text-(--color-primary) text-2xl"></i>
+              )}
+              <span className="dock-label">Profile</span>
+            </>
+          )}
         </NavLink>
-
-        {/* Floating Report Button */}
         <NavLink
           to="/report"
           className={({ isActive }) => `
     absolute
     left-1/2
     -translate-x-1/2
-    -top-6
+    -top-9
 
     flex
     flex-col
@@ -90,23 +105,23 @@ export default function Dock() {
     bg-white
     text-(--color-primary)
 
-    shadow-xl
+    shadow-[0_12px_12px_rgba(0,0,0,0.15),0_-12px_12px_rgba(0,0,0,0.1)]
     border-4
     border-white
 
     transition-all duration-300
-  `}
-        >
+  `}>
           {({ isActive }) => (
             <>
-              <StickyNotePlus
-                className={`size-8 ${isActive ? "fill-current" : "opacity-60"}`}
-              />
-              <span className="text-xs mt-1">Report</span>
+              {isActive ? (
+                <img src={reportIconActive} alt="ReportIcon" className="h-9.5 ml-1" />
+              ) : (
+                <img src={reportIconInactive} alt="ReportIcon" className="h-9" />
+              )}
+              <span className={`text-xs mt-1 ${isActive ? "opacity-100" : "opacity-60"}`}>Report</span>
             </>
           )}
         </NavLink>
-
       </div>
     </>
   )

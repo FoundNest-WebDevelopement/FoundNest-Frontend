@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 
 export default function NotificationBar() {
   return (
-    <div className="navbar bg-base-100 shadow-sm fixed top-0 left-0 ">
+    <div className="flex w-full shadow-sm fixed top-0 left-0 bg-white z-100 py-2">
 
       <div className="navbar-start">
         <img
@@ -27,7 +27,13 @@ export default function NotificationBar() {
               : "text-(--color-primary)"
           }
         >
-          <Bell className="size-6" />
+
+          {({ isActive }) =>
+            isActive ? (
+              <Bell className="size-6 fill-current" />
+            ) :
+              <Bell className="size-6" />
+          }
         </NavLink>
       </div>
 

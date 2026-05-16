@@ -1,9 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Krona+One&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Pixelify+Sans:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
+
 :root {
   --color-primary: #990000;
   --color-secondary: #FFF3E0;
+  --color-tertiary: #4B2D23;
+  --color-quaternary : #FFD700;
 }
 
 @plugin "daisyui"{
   themes: false;
+}
+
+body{
+  font-family: "Poppins", sans-serif; 
 }

@@ -4,6 +4,7 @@ import Map from "./pages/Map";
 import Report from "./pages/Report";
 import Find from "./pages/Find";
 import Profile from "./pages/Profile";
+import Notification from "./pages/Notification";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
@@ -23,6 +24,7 @@ function App() {
         <Route path="/report" element={<Report />} />
         <Route path="/find" element={<Find />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/notifications" element={<Notification />} />
       </Routes>
         <Dock/>
     </BrowserRouter>
