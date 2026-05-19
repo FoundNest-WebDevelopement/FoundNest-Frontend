@@ -77,9 +77,9 @@ export default function Dock() {
           {({ isActive }) => (
             <>
               {isActive ? (
-                <i class="fa-solid fa-circle-user text-(--color-primary) text-2xl"></i>
+                <i className="fa-solid fa-circle-user text-(--color-primary) text-2xl"></i>
               ) : (
-                <i class="fa-regular fa-circle-user text-(--color-primary) text-2xl"></i>
+                <i className="fa-regular fa-circle-user text-(--color-primary) text-2xl"></i>
               )}
               <span className="dock-label">Profile</span>
             </>
