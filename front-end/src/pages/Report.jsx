@@ -12,13 +12,22 @@ import HourInput from "../components/HourInput";
 import { CircleAlert } from "lucide-react"
 import ButtonNegative from "../components/ButtonNegative";
 import heart from "../assets/heart.png"
+import Loading from "../components/Loading";
+import AlertDialog from "../components/AlertDialog";
+import Toast from "../components/Toast";
+import InfoIcon from "../assets/info_icon.png"
+import toast from "react-hot-toast";
 
 export default function Report() {
 
   const [userID, setUserID] = useState(7);
-  //new
-  const [selectedFile, setSelectedFile] = useState(null);
 
+
+  //new
+  const [createdReportID, setCreatedReportID] = useState(null);
+  const [createdItemID, setCreatedItemID] = useState(null);
+
+  const [selectedFile, setSelectedFile] = useState(null);
   const [categoryID, setCategoryID] = useState("");
   const [image, setImage] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -28,6 +37,10 @@ export default function Report() {
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
   const [location, setLocation] = useState("");
+
+  const [isCancel, setIsCancel] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
   const [nextPage, setNextPage] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const isPage1Valid =
@@ -67,10 +80,90 @@ export default function Report() {
   //   }
   // };
 
+  const handleCancel = () => {
+    setIsCancel(true);
+  } 
+  const handleKeepEditing = () => {
+    setIsCancel(false);
+  }
+  const handleDiscard = () => {
+    setIsCancel(false);
+    setNextPage(true);
+    setSubmitted(true);
+
+    toast.custom((e) => (
+          <Toast icon={InfoIcon} message="Edit has been cancelled."/>
+        ));
+  }
+  const handleEditReport = () => {
+    setNextPage(false);
+    setSubmitted(false);
+    setIsEdit(true);
+    
+  }
+
+  const handleUpdate = async () => {
+
+    try{
+    setIsLoading(true);
+      const formData = new FormData();
+
+      formData.append("image", selectedFile);
+      formData.append("item_name", itemName);
+      formData.append("description", description);
+      formData.append("contents", contents);
+      formData.append("category_id", categoryID);
+      formData.append("user_id", userID);
+      formData.append("location_lost", location);
+
+      formData.append(
+        "lost_date",
+        `${dateLost} ${timeLost}`
+      );
+
+      const response = await fetch(
+        `http://localhost:5000/api/lost-reports/${createdReportID}`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(data);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong");+
+        setIsLoading(false);
+      }
+
+      console.log(data);
+
+
+       
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      if(response.ok){
+        setIsLoading(false);
+        setSubmitted(true);
+        toast.custom((e) => (
+          <Toast icon={InfoIcon} message="Report edited successfully."/>
+        ));
+      }
+    }catch (err) {
+      console.error(err);
+    }
+
+  }
   //new
   const handleSubmit = async () => {
     try {
-
+  
+      setIsLoading(true);
       const formData = new FormData();
 
       formData.append("image", selectedFile);
@@ -100,27 +193,37 @@ export default function Report() {
       console.log(data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Something went wrong");
+        throw new Error(data.error || "Something went wrong");+
+        setIsLoading(false);
       }
 
       console.log(data);
 
-      alert("Lost report submitted!");
+      // alert("Lost report submitted!");
 
 
-      setItemName("");
-      setDescription("");
-      setContents("");
-      setCategoryID("");
-      setLocation("");
-      setDateLost("");
-      setTimeLost("");
-      setSelectedFile(null);
-      setImage(null);
+      // setItemName("");
+      // setDescription("");
+      // setContents("");
+      // setCategoryID("");
+      // setLocation("");
+      // setDateLost("");
+      // setTimeLost("");
+      // setSelectedFile(null);
+      // setImage(null);
       setSubmitted(true);
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
+      }
+
+      if(response.ok){
+        setIsLoading(false);
+        
+
+        setCreatedReportID(data.report.lost_report_id);
+        setCreatedItemID(data.item.item_id);
+        console.log("CREATED REPORT ID: " + data.report.lost_report_id);
       }
 
     } catch (err) {
@@ -212,7 +315,23 @@ export default function Report() {
             <div className="pb-5"></div>
             <div className="flex justify-between items-center pb-20">
               <p className="text-xs">Page 1 out of 2</p>
-              <ButtonPositive label="Next" enable={isPage1Valid} onClick={() => setNextPage(true)} />
+              
+              <div className="flex gap-2">
+                  {isEdit?
+                  (
+                  <>
+                    <ButtonNegative label="Cancel" onClick={handleCancel}  />
+                  </>
+                  )
+                  :
+                  (
+                  <>
+              
+                  </>
+                  )
+                  }
+                  <ButtonPositive label="Next" enable={isPage1Valid} onClick={() => setNextPage(true)} />
+                </div>
             </div>
           </>)
           :
@@ -266,7 +385,19 @@ export default function Report() {
                 <p className="text-xs">Page 2 out of 2</p>
                 <div className="flex gap-2">
                   <ButtonNegative label="Back" onClick={() => { setNextPage(false) }} />
-                  <ButtonPositive label="Submit" enable={timeValid} onClick={handleSubmit} />
+                  {isEdit?
+                  (
+                  <>
+                    <ButtonPositive label="Confirm" enable={timeValid} onClick={handleUpdate} />
+                  </>
+                  )
+                  :
+                  (
+                  <>
+                    <ButtonPositive label="Submit" enable={timeValid} onClick={handleSubmit} />
+                  </>
+                  )
+                  }
                 </div>
               </div>
               <div className="pb-20"></div>
@@ -303,7 +434,7 @@ export default function Report() {
                   </div>
                   <HorizontalBreak/>
                   <div className=" flex justify-between px-3 py-3 ">
-                    <div className="flex justify-evenly gap-1">
+                    <div className="flex justify-evenly gap-1" onClick={handleEditReport}>
                       <i className="fa-regular fa-pen-to-square text-primary"></i>
                       <p className="text-xs text-primary">Edit Report</p>
                     </div>
@@ -324,6 +455,35 @@ export default function Report() {
           )
 
         }
+        {isLoading ?
+          (
+            <>  
+              <Loading label="Analyzing Image"/>
+            </>
+          )
+          :
+          (
+            <>
+             
+            </>
+          )
+
+        }
+        {isCancel ?
+          (
+            <>  
+              <AlertDialog message="Discard changes? Unsaved edits will be lost." b1Label="Keep Editing" b2Label="Discard" b1OnClick={handleKeepEditing} b2OnClick={handleDiscard}/>
+            </>
+          )
+          :
+          (
+            <>
+  
+            </>
+          )
+
+        }
+        
 
       </div>
     </>

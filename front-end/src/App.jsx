@@ -6,6 +6,8 @@ import Find from "./pages/Find";
 import Profile from "./pages/Profile";
 import Notification from "./pages/Notification";
 
+
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
 
