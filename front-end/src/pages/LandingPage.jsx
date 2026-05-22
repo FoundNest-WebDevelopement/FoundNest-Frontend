@@ -16,7 +16,7 @@ function LandingPage() {
         />
       </div>
 
-      <div className="bg-[#990000] rounded-t-3xl px-6 py-6 flex flex-col gap-3"
+      <div className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3"
         style={{ minHeight: '45%' }}
       >
         
@@ -41,13 +41,10 @@ function LandingPage() {
           <div className="flex-1 h-px bg-white opacity-60"></div>
         </div>
 
-        <button
-          onClick={() => navigate('/register')}
-          className="w-full py-3 rounded-md font-semibold text-sm"
-          style={{ backgroundColor: '#FDC502', color: '#2C2C2C' }}
-        >
-          Create an account
-        </button>
+    
+        <p className="text-white text-xs text-center leading-relaxed opacity-80">
+        Use your official BulSU Microsoft 365 account to access FoundNest.
+        </p>
 
         <button
           onClick={() => navigate('/login')}
