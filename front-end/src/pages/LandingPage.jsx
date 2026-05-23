@@ -43,7 +43,7 @@ function LandingPage() {
 
     
         <p className="text-white text-xs text-center leading-relaxed opacity-80">
-        Use your official BulSU Microsoft 365 account to access FoundNest.
+        Use Institutional account to access FoundNest.
         </p>
 
         <button

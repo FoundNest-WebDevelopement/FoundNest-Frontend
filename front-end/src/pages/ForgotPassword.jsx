@@ -1,42 +1,69 @@
-import { useNavigate } from 'react-router-dom';
-import amico from '../assets/amico.png';
-import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import amico from "../assets/amico.png";
+import { useState } from "react";
 
 function ForgotPassword() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const TEMP_CODE = '123456';
-  const TEMP_EMAIL = '2023100464@ms.bulsu.edu.ph';
+  const TEMP_CODE = "123456";
+  const TEMP_EMAIL = "2023100464@ms.bulsu.edu.ph";
+
+  const isStep1Valid = email.trim() !== "";
+  const isStep2Valid = code.join("").length === 6;
+  const isStep3Valid = newPassword !== "" && confirmPassword !== "";
+
+  const actionButtonStyle = (isActive) => ({
+    backgroundColor: isActive ? "#FFEFEF" : "rgba(255, 243, 224, 0.7)",
+    color: isActive ? "#990000" : "rgba(75, 45, 35, 0.7)",
+    border: "none",
+    borderRadius: "6px",
+    padding: "8px 24px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: isActive ? "pointer" : "default",
+  });
+
+  const backButtonStyle = {
+    backgroundColor: "transparent",
+    color: "#FFEFEF",
+    border: "1.5px solid #FFEFEF",
+    borderRadius: "6px",
+    padding: "8px 24px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+  };
 
   const handleNext = () => {
+    setError("");
     if (step === 1) {
       if (email !== TEMP_EMAIL) {
-        alert('Email not found!');
+        setError("Email not found. Please try again.");
         return;
       }
       setStep(2);
     } else if (step === 2) {
-      if (code.join('') !== TEMP_CODE) {
-        alert('Invalid verification code!');
+      if (code.join("") !== TEMP_CODE) {
+        setError("Invalid verification code. Please try again.");
         return;
       }
       setStep(3);
     } else if (step === 3) {
-      if (newPassword !== confirmPassword) {
-        alert('Passwords do not match!');
-        return;
-      }
       if (newPassword.length < 6) {
-        alert('Password must be at least 6 characters!');
+        setError("Password must be at least 6 characters.");
         return;
       }
-      alert('Password reset successful!');
-      navigate('/login');
+      if (newPassword !== confirmPassword) {
+        setError("Passwords do not match. Please try again.");
+        return;
+      }
+      navigate("/login");
     }
   };
 
@@ -44,7 +71,7 @@ function ForgotPassword() {
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-    // Auto focus next input
+    setError("");
     if (value && index < 5) {
       document.getElementById(`code-${index + 1}`).focus();
     }
@@ -52,10 +79,8 @@ function ForgotPassword() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-
-      {/* Top white section */}
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
-    <button
+        <button
           onClick={() => navigate("/login")}
           className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center"
           style={{ backgroundColor: "#D9D9D9" }}
@@ -69,10 +94,10 @@ function ForgotPassword() {
         />
       </div>
 
-      {/* Bottom red card */}
-      <div className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-4"
-        style={{ minHeight: '45%' }}>
-
+      <div
+        className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-4"
+        style={{ minHeight: "45%" }}
+      >
         {/* Step 1 - Enter Email */}
         {step === 1 && (
           <>
@@ -86,14 +111,21 @@ function ForgotPassword() {
               type="email"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
               className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
             />
-            <div className="flex justify-end mt-2">
+            {error && (
+              <p className="text-[#F9E055] text-xs font-normal text-center">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end mt-auto">
               <button
                 onClick={handleNext}
-                className="px-6 py-2 rounded-md text-sm font-semibold"
-                style={{ backgroundColor: '#FFEFEF', color: '#990000' }}
+                style={actionButtonStyle(isStep1Valid)}
               >
                 Next
               </button>
@@ -108,10 +140,9 @@ function ForgotPassword() {
               Enter Verification Code
             </h1>
             <p className="text-white text-xs text-center opacity-90">
-              We've sent a verification code to:{'\n'}
+              We've sent a verification code to:{" "}
               <span className="font-semibold">{email}</span>
             </p>
-            {/* 6 code boxes */}
             <div className="flex justify-between gap-2">
               {code.map((digit, index) => (
                 <input
@@ -125,22 +156,25 @@ function ForgotPassword() {
                 />
               ))}
             </div>
+            {error && (
+              <p className="text-[#F9E055] text-xs font-normal text-center">
+                {error}
+              </p>
+            )}
             <p className="text-white text-xs text-center">
-              Didn't receive the code?{' '}
+              Didn't receive the code?{" "}
               <span className="text-[#F9E055] cursor-pointer">Resend</span>
             </p>
-            <div className="flex justify-between mt-2">
+            <div className="flex justify-between mt-auto">
               <button
-                onClick={() => setStep(1)}
-                className="px-6 py-2 rounded-md text-sm font-semibold"
-                style={{ backgroundColor: '#FFEFEF', color: '#990000' }}
+                onClick={() => { setStep(1); setError(""); }}
+                style={backButtonStyle}
               >
                 Back
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 rounded-md text-sm font-semibold"
-                style={{ backgroundColor: '#FFEFEF', color: '#990000' }}
+                style={actionButtonStyle(isStep2Valid)}
               >
                 Next
               </button>
@@ -155,41 +189,50 @@ function ForgotPassword() {
               Set New Password
             </h1>
             <p className="text-white text-xs text-center opacity-90">
-              Password must contain an uppercase letter, a special character, and a number.
+              Password must contain an uppercase letter, a special character,
+              and a number.
             </p>
             <input
               type="password"
               placeholder="New Password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setError("");
+              }}
               className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
             />
             <input
               type="password"
               placeholder="Confirm New Password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setError("");
+              }}
               className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
             />
-            <div className="flex justify-between mt-2">
+            {error && (
+              <p className="text-[#F9E055] text-xs font-normal text-center">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-between mt-auto">
               <button
-                onClick={() => setStep(2)}
-                className="px-6 py-2 rounded-md text-sm font-semibold"
-                style={{ backgroundColor: '#FFEFEF', color: '#990000' }}
+                onClick={() => { setStep(2); setError(""); }}
+                style={backButtonStyle}
               >
                 Back
               </button>
               <button
                 onClick={handleNext}
-                className="px-6 py-2 rounded-md text-sm font-semibold"
-                style={{ backgroundColor: '#FFEFEF', color: '#990000' }}
+                style={actionButtonStyle(isStep3Valid)}
               >
                 Done
               </button>
             </div>
           </>
         )}
-
       </div>
     </div>
   );

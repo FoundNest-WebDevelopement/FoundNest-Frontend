@@ -8,21 +8,25 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
 
   const TEMP_EMAIL = "2023100464@ms.bulsu.edu.ph";
   const TEMP_PASSWORD = "admin123";
 
+  const isLoginValid = email.trim() !== "" && password.trim() !== "";
+
   const handleLogin = () => {
+    if (!isLoginValid) return;
+    setError("");
     if (email === TEMP_EMAIL && password === TEMP_PASSWORD) {
       navigate("/home");
     } else {
-      alert("Invalid email or password!");
+      setError("Invalid email or password. Please try again.");
     }
   };
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-      {/* Top white section - exact same as landing page */}
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <button
           onClick={() => navigate("/")}
@@ -38,32 +42,34 @@ function Login() {
         />
       </div>
 
-      {/* Bottom red card - exact same size as landing page */}
       <div
         className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3"
         style={{ minHeight: "45%" }}
       >
-        {/* Title */}
         <h1 className="text-white text-2xl font-semibold text-center">
           Log In
         </h1>
 
-        {/* Email Input */}
         <input
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError("");
+          }}
           className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
         />
 
-        {/* Password Input */}
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError("");
+            }}
             className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
           />
           <button
@@ -74,8 +80,13 @@ function Login() {
           </button>
         </div>
 
-        {/* Remember me + Forgot password */}
-        <div className="flex items-center justify-between mt-4">
+        {error && (
+          <p className="text-[#F9E055] text-xs font-normal text-center">
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between mt-1">
           <label className="flex items-center gap-2 text-white text-xs cursor-pointer">
             <input
               type="checkbox"
@@ -101,11 +112,20 @@ function Login() {
           </button>
         </div>
 
-        {/* Login Button */}
         <button
           onClick={handleLogin}
-          className="w-full py-3 rounded-md text-sm font-semibold mt-4"
-          style={{ backgroundColor: "#FFEFEF", color: "#990000" }}
+          style={{
+            backgroundColor: isLoginValid ? "#FFEFEF" : "rgba(255, 243, 224, 0.7)",
+            color: isLoginValid ? "#990000" : "rgba(75, 45, 35, 0.7)",
+            border: "none",
+            borderRadius: "6px",
+            width: "100%",
+            padding: "12px",
+            fontSize: "14px",
+            fontWeight: "600",
+            cursor: isLoginValid ? "pointer" : "default",
+            marginTop: "8px",
+          }}
         >
           Log In
         </button>
