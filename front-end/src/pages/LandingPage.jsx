@@ -43,13 +43,13 @@ function LandingPage() {
 
     
         <p className="text-white text-xs text-center leading-relaxed opacity-80">
-        Use your official BulSU Microsoft 365 account to access FoundNest.
+        Use your Institutional account to access FoundNest.
         </p>
 
         <button
           onClick={() => navigate('/login')}
-          className="w-full py-3 rounded-md text-sm"
-          style={{ backgroundColor: '#FFEFEF', color: '#000000' }}
+          className="w-full py-3 rounded-md text-sm font-semibold "
+          style={{ backgroundColor: "#FFEFEF", color: "#990000" }}
         >
           Log In
         </button>

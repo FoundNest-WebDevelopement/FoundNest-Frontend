@@ -20,6 +20,21 @@ function Login() {
     }
   };
 
+  const EyeIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+);
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       {/* Top white section - exact same as landing page */}
@@ -66,16 +81,16 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
           />
-          <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-3 text-gray-400 text-sm"
-          >
-            {showPassword ? "🙈" : "👁️"}
-          </button>
+         <button
+  onClick={() => setShowPassword(!showPassword)}
+  className="absolute right-3 top-3"
+>
+  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+</button>
         </div>
 
         {/* Remember me + Forgot password */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-2">
           <label className="flex items-center gap-2 text-white text-xs cursor-pointer">
             <input
               type="checkbox"
@@ -104,7 +119,7 @@ function Login() {
         {/* Login Button */}
         <button
           onClick={handleLogin}
-          className="w-full py-3 rounded-md text-sm font-semibold mt-4"
+          className="w-full py-3 rounded-md text-sm font-semibold mt-2"
           style={{ backgroundColor: "#FFEFEF", color: "#990000" }}
         >
           Log In
