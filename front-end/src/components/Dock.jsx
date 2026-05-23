@@ -6,8 +6,7 @@ import reportIconActive from "../assets/report_icon_active.png"
 export default function Dock() {
   return (
     <>
-      <div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white">
-        <NavLink
+<div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white z-[999]">        <NavLink
           to="/"
           className={({ isActive }) =>
             isActive
