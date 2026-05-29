@@ -10,6 +10,7 @@ import Notification from "./pages/Notification";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
+import FoundItemDetails from "./pages/FoundItemDetails";
 
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/map" element={<Map />} />
         <Route path="/report" element={<Report />} />
         <Route path="/find" element={<Find />} />
+        <Route path="/find/:id" element={<FoundItemDetails/>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<Notification />} />
       </Routes>

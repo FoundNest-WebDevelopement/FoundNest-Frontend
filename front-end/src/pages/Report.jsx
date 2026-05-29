@@ -19,8 +19,8 @@ import InfoIcon from "../assets/info_icon.png"
 import toast from "react-hot-toast";
 
 export default function Report() {
-
-  const [userID, setUserID] = useState(7);
+  const API_URL = import.meta.env.VITE_API_URL;
+  const [userID, setUserID] = useState(2);
 
 
   //new
@@ -38,7 +38,13 @@ export default function Report() {
   const [timeLost, setTimeLost] = useState("");
   const [location, setLocation] = useState("");
 
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const [showImageOptions, setShowImageOptions] = useState(false);
+
   const [isCancel, setIsCancel] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [nextPage, setNextPage] = useState(false);
@@ -105,7 +111,7 @@ export default function Report() {
   const handleUpdate = async () => {
 
     try{
-    setIsLoading(true);
+    setIsUpdating(true);
       const formData = new FormData();
 
       formData.append("image", selectedFile);
@@ -122,7 +128,7 @@ export default function Report() {
       );
 
       const response = await fetch(
-        `http://localhost:5000/api/lost-reports/${createdReportID}`,
+        `${API_URL}/api/lost-reports/${createdReportID}`,
         {
           method: "PUT",
           body: formData,
@@ -134,8 +140,8 @@ export default function Report() {
       console.log(data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Something went wrong");+
-        setIsLoading(false);
+        throw new Error(data.error || "Something went wrong");
+        setIsUpdating(false);
       }
 
       console.log(data);
@@ -148,7 +154,7 @@ export default function Report() {
       }
 
       if(response.ok){
-        setIsLoading(false);
+        setIsUpdating(false);
         setSubmitted(true);
         toast.custom((e) => (
           <Toast icon={InfoIcon} message="Report edited successfully."/>
@@ -163,7 +169,7 @@ export default function Report() {
   const handleSubmit = async () => {
     try {
   
-      setIsLoading(true);
+      setIsSubmitting(true);
       const formData = new FormData();
 
       formData.append("image", selectedFile);
@@ -180,7 +186,7 @@ export default function Report() {
       );
 
       const response = await fetch(
-        "http://localhost:5000/api/lost-reports",
+        `${API_URL}/api/lost-reports`,
         {
           method: "POST",
           body: formData,
@@ -194,7 +200,7 @@ export default function Report() {
 
       if (!response.ok) {
         throw new Error(data.error || "Something went wrong");+
-        setIsLoading(false);
+        setIsSubmitting(false);
       }
 
       console.log(data);
@@ -218,7 +224,7 @@ export default function Report() {
       }
 
       if(response.ok){
-        setIsLoading(false);
+        setIsSubmitting(false);
         
 
         setCreatedReportID(data.report.lost_report_id);
@@ -231,14 +237,64 @@ export default function Report() {
     }
   };
   //new 
-  const handleChange = (e) => {
-    const file = e.target.files[0];
+  // const handleChange = (e) => {
+  //   const file = e.target.files[0];
 
-    if (file) {
-      setSelectedFile(file);
-      setImage(URL.createObjectURL(file));
+  //   if (file) {
+  //     setSelectedFile(file);
+  //     setImage(URL.createObjectURL(file));
+  //   }
+  // };
+const handleChange = async (e) => {
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  setSelectedFile(file);
+  setImage(URL.createObjectURL(file));
+
+  try {
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await fetch(
+  "https://foundnest-backend.onrender.com/api/gemini-item-listing/describe-item",
+  {
+    method: "POST",
+    body: formData,
+  }
+);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "AI analysis failed");
     }
-  };
+
+    setItemName(data.itemName || "");
+    setDescription(data.detailedDescription || "");
+    setContents(data.contents || "");
+
+    const matchedCategory = categories.find(
+      (category) =>
+        category.category_name.toLowerCase() ===
+        data.category.toLowerCase()
+    );
+
+    if (matchedCategory) {
+      setCategoryID(String(matchedCategory.category_id));
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
   const dateValid = isValidPastOrToday(dateLost);
   const timeValid = dateValid && isTimeNotFuture(dateLost, timeLost)
 
@@ -251,7 +307,7 @@ export default function Report() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/categories")
+    fetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
         console.log(data);
@@ -279,23 +335,46 @@ export default function Report() {
                 <img
                   src={image}
                   alt="Uploaded"
-                  onClick={openFilePicker}
+                  onClick={() => {setShowImageOptions(true)}}
                   className="w-full max-h-50 object-cover rounded-xl cursor-pointer hover:opacity-80 transition"
                 />
               ) : (
                 <div className="p-1 border border-dashed rounded-full border-(--color-primary)">
-                  <label onClick={openFilePicker} className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center">
+                  {/* <label onClick={openFilePicker} className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center">
                     <i className="fa-solid fa-plus text-white"></i>
-                  </label>
+                  </label> */}
+                  <button
+  type="button"
+  onClick={() => setShowImageOptions(true)}
+  className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center"
+>
+  <i className="fa-solid fa-plus text-white"></i>
+</button>
                 </div>
               )}
-              <input
+              {/* <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={handleChange}
-              />
+              /> */}
+              <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleChange}
+            />
+
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleChange}
+            />
               {!image && (
                 <>
                   <p className="text-sm text-(--color-tertiary) opacity-70 font-medium mt-2">
@@ -469,6 +548,20 @@ export default function Report() {
           )
 
         }
+        {isSubmitting &&
+          (
+            <>  
+              <Loading label="Creating Lost Report"/>
+            </>
+          )
+        }
+        {isUpdating &&
+          (
+            <>  
+              <Loading label="Updating Lost Report"/>
+            </>
+          )
+        }
         {isCancel ?
           (
             <>  
@@ -483,6 +576,24 @@ export default function Report() {
           )
 
         }
+        {showImageOptions && (
+              <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50">
+                <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2">
+                  <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
+                      setShowImageOptions(false);
+                      cameraInputRef.current?.click();
+                    }}/>
+                    <ButtonPositive label="Choose from Gallery" enable={showImageOptions}  onClick={() => {
+                      setShowImageOptions(false);
+                      galleryInputRef.current?.click();
+                    }}/>
+                    <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)}/>
+               
+        
+             
+                </div>
+              </div>
+            )}
         
 
       </div>

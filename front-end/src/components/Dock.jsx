@@ -6,7 +6,7 @@ import reportIconActive from "../assets/report_icon_active.png"
 export default function Dock() {
   return (
     <>
-      <div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white">
+      <div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white z-1000">
         <NavLink
           to="/"
           className={({ isActive }) =>
@@ -37,7 +37,7 @@ export default function Dock() {
           {({ isActive }) => (
             <>
               {isActive ? (
-                <i class="fa-solid fa-location-dot text-2xl"></i>
+                <i className="fa-solid fa-location-dot text-2xl"></i>
               ) : (
                 <MapPin className="size-10" />
               )}
