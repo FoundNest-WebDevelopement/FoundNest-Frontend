@@ -8,13 +8,15 @@ import Notification from "./pages/Notification";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import QRItem from "./pages/QRItem";
 
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
 
 // hide the dock and notif from landingpage, log, reg page
 function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const hideNav = ["/", "/login", "/register", "/forgot-password"].includes(
     location.pathname,
   );
@@ -31,6 +33,7 @@ function Layout() {
         <Route path="/notifications" element={<Notification />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/qr-item" element={<QRItem onBack={() => navigate("/profile")} />} />
       </Routes>
       {!hideNav && <Dock />}
     </>
