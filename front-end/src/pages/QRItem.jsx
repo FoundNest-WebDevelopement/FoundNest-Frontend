@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5Qrcode } from "html5-qrcode";
+
+const API_URL = "http://localhost:5000/api";
 
 // Icons
 const RegisterIcon = () => (
@@ -81,6 +83,8 @@ const emptyForm = {
 };
 
 export default function QRItem({ onBack }) {
+  const user_id = localStorage.getItem("user_id");
+
   const [page, setPage] = useState("main");
   const [form, setForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
@@ -93,6 +97,7 @@ export default function QRItem({ onBack }) {
   const [editTargetId, setEditTargetId] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [loading, setLoading] = useState(false);
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
   const isStartedRef = useRef(false);
@@ -109,6 +114,42 @@ export default function QRItem({ onBack }) {
     editForm.courseSection.trim() !== "" &&
     editForm.category !== "";
 
+  // Fetch user QR items when viewItems page loads
+
+
+const fetchUserItems = useCallback(async () => {
+  setLoading(true);
+  try {
+    const res = await fetch(`${API_URL}/qr-items/${user_id}`);
+    const data = await res.json();
+    if (res.ok) {
+      const mapped = data.map((item) => ({
+        id: item.qr_code_id,
+        itemName: item.item_name,
+        description: item.description,
+        imagePreview: item.image_url,
+        qrData: item.qr_data,
+        category: item.category_name,
+        ownerName: "",
+        studentNumber: "",
+        courseSection: "",
+        contactNumber: "",
+      }));
+      setRegisteredItems(mapped);
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}, [user_id]);
+
+useEffect(() => {
+  if (page === "viewItems") {
+    fetchUserItems();
+  }
+}, [page, fetchUserItems]);
+
   const handleImageUpload = (e, isEdit = false) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -124,25 +165,47 @@ export default function QRItem({ onBack }) {
 
   const handleRegister = async () => {
     if (!isFormValid) return;
-    const qrData = JSON.stringify({
-      ownerName: form.ownerName,
-      studentNumber: form.studentNumber,
-      courseSection: form.courseSection,
-      contactNumber: form.contactNumber,
-      itemName: form.itemName,
-      category: form.category,
-    });
-    const url = await QRCode.toDataURL(qrData, {
-      width: 200,
-      margin: 2,
-    });
-    setQrCodeUrl(url);
-    setGeneratedItemName(form.itemName || "Item");
-    setRegisteredItems([
-      ...registeredItems,
-      { id: Date.now(), ...form, qrUrl: url },
-    ]);
-    setPage("qrSuccess");
+    setLoading(true);
+    try {
+      const qrData = JSON.stringify({
+        ownerName: form.ownerName,
+        studentNumber: form.studentNumber,
+        courseSection: form.courseSection,
+        contactNumber: form.contactNumber,
+        itemName: form.itemName,
+        category: form.category,
+      });
+
+      // Generate QR code image
+      const url = await QRCode.toDataURL(qrData, { width: 200, margin: 2 });
+      setQrCodeUrl(url);
+      setGeneratedItemName(form.itemName || "Item");
+
+      // Save to backend
+      const res = await fetch(`${API_URL}/qr-items/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id,
+          item_name: form.itemName,
+          category_id: categories.indexOf(form.category) + 1,
+          description: form.courseSection,
+          qr_data: qrData,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setPage("qrSuccess");
+        setForm(emptyForm);
+      } else {
+        console.error(data.message);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownload = () => {
@@ -152,22 +215,46 @@ export default function QRItem({ onBack }) {
     link.click();
   };
 
-  const handleDeleteConfirm = () => {
-    setRegisteredItems(registeredItems.filter((i) => i.id !== deleteTargetId));
+  const handleDeleteConfirm = async () => {
+    try {
+      const res = await fetch(`${API_URL}/qr-items/${deleteTargetId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setRegisteredItems(registeredItems.filter((i) => i.id !== deleteTargetId));
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setShowDeleteModal(false);
     setDeleteTargetId(null);
   };
 
-  const handleEditSave = () => {
-    setRegisteredItems(
-      registeredItems.map((i) =>
-        i.id === editTargetId ? { ...i, ...editForm } : i
-      )
-    );
-    setPage("viewItems");
+  const handleEditSave = async () => {
+    try {
+      const res = await fetch(`${API_URL}/qr-items/${editTargetId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item_name: editForm.itemName,
+          description: editForm.courseSection,
+          category_id: categories.indexOf(editForm.category) + 1,
+        }),
+      });
+      if (res.ok) {
+        setRegisteredItems(
+          registeredItems.map((i) =>
+            i.id === editTargetId ? { ...i, ...editForm } : i
+          )
+        );
+        setPage("viewItems");
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // FIX: track isStarted so we never call stop() before start() resolves
+  // QR Scanner
   useEffect(() => {
     if (page !== "scan" || !scannerRef.current) return;
 
@@ -379,15 +466,15 @@ export default function QRItem({ onBack }) {
           {/* Register Button */}
           <button
             onClick={handleRegister}
-            disabled={!isFormValid}
+            disabled={!isFormValid || loading}
             className="w-full py-3 rounded-lg text-sm font-semibold mt-2"
             style={{
-              backgroundColor: isFormValid ? "#990000" : "rgba(153, 0, 0, 0.3)",
+              backgroundColor: isFormValid && !loading ? "#990000" : "rgba(153, 0, 0, 0.3)",
               color: "white",
-              cursor: isFormValid ? "pointer" : "default",
+              cursor: isFormValid && !loading ? "pointer" : "default",
             }}
           >
-            Register Item
+            {loading ? "Registering..." : "Register Item"}
           </button>
         </div>
 
@@ -435,7 +522,6 @@ export default function QRItem({ onBack }) {
         className="flex flex-col min-h-screen mt-13 mb-16 items-center justify-center px-5"
         style={{ backgroundColor: "#990000" }}
       >
-        {/* Success */}
         <div className="flex items-center gap-2 mb-6">
           <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#990000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -445,7 +531,6 @@ export default function QRItem({ onBack }) {
           <p className="text-white font-bold text-lg">Item Successfully Registered!</p>
         </div>
 
-        {/* QR Card */}
         <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3 w-full max-w-xs">
           <p className="font-bold text-[#4B2D23] text-base">{generatedItemName}</p>
           {qrCodeUrl && (
@@ -454,7 +539,6 @@ export default function QRItem({ onBack }) {
           <p className="text-xs font-bold text-[#990000]">FoundNest</p>
         </div>
 
-        {/* Download */}
         <button
           onClick={handleDownload}
           className="flex items-center gap-2 mt-6 text-white text-sm font-medium"
@@ -467,10 +551,8 @@ export default function QRItem({ onBack }) {
           Download Image For Printing
         </button>
 
-        {/* Register Another */}
         <button
           onClick={() => {
-            setForm(emptyForm);
             setQrCodeUrl("");
             setPage("register");
           }}
@@ -491,7 +573,11 @@ export default function QRItem({ onBack }) {
       <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
         <BackHeader title="Registered Items" onBackPress={() => setPage("main")} />
         <div className="px-5 py-5">
-          {registeredItems.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center mt-20">
+              <div className="w-10 h-10 border-4 border-[#990000] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : registeredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center mt-20 gap-4">
               <div className="w-40 h-40 rounded-full bg-[#f5e6d3] flex items-center justify-center">
                 <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
@@ -593,7 +679,6 @@ export default function QRItem({ onBack }) {
         <BackHeader title="Edit Registered Item" onBackPress={() => setPage("viewItems")} />
         <div className="px-5 py-5 flex flex-col gap-4">
 
-          {/* Owner Name */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
             <input
@@ -605,7 +690,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Student Number */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number*</p>
             <input
@@ -617,7 +701,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Course and Section */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section*</p>
             <input
@@ -629,7 +712,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Contact Number */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
             <input
@@ -641,7 +723,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Item Description */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Description</p>
             <div className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 border border-dashed border-gray-300">
@@ -664,7 +745,6 @@ export default function QRItem({ onBack }) {
             </div>
           </div>
 
-          {/* Item Name */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
             <input
@@ -676,7 +756,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Category */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Category*</p>
             <div className="bg-white rounded-lg px-4 py-3">
@@ -693,7 +772,6 @@ export default function QRItem({ onBack }) {
             </div>
           </div>
 
-          {/* Save Button */}
           <button
             onClick={handleEditSave}
             disabled={!isEditFormValid}
