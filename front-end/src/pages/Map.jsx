@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { apiFetch } from "../utils/api";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -112,14 +113,9 @@ export default function Map() {
   const handlePostReview = async () => {
     if (rating === 0 || reviewText.trim() === "") return;
     try {
-      const res = await fetch(`${API_URL}/offices/${selectedOffice.office_id}/reviews`, {
+      const res = await apiFetch(`/offices/${selectedOffice.office_id}/reviews`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id,
-          rating,
-          review_text: reviewText,
-        }),
+        body: JSON.stringify({ user_id, rating, review_text: reviewText }),
       });
       if (res.ok) {
         setRating(0);

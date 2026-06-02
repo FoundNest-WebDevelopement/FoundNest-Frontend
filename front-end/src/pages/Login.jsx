@@ -36,14 +36,30 @@ function Login() {
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("role", data.role);
-        localStorage.setItem("user_id", data.user_id);
-        navigate("/home");
+        // Save token and user data
+        localStorage.setItem("token", data.accessToken);
+        localStorage.setItem("user_id", data.user.user_id);
+        localStorage.setItem("role", data.user.user_role);
+        localStorage.setItem("first_name", data.user.first_name || "");
+        localStorage.setItem("last_name", data.user.last_name || "");
+        localStorage.setItem("email", data.user.email || "");
+        localStorage.setItem("student_number", data.user.student_number || "");
+        if (data.refreshToken) {
+          localStorage.setItem("refreshToken", data.refreshToken);
+        }
+
+        // Role based redirect
+        if (data.user.user_role === "super_admin") {
+          navigate("/superadmin/dashboard");
+        } else if (data.user.user_role === "admin") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/home");
+        }
       } else {
         setError(data.message || "Invalid email or password. Please try again.");
       }
@@ -64,29 +80,17 @@ function Login() {
         >
           <span className="text-[#333333] text-lg font-bold">←</span>
         </button>
-        <img
-          src={rafiki}
-          alt="Login Illustration"
-          className="w-4/5 h-4/5 object-contain object-center"
-        />
+        <img src={rafiki} alt="Login Illustration" className="w-4/5 h-4/5 object-contain object-center" />
       </div>
 
-      <div
-        className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3"
-        style={{ minHeight: "45%" }}
-      >
-        <h1 className="text-white text-2xl font-semibold text-center">
-          Log In
-        </h1>
+      <div className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3" style={{ minHeight: "45%" }}>
+        <h1 className="text-white text-2xl font-semibold text-center">Log In</h1>
 
         <input
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError("");
-          }}
+          onChange={(e) => { setEmail(e.target.value); setError(""); }}
           className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
         />
 
@@ -95,50 +99,25 @@ function Login() {
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError("");
-            }}
+            onChange={(e) => { setPassword(e.target.value); setError(""); }}
             className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
           />
-          <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-3"
-          >
+          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
             {showPassword ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         </div>
 
-       {error && (
-  <div className="fixed bottom-8 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
-    <span className="text-white text-sm">ℹ️</span>
-    <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-      {error}
-    </p>
-  </div>
-)}
         <div className="flex items-center justify-between mt-1">
           <label className="flex items-center gap-2 text-white text-xs cursor-pointer">
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              style={{
-                width: "14px",
-                height: "14px",
-                borderRadius: "3px",
-                border: "2px solid white",
-                backgroundColor: "white",
-                accentColor: "#990000",
-                cursor: "pointer",
-              }}
+              style={{ width: "14px", height: "14px", borderRadius: "3px", border: "2px solid white", backgroundColor: "white", accentColor: "#990000", cursor: "pointer" }}
             />
             Remember me
           </label>
-          <button
-            onClick={() => navigate("/forgot-password")}
-            className="text-[#F9E055] text-xs"
-          >
+          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs">
             Forgot password?
           </button>
         </div>
@@ -161,6 +140,13 @@ function Login() {
         >
           {loading ? "Logging in..." : "Log In"}
         </button>
+
+        {error && (
+          <div className="fixed bottom-8 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
+            <span className="text-white text-sm">ℹ️</span>
+            <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">{error}</p>
+          </div>
+        )}
       </div>
     </div>
   );

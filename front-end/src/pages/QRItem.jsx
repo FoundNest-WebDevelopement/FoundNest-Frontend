@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5Qrcode } from "html5-qrcode";
-
-const API_URL = "http://localhost:5000/api";
+import { apiFetch } from "../utils/api";
 
 // Icons
 const RegisterIcon = () => (
@@ -114,41 +113,38 @@ export default function QRItem({ onBack }) {
     editForm.courseSection.trim() !== "" &&
     editForm.category !== "";
 
-  // Fetch user QR items when viewItems page loads
-
-
-const fetchUserItems = useCallback(async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(`${API_URL}/qr-items/${user_id}`);
-    const data = await res.json();
-    if (res.ok) {
-      const mapped = data.map((item) => ({
-        id: item.qr_code_id,
-        itemName: item.item_name,
-        description: item.description,
-        imagePreview: item.image_url,
-        qrData: item.qr_data,
-        category: item.category_name,
-        ownerName: "",
-        studentNumber: "",
-        courseSection: "",
-        contactNumber: "",
-      }));
-      setRegisteredItems(mapped);
+  const fetchUserItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/qr-items/${user_id}`);
+      const data = await res.json();
+      if (res.ok) {
+        const mapped = data.map((item) => ({
+          id: item.qr_code_id,
+          itemName: item.item_name,
+          description: item.description,
+          imagePreview: item.image_url,
+          qrData: item.qr_data,
+          category: item.category_name,
+          ownerName: "",
+          studentNumber: "",
+          courseSection: "",
+          contactNumber: "",
+        }));
+        setRegisteredItems(mapped);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-}, [user_id]);
+  }, [user_id]);
 
-useEffect(() => {
-  if (page === "viewItems") {
-    fetchUserItems();
-  }
-}, [page, fetchUserItems]);
+  useEffect(() => {
+    if (page === "viewItems") {
+      fetchUserItems();
+    }
+  }, [page, fetchUserItems]);
 
   const handleImageUpload = (e, isEdit = false) => {
     const file = e.target.files[0];
@@ -176,15 +172,12 @@ useEffect(() => {
         category: form.category,
       });
 
-      // Generate QR code image
       const url = await QRCode.toDataURL(qrData, { width: 200, margin: 2 });
       setQrCodeUrl(url);
       setGeneratedItemName(form.itemName || "Item");
 
-      // Save to backend
-      const res = await fetch(`${API_URL}/qr-items/register`, {
+      const res = await apiFetch("/qr-items/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id,
           item_name: form.itemName,
@@ -217,7 +210,7 @@ useEffect(() => {
 
   const handleDeleteConfirm = async () => {
     try {
-      const res = await fetch(`${API_URL}/qr-items/${deleteTargetId}`, {
+      const res = await apiFetch(`/qr-items/${deleteTargetId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -232,9 +225,8 @@ useEffect(() => {
 
   const handleEditSave = async () => {
     try {
-      const res = await fetch(`${API_URL}/qr-items/${editTargetId}`, {
+      const res = await apiFetch(`/qr-items/${editTargetId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           item_name: editForm.itemName,
           description: editForm.courseSection,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import QRItem from "./QRItem";
@@ -115,13 +115,28 @@ export default function Profile() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [originalContact, setOriginalContact] = useState("");
 
-  const user = {
-    name: "Manuel Santiago",
-    studentId: "2023100464",
-    firstName: "Manuel",
-    lastName: "Santiago",
-    email: "2023100464@ms.bulsu.edu.ph",
-  };
+  const [user, setUser] = useState({
+    name: "",
+    studentId: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+  });
+
+  useEffect(() => {
+    const firstName = localStorage.getItem("first_name") || "";
+    const lastName = localStorage.getItem("last_name") || "";
+    const email = localStorage.getItem("email") || "";
+    const studentNumber = localStorage.getItem("student_number") || "";
+
+    setUser({
+      name: `${firstName} ${lastName}`.trim() || "User",
+      studentId: studentNumber,
+      firstName,
+      lastName,
+      email,
+    });
+  }, []);
 
   const validateContact = (value) => {
     const phoneRegex = /^9\d{9}$/;
@@ -233,9 +248,10 @@ export default function Profile() {
               </button>
 
               {/* QR an Item */}
-              <button 
-                onClick={() => setPage("qrItem")} 
-                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100">
+              <button
+                onClick={() => setPage("qrItem")}
+                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
+              >
                 <QRIcon />
                 <p className="flex-1 text-sm text-left text-[#4B2D23]">
                   QR an Item
@@ -245,7 +261,10 @@ export default function Profile() {
 
               {/* Log out */}
               <button
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  localStorage.clear();
+                  navigate("/");
+                }}
                 className="flex items-center gap-4 px-4 py-4 w-full"
               >
                 <LogoutIcon />
@@ -290,7 +309,7 @@ export default function Profile() {
         </div>
 
         <div className="px-5 py-5 flex flex-col gap-4">
-          {/* Avatar — no edit */}
+          {/* Avatar */}
           <div className="flex justify-center mb-2">
             <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
               <AccountDetailsIcon />
@@ -445,6 +464,7 @@ export default function Profile() {
       </div>
     );
   }
+
   // =====================
   // QR ITEM PAGE
   // =====================
@@ -452,4 +472,3 @@ export default function Profile() {
     return <QRItem onBack={() => setPage("main")} />;
   }
 }
-
