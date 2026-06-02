@@ -36,7 +36,7 @@ function Login() {
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: JSON.stringify({ email, password,}),
       });
       const data = await res.json();
       if (res.ok) {
@@ -48,9 +48,7 @@ function Login() {
         localStorage.setItem("last_name", data.user.last_name || "");
         localStorage.setItem("email", data.user.email || "");
         localStorage.setItem("student_number", data.user.student_number || "");
-        if (data.refreshToken) {
-          localStorage.setItem("refreshToken", data.refreshToken);
-        }
+        localStorage.setItem("refreshToken", data.refreshToken);
 
         // Role based redirect
         if (data.user.user_role === "super_admin") {
