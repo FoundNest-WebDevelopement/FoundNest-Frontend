@@ -43,13 +43,17 @@ function LandingPage() {
 
     
         <p className="text-white text-xs text-center leading-relaxed opacity-80">
+<<<<<<< HEAD
         Use Institutional account to access FoundNest.
+=======
+        Use your Institutional account to access FoundNest.
+>>>>>>> 77b6d083ed144b2560673d4493ff382004123b62
         </p>
 
         <button
           onClick={() => navigate('/login')}
-          className="w-full py-3 rounded-md text-sm"
-          style={{ backgroundColor: '#FFEFEF', color: '#000000' }}
+          className="w-full py-3 rounded-md text-sm font-semibold "
+          style={{ backgroundColor: "#FFEFEF", color: "#990000" }}
         >
           Log In
         </button>
