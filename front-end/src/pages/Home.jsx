@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Search, ChevronRight, Calendar, MapPin } from "lucide-react";
+
+const API_URL = "http://localhost:5000/api";
 
 const LostItemIcon = () => (
   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -24,27 +27,82 @@ const DropoffIcon = () => (
   </svg>
 );
 
-const recentFinds = [
-  {
-    id: 1,
-    name: "Aquaflask Tumbler",
-    date: "March 10, 2026",
-    time: "3:00 pm",
-    location: "Mendoza Hall",
-    image: null,
-  },
-  {
-    id: 2,
-    name: "iPhone 15 Pro Max",
-    date: "March 12, 2026",
-    time: "12:30 pm",
-    location: "Pimentel Hall",
-    image: null,
-  },
-];
-
 export default function Home() {
   const navigate = useNavigate();
+  const firstName = localStorage.getItem("first_name") || "User";
+  const user_id = localStorage.getItem("user_id");
+  const token = localStorage.getItem("token");
+
+  const [recentFinds, setRecentFinds] = useState([]);
+  const [latestReport, setLatestReport] = useState(null);
+  const [loadingFinds, setLoadingFinds] = useState(true);
+  const [loadingReport, setLoadingReport] = useState(true);
+
+  // Fetch recent found items
+  useEffect(() => {
+    const fetchRecentFinds = async () => {
+      try {
+        const res = await fetch(`${API_URL}/found-reports`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setRecentFinds(data.slice(0, 3));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingFinds(false);
+      }
+    };
+    fetchRecentFinds();
+  }, []);
+
+  // Fetch user's latest lost report
+  useEffect(() => {
+    const fetchLatestReport = async () => {
+      try {
+        const res = await fetch(`${API_URL}/lost-reports`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          // Filter by user and get latest
+          const userReports = data.filter(
+            (r) => String(r.user_id) === String(user_id)
+          );
+          if (userReports.length > 0) {
+            setLatestReport(userReports[0]);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingReport(false);
+      }
+    };
+    fetchLatestReport();
+  }, []);
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "—";
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-PH", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "—";
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("en-PH", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   return (
     <div
@@ -54,7 +112,7 @@ export default function Home() {
       {/* Greeting + Search */}
       <div className="px-5 pt-6 pb-4">
         <h1 className="text-white text-2xl font-bold leading-tight">
-          Hello, Manuel!
+          Hello, {firstName}!
         </h1>
         <p className="text-white text-2xl font-bold leading-tight mb-4">
           Searching for something?
@@ -76,12 +134,9 @@ export default function Home() {
         <p className="text-white text-base font-bold mb-2">
           How can the Nest help you today?
         </p>
-        {/* Divider */}
         <div className="w-full h-px bg-white opacity-40 mb-4"></div>
 
-        {/* Action Cards */}
         <div className="flex flex-col gap-3">
-          {/* Report an Item */}
           <button
             onClick={() => navigate("/report")}
             className="flex items-center gap-4 rounded-2xl px-4 py-4 w-full text-left"
@@ -89,7 +144,7 @@ export default function Home() {
           >
             <LostItemIcon />
             <div className="flex-1">
-              <p className="text-sm font-bold text-[#4B2D23]">Lost an Item</p>
+              <p className="text-sm font-bold text-[#4B2D23]">Lost an Item?</p>
               <p className="text-xs text-[#4B2D23] opacity-70 mt-0.5">
                 File a detailed report to start the search.
               </p>
@@ -97,7 +152,6 @@ export default function Home() {
             <ChevronRight size={18} color="#4B2D23" />
           </button>
 
-          {/* Browse the Nest */}
           <button
             onClick={() => navigate("/find")}
             className="flex items-center gap-4 rounded-2xl px-4 py-4 w-full text-left"
@@ -113,7 +167,6 @@ export default function Home() {
             <ChevronRight size={18} color="#4B2D23" />
           </button>
 
-          {/* Drop-off Locations */}
           <button
             onClick={() => navigate("/map")}
             className="flex items-center gap-4 rounded-2xl px-4 py-4 w-full text-left"
@@ -143,37 +196,61 @@ export default function Home() {
             Go to My Reports <ChevronRight size={14} color="#F9E055" />
           </button>
         </div>
-        {/* Divider */}
         <div className="w-full h-px bg-white opacity-40 mb-3"></div>
 
-        {/* Report Card */}
-        <div className="bg-white rounded-2xl px-4 py-4">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="text-xs text-gray-500">Lost Item Name:</p>
-              <p className="text-sm font-bold text-[#4B2D23]">Black Umbrella</p>
-            </div>
-            <span
-              className="text-xs font-semibold px-3 py-1 rounded-full"
-              style={{ backgroundColor: "#FFD700", color: "#4B2D23" }}
-            >
-              Potential Match Found!
-            </span>
+        {loadingReport ? (
+          <div className="flex justify-center py-4">
+            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <div className="w-full h-px bg-gray-200 mb-3"></div>
-          <div className="flex justify-between items-center">
-            <button className="flex items-center gap-1 text-xs text-[#4B2D23]">
-              <i className="fa-regular fa-pen-to-square text-xs"></i>
-              Edit Report
-            </button>
+        ) : latestReport ? (
+          <div className="bg-white rounded-2xl px-4 py-4">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="text-xs text-gray-500">Lost Item Name:</p>
+                <p className="text-sm font-bold text-[#4B2D23]">
+                  {latestReport.item_name}
+                </p>
+              </div>
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full"
+                style={{
+                  backgroundColor:
+                    latestReport.status === "matched" ? "#FFD700" : "#E0E0E0",
+                  color: "#4B2D23",
+                }}
+              >
+                {latestReport.status === "matched"
+                  ? "Potential Match Found!"
+                  : latestReport.status === "open"
+                  ? "Searching..."
+                  : latestReport.status}
+              </span>
+            </div>
+            <div className="w-full h-px bg-gray-200 mb-3"></div>
+            <div className="flex justify-between items-center">
+              <button className="flex items-center gap-1 text-xs text-[#4B2D23]">
+                <i className="fa-regular fa-pen-to-square text-xs"></i>
+                Edit Report
+              </button>
+              <button
+                onClick={() => navigate("/report")}
+                className="flex items-center gap-1 text-xs text-[#4B2D23] font-semibold"
+              >
+                View Matches →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl px-4 py-4 text-center">
+            <p className="text-xs text-gray-400">No reports yet.</p>
             <button
               onClick={() => navigate("/report")}
-              className="flex items-center gap-1 text-xs text-[#4B2D23] font-semibold"
+              className="text-xs text-[#990000] font-semibold mt-1"
             >
-              View Matches →
+              File a report →
             </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Recent Finds Section */}
@@ -188,46 +265,56 @@ export default function Home() {
             Go to Found Items <ChevronRight size={14} color="#F9E055" />
           </button>
         </div>
-        {/* Divider */}
         <div className="w-full h-px bg-white opacity-40 mb-3"></div>
 
-        {/* Recent Finds Cards */}
-        <div className="flex flex-col gap-3">
-          {recentFinds.map((item) => (
-            <div
-              key={item.id}
-              className="relative rounded-2xl overflow-hidden h-52"
-              style={{ backgroundColor: "#7B1F1F", border: "1px solid rgba(255,255,255,0.2)" }}
-            >
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-[#7B1F1F]" />
-              )}
+        {loadingFinds ? (
+          <div className="flex justify-center py-4">
+            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : recentFinds.length === 0 ? (
+          <div className="bg-white/20 rounded-2xl px-4 py-6 text-center">
+            <p className="text-white text-xs opacity-70">No recent finds yet.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {recentFinds.map((item) => (
+              <div
+                key={item.found_report_id}
+                className="relative rounded-2xl overflow-hidden h-52"
+                style={{ backgroundColor: "#7B1F1F", border: "1px solid rgba(255,255,255,0.2)" }}
+              >
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.item_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#7B1F1F]" />
+                )}
 
-              {/* Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 px-4 py-3">
-                <p className="text-white font-bold text-base mb-2">{item.name}</p>
-                {/* White divider line */}
-                <div className="w-full h-px bg-white opacity-60 mb-2"></div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar size={12} color="white" />
-                  <p className="text-white text-xs">
-                    {item.date} | {item.time}
+                <div className="absolute bottom-0 left-0 right-0 px-4 py-3">
+                  <p className="text-white font-bold text-base mb-2">
+                    {item.item_name}
                   </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={12} color="white" />
-                  <p className="text-white text-xs">{item.location}</p>
+                  <div className="w-full h-px bg-white opacity-60 mb-2"></div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar size={12} color="white" />
+                    <p className="text-white text-xs">
+                      {formatDate(item.found_date)} | {formatTime(item.found_date)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={12} color="white" />
+                    <p className="text-white text-xs">
+                      {item.location_found || "—"}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

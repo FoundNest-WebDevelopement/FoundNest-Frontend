@@ -150,15 +150,36 @@ export default function Profile() {
     setEditingContact(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!validateContact(contactNumber)) {
       setContactError("Please enter a valid contact number.");
       return;
     }
-    setContactError("");
-    setEditingContact(false);
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 3000);
+    try {
+      const user_id = localStorage.getItem("user_id");
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`http://localhost:5000/api/profile/${user_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ contact_number: `+63${contactNumber}` }),
+      });
+
+      if (res.ok) {
+        setContactError("");
+        setEditingContact(false);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      } else {
+        const data = await res.json();
+        setContactError(data.message || "Failed to update contact number.");
+      }
+    } catch (err) {
+      setContactError("Something went wrong. Please try again.");
+    }
   };
 
   const handleBackFromDetails = () => {

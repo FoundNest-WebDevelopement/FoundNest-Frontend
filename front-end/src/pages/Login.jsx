@@ -49,6 +49,7 @@ function Login() {
         localStorage.setItem("email", data.user.email || "");
         localStorage.setItem("student_number", data.user.student_number || "");
         localStorage.setItem("refreshToken", data.refreshToken);
+        localStorage.setItem("course_section", data.user.course_section || "");
 
         // Role based redirect
         if (data.user.user_role === "super_admin") {

@@ -71,9 +71,9 @@ const categories = [
 ];
 
 const emptyForm = {
-  ownerName: "",
-  studentNumber: "",
-  courseSection: "",
+  ownerName: `${localStorage.getItem("first_name") || ""} ${localStorage.getItem("last_name") || ""}`.trim(),
+  studentNumber: localStorage.getItem("student_number") || "",
+  courseSection: localStorage.getItem("course_section") || "",
   contactNumber: "",
   itemName: "",
   category: "",
