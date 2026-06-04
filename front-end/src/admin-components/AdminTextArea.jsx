@@ -3,12 +3,13 @@ export default function AdminTextArea({
   placeholder,
   value,
   onChange = () => {},
-  error
+  error,
+  titlePrimary
 }) {
   return (
     <fieldset className="fieldset">
 
-      <legend className="fieldset-legend font-medium text-sm">
+      <legend className={`fieldset-legend font-medium text-sm ${titlePrimary? "text-primary" : "text-black"}`}>
         {title}
       </legend>
 

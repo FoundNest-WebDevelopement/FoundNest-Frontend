@@ -3,6 +3,9 @@ export default function AdminLocationDropDown({
   placeholder,
   value = "",
   options = [],
+  hidden,
+  disabled,
+  reqField,
   onChange = () => {}
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
@@ -13,17 +16,18 @@ export default function AdminLocationDropDown({
       {title && (
         <legend className="fieldset-legend font-medium text-sm">
           {title}
+           {reqField&&<span className="text-primary">*</span>}
         </legend>
       )}
 
       <select
-        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
+        className="select bg-white rounded-md text- w-full border border-[#DDD9CF] text-black" 
         value={value}
         onChange={(e) =>{ onChange(e.target.value)}}
         required
       >
 
-        <option disabled hidden value="">
+        <option hidden={hidden} disabled={disabled} value="">
           {placeholder}
         </option>
 

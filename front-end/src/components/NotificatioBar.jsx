@@ -1,8 +1,36 @@
 import logo from "../assets/logo.png";
 import { NavLink } from "react-router-dom";
 import { Bell } from "lucide-react";
+import { useEffect, useState } from "react";
+
+
 
 export default function NotificationBar() {
+
+
+  const API_URL = import.meta.env.VITE_API_URL;
+  const [unreadCount, setUnreadCount] = useState(0);
+  const userId = 2;
+
+  useEffect(() => {
+  const fetchUnreadCount = () => {
+    fetch(`${API_URL}/api/notifications/unread-count/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setUnreadCount(data.unreadCount);
+      })
+      .catch(console.error);
+  };
+
+  // Run First
+  fetchUnreadCount();
+
+  // RUN EVRY 10secs
+  const interval = setInterval(fetchUnreadCount, 5000);
+
+  return () => clearInterval(interval);
+}, [API_URL, userId]);
+
   return (
     <div className="flex w-full shadow-sm fixed top-0 left-0 bg-white z-100 py-2">
 
@@ -32,7 +60,14 @@ export default function NotificationBar() {
             isActive ? (
               <Bell className="size-6 fill-current" />
             ) :
-              <Bell className="size-6" />
+              <div className="relative">
+                <Bell className="size-6" />
+
+                {unreadCount > 0 && (
+                  <i className="fa-solid fa-circle text-(--color-quaternary) text-[10px] ml-2 absolute top-0 right-0"></i>
+                )}
+              </div>
+
           }
         </NavLink>
       </div>

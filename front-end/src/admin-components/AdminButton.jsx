@@ -11,7 +11,8 @@ export default function AdminButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex gap-3  p-2 rounded-md  items-center font-medium 
+      className={`flex gap-3  p-2 rounded-md  items-center font-medium cursor-pointer transition-transform duration-100
+     active:scale-95
         ${isSolid? "bg-primary text-white" : "text-[#1A1208]"}
         ${isBorder? "border border-primary" : ""}
         ${isShadow? "shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]" : ""}`}

@@ -8,9 +8,11 @@ export default function AdminStatusDropDown({
   return (
     <fieldset className="fieldset">
 
-      <legend className="fieldset-legend font-medium text-sm">
-        {title}
-      </legend>
+         {title && (
+        <legend className="fieldset-legend font-medium text-sm">
+          {title}
+        </legend>
+      )}
 
       <select
         className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
@@ -19,7 +21,7 @@ export default function AdminStatusDropDown({
         required
       >
 
-        <option disabled hidden value="">
+        <option  value="">
           {placeholder}
         </option>
 

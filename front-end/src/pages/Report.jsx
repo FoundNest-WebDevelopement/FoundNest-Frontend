@@ -577,8 +577,8 @@ const handleChange = async (e) => {
 
         }
         {showImageOptions && (
-              <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50">
-                <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2">
+              <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
+                <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
                   <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
                       setShowImageOptions(false);
                       cameraInputRef.current?.click();

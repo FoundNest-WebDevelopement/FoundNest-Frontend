@@ -5,6 +5,7 @@ import AdminTextArea from "./AdminTextArea";
 import AdminDateInput from "./AdminDateInput";
 import AdminHourInput from "./AdminHourInput";
 import AdminLocationDropDown from "./AdminLocationDropDown";
+import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
 
 
 export default function FoundItemModal({
@@ -12,10 +13,12 @@ export default function FoundItemModal({
     setOpen,
     categories = [],
     locations = [],
+    allLocations = [],
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [adminID] = useState(1);
+    const [userId] = useState(2);
     const [selectedFile, setSelectedFile] = useState(null);
     const [image, setImage] = useState(null);
     const [itemName, setItemName] = useState("");
@@ -28,19 +31,52 @@ export default function FoundItemModal({
     const [surrenderedBy, setSurrenderedBy] = useState("");
     const [additionalNotes, setAdditionalNotes] = useState("");
     const [currentLocation, setCurrentLocation] = useState("");
+    const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const fileInputRef = useRef(null);
+
+    function isValidPastOrToday(dateStr) {
+        if (!dateStr) return false;
+
+        const chosen = new Date(dateStr);
+        if (Number.isNaN(chosen.getTime())) return false;
+
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        return chosen <= today;
+    }
+
+    function isTimeNotFuture(dateStr, timeStr) {
+        if (!dateStr || !timeStr) return false;
+
+        const todayDate = new Date().toISOString().split("T")[0];
+        const chosenDate = new Date(dateStr).toISOString().split("T")[0];
+
+        if (chosenDate < todayDate) return true;
+
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        const chosenDateTime = new Date(dateStr);
+        chosenDateTime.setHours(hours, minutes, 0, 0);
+
+        return chosenDateTime <= new Date();
+    }
+
+    const dateValid = isValidPastOrToday(dateFound);
+    const timeValid = dateValid && isTimeNotFuture(dateFound, timeFound);
 
     const isFormValid =
         selectedFile &&
-        itemName &&
+        itemName.trim() &&
         category &&
-        description &&
         locationFound &&
         dateFound &&
         timeFound &&
-        currentLocation;
+        dateValid &&
+        currentLocation &&
+        timeValid;
 
     const resetForm = () => {
         setSelectedFile(null);
@@ -55,6 +91,7 @@ export default function FoundItemModal({
         setSurrenderedBy("");
         setAdditionalNotes("");
         setCurrentLocation("");
+        setSpecificLocation("")
 
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -113,11 +150,18 @@ export default function FoundItemModal({
         }
     };
 
-    const handleSubmit = async () => {
-        if (!isFormValid) return;
+    const handleDateChange = (value) => {
+        setDateFound(value);
+        setTimeFound("");
+    };
 
+    const handleSubmit = async () => {
+       
+        if (!isFormValid) return;
+            
         try {
             setIsSubmitting(true);
+            console.log("specificLocation:", specificLocation);
 
             const formData = new FormData();
             formData.append("image", selectedFile);
@@ -127,10 +171,12 @@ export default function FoundItemModal({
             formData.append("description", description);
             formData.append("contents", contents);
             formData.append("location_found", locationFound);
+            formData.append("specific_location", specificLocation);
             formData.append("found_date", `${dateFound} ${timeFound}`);
             formData.append("reported_by", surrenderedBy);
             formData.append("additional_notes", additionalNotes);
             formData.append("office_id", currentLocation);
+            formData.append("user_id", userId);
 
             const response = await fetch(`${API_URL}/api/found-reports`, {
                 method: "POST",
@@ -151,6 +197,8 @@ export default function FoundItemModal({
             setIsSubmitting(false);
         }
     };
+
+    
 
     return (
         <>
@@ -175,21 +223,26 @@ export default function FoundItemModal({
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
 
             <div>
-                <p className="font-medium text-sm">
-                    Surrendered Item Photo *
+                <p className="font-medium text-sm ">
+                    Surrendered Item Photo <span className="text-primary">*</span>
                 </p>
 
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                    className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                 >
                     {image ? (
-                        <img
+                        <>
+                            <img
                             src={image}
                             alt="Selected found item"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                         />
+                         <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                                                        Click image to replace photo.
+                                                    </span>
+                        </>
                     ) : (
                         <>
                             <i className="fa-regular fa-camera text-(--color-quaternary) text-4xl"></i>
@@ -208,6 +261,8 @@ export default function FoundItemModal({
                 {isAnalyzing && (
                     <p className="text-xs text-primary mt-2">Analyzing image...</p>
                 )}
+                
+                
             </div>
 
             <AdminTextField
@@ -215,6 +270,7 @@ export default function FoundItemModal({
                 placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
                 value={itemName}
                 onChange={setItemName}
+                reqField={true}
             />
 
             <AdminCategoriesDropdown
@@ -223,6 +279,8 @@ export default function FoundItemModal({
                 value={category}
                 onChange={setCategory}
                 options={categories}
+                reqField={true}
+           
             />
 
             <AdminTextArea
@@ -230,6 +288,8 @@ export default function FoundItemModal({
                 placeholder="Brand, Model, Size, Color, Material, etc."
                 value={description}
                 onChange={setDescription}
+          
+
             />
 
             <AdminTextField
@@ -237,22 +297,56 @@ export default function FoundItemModal({
                 placeholder="e.g., Cash amount, ID name"
                 value={contents}
                 onChange={setContents}
+         
+            />
+            <AdminAllLocationDropDown
+                title="Location Found"
+                value={locationFound}
+                placeholder="Select Found Location"
+                onChange={setLocationFound}
+                options={allLocations}
+                reqField={true}
+               
             />
             <AdminTextField
-                title="Location Found *"
-                value={locationFound}
-                onChange={setLocationFound}
+                title="Specific Location"
+                value={specificLocation}
+                onChange={setSpecificLocation}
+              
             />
+
             <AdminDateInput
                 title="Date Found"
                 value={dateFound}
-                onChange={setDateFound}
+                onChange={handleDateChange}
+                reqField={true}
+                error={dateFound && !dateValid}
+                max={new Date().toISOString().split("T")[0]}
+             
             />
+            {dateFound && !dateValid && (
+                <p className="text-xs text-red-500 mt-1 ml-1">
+                    Date found cannot be in the future.
+                </p>
+            )}
             <AdminHourInput
                 title="Time Found"
                 value={timeFound}
                 onChange={setTimeFound}
+                reqField={true}
+                error={dateValid && timeFound && !timeValid}
+                disabled={!dateValid}
             />
+            {dateFound && !dateValid && (
+                <p className="text-xs text-yellow-500 mt-1 ml-1">
+                    Enter a valid date first.
+                </p>
+            )}
+            {dateValid && timeFound && !timeValid && (
+                <p className="text-xs text-red-500 mt-1 ml-1">
+                    Time found cannot be in the future.
+                </p>
+            )}
             <AdminTextField
                 title="Surrendered by (Recommended)"
                 value={surrenderedBy}
@@ -265,11 +359,14 @@ export default function FoundItemModal({
                 onChange={setAdditionalNotes}
             />
             <AdminLocationDropDown
+            hidden={true}
+            disabled={true}
                 title="Current Location"
                 placeholder="Select Current Location"
                 value={currentLocation}
                 onChange={setCurrentLocation}
                 options={locations}
+                reqField={true}
             />
 
             

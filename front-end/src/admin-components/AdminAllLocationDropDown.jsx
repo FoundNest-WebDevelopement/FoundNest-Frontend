@@ -1,5 +1,4 @@
-export default function AdminCategoriesDropdown({
-  title,
+export default function AdminAllLocationDropDown({title,
   placeholder,
   value = "",
   options = [],
@@ -12,34 +11,34 @@ export default function AdminCategoriesDropdown({
     <fieldset className="fieldset">
 
       {title && (
-        <legend className={`fieldset-legend text-sm font-medium `}>
+        <legend className={`fieldset-legend font-medium text-sm`}>
           {title}
-          {reqField&&<span className="text-primary">*</span>}
+           {reqField&&<span className="text-primary">*</span>}
         </legend>
       )}
 
       <select
         className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>{ onChange(e.target.value)}}
         required
       >
 
-        <option  value="">
+        <option hidden disabled value="">
           {placeholder}
         </option>
 
-        {safeOptions.map((option) => (
+        {safeOptions.map((option, index) => (
           <option
-            key={option.category_id}
-            value={option.category_id}
+            key={index}
+            value={option.name}
           >
-            {option.category_name}
+            {option.name}
           </option>
         ))}
 
       </select>
 
     </fieldset>
-  );
+    )
 }
