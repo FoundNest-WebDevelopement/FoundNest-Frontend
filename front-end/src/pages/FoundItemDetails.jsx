@@ -26,7 +26,15 @@ const handleTouchEnd = (e) => {
 };
 const [howToClaim,setHowToClaim] = useState(false);
     useEffect(() => {
-        fetch(`${API_URL}/api/found-reports/${id}`)
+        const token = localStorage.getItem("token")
+        fetch(`${API_URL}/api/found-reports/${id}`,
+            {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+
+        )
             .then((res) => res.json())
             .then((data) => {
                 console.log(data);

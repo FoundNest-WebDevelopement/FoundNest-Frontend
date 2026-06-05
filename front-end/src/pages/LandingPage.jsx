@@ -43,11 +43,7 @@ function LandingPage() {
 
     
         <p className="text-white text-xs text-center leading-relaxed opacity-80">
-<<<<<<< HEAD
-        Use Institutional account to access FoundNest.
-=======
         Use your Institutional account to access FoundNest.
->>>>>>> 77b6d083ed144b2560673d4493ff382004123b62
         </p>
 
         <button

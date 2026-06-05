@@ -14,7 +14,9 @@ export default function ItemManagement() {
     const API_URL = import.meta.env.VITE_API_URL;
 
     //test
-
+    const adminId = localStorage.getItem("admin_id");
+    console.log(adminId)
+    console.log(localStorage);
 
     const [openLogItem, setOpenLogItem] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -115,17 +117,23 @@ export default function ItemManagement() {
                 console.error(err);
             });
     }, []);
-    useEffect(() => {
-        fetch(`${API_URL}/api/found-reports`)
-            .then((res) => res.json())
-            .then((data) => {
-                console.log(data);
-                setReports(data);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
+   useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    fetch(`${API_URL}/api/found-reports`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            console.log(data);
+            setReports(data);
+        })
+        .catch((err) => {
+            console.error(err);
+        });
+}, []);
     useEffect(() => {
         fetch(`${API_URL}/api/offices`)
             .then((res) => res.json())

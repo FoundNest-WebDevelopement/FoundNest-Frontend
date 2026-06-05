@@ -105,10 +105,6 @@ export default function Home() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className=" h-screen mt-13">
-      <h1>Home Page</h1>
-=======
     <div
       className="flex flex-col min-h-screen overflow-y-auto mt-13 mb-16"
       style={{ backgroundColor: "#990000" }}
@@ -320,7 +316,6 @@ export default function Home() {
           </div>
         )}
       </div>
->>>>>>> 77b6d083ed144b2560673d4493ff382004123b62
     </div>
   );
 }

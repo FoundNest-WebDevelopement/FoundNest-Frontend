@@ -15,8 +15,8 @@ export default function ItemManagementTable({
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const userId = 2;
-    const adminId = 1;
+    const userId = localStorage.getItem("user_id");
+    const adminId = localStorage.getItem("admin_id");
    
 
     const [selectedImage, setSelectedImage] = useState(null);

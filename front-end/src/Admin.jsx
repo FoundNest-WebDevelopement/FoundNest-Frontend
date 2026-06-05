@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {  Routes, Route } from "react-router-dom";
 import AdminLayout from "./layout/AdminLayout";
 import Dashboard from "./admin-pages/Dashboard";
 import ItemManagement from "./admin-pages/ItemManagement";
@@ -8,11 +8,12 @@ import Feedbacks from "./admin-pages/Feedbacks";
 import Transactions from "./admin-pages/Tansactions";
 import AdminProfile from "./admin-pages/AdminProfile";
 
+
 function Admin() {
   return (
-    <BrowserRouter>
+
       <Routes>
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="item_management" element={<ItemManagement/>} />
           <Route path="report_management" element={<ReportManagement/>} />
@@ -22,7 +23,7 @@ function Admin() {
           <Route path="admin_profile" element={<AdminProfile/>} />
         </Route>
       </Routes>
-    </BrowserRouter>
+
   );
 }
 

@@ -84,7 +84,14 @@ const locationLabel =
   ];
 
   useEffect(() => {
-    fetch(`${API_URL}/api/found-reports`)
+     const token = localStorage.getItem("token");
+    fetch(`${API_URL}/api/found-reports`
+      ,     {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+    )
       .then((res) => res.json())
       .then((data) => {
         console.log(data);
@@ -96,7 +103,9 @@ const locationLabel =
   }, []);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/categories`)
+
+    fetch(`${API_URL}/api/categories`
+    )
       .then((res) => res.json())
       .then((data) => {
         console.log(data);
@@ -267,7 +276,7 @@ const locationLabel =
   return (
     <>
       <PageLabel label="Search Item" />
-      <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col">
+      <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col pb-25">
         {spaces && buildings && gates && buildings && categories && reports ?
           (
             <>

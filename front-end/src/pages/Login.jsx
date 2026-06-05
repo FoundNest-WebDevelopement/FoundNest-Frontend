@@ -51,11 +51,14 @@ function Login() {
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("course_section", data.user.course_section || "");
 
+
         // Role based redirect
         if (data.user.user_role === "super_admin") {
-          navigate("/superadmin/dashboard");
+          navigate("/superadmin/");
         } else if (data.user.user_role === "admin") {
-          navigate("/admin/dashboard");
+          localStorage.setItem("admin_id", data.user.admin_id);
+          localStorage.setItem("office_location", data.user.office_location);
+          navigate("/admin");
         } else {
           navigate("/home");
         }

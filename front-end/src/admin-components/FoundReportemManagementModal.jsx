@@ -17,14 +17,16 @@ export default function FoundReportItemManagementModal(
     locations = [],
     onUpdated,
     allLocations = [],
-    userId,
-    adminId}
+   }
 ){
 
-
+    console.log(selectedItem)
 
     const API_URL = import.meta.env.VITE_API_URL;
      const [isLoading, setIsLoading] = useState(false);
+     const adminId = localStorage.getItem("admin_id");
+     console.log("ADMINNN" +  adminId)
+     const userId = localStorage.getItem("user_id");
 
        //HANDLE STATUS UPDATE TAB
     const [claimTab, setClaimTab] = useState(false);
@@ -85,6 +87,8 @@ export default function FoundReportItemManagementModal(
         claimForm.verification_details.trim();
     const handleItemRelease = async () => {
         try {
+ 
+
             if (!selectedItem?.found_report_id) {
                 throw new Error(
                     "Please select an item to release."
@@ -164,12 +168,15 @@ export default function FoundReportItemManagementModal(
                 "claimant_photo",
                 selectedFile
             );
-
+            const token = localStorage.getItem("token")
             const response = await fetch(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}/claim`,
                 {
                     method: "POST",
                     body: formData,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
                 }
             );
 
@@ -182,8 +189,14 @@ export default function FoundReportItemManagementModal(
             }
 
             // Refresh table
+         
             const reportsResponse = await fetch(
-                `${API_URL}/api/found-reports`
+                `${API_URL}/api/found-reports`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                }
             );
 
             const reportsData =
@@ -365,12 +378,14 @@ export default function FoundReportItemManagementModal(
 
             const formData = new FormData();
             formData.append("image", file);
-
+             const token = localStorage.getItem("token");
             const response = await fetch(
                 `${API_URL}/api/gemini-item-listing/describe-item`,
                 {
+                    
                     method: "POST",
                     body: formData,
+                    Authorization : `Bearer ${token}`
                 }
             );
 
@@ -455,12 +470,13 @@ export default function FoundReportItemManagementModal(
             if (editImageFile) {
                 formData.append("image", editImageFile);
             }
-
+            const token = localStorage.getItem("token");
             const response = await fetch(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}`,
                 {
                     method: "PUT",
                     body: formData,
+                    Authorization: `Bearer ${token}`,
                 }
             );
 
@@ -469,9 +485,13 @@ export default function FoundReportItemManagementModal(
             if (!response.ok) {
                 throw new Error(data.error || "Failed to update found item");
             }
-
+     
             const refreshedResponse = await fetch(
-                `${API_URL}/api/found-reports`
+                `${API_URL}/api/found-reports`,{
+                    headers : {
+                        Authorization : `Bearer ${token}`,
+                    }
+                }
             );
             const refreshedReports = await refreshedResponse.json();
 
@@ -501,8 +521,14 @@ export default function FoundReportItemManagementModal(
     const fetchItemHistory = async (itemId) => {
         setIsLoading(true);
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch(
-                `${API_URL}/api/item-history/${itemId}`
+                `${API_URL}/api/item-history/${itemId}` ,
+                {
+                    headers : {
+                        Authorization : `Bearer ${token}`
+                    }
+                }
             );
 
             const data = await response.json();
@@ -531,8 +557,13 @@ export default function FoundReportItemManagementModal(
 
     // for claim tab
     const fetchLostReports = async (search) => {
+       const token = localStorage.getItem("token");
         const response = await fetch(
-            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`
+            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`,{
+                headers : {
+                    Authorization : `Bearer ${token}`,
+                },
+            }
         );
 
         const data = await response.json();
@@ -781,7 +812,7 @@ export default function FoundReportItemManagementModal(
                                                             <div className=" flex">
                                                                 <div className="flex flex-col text-xs mt-5 flex-1">
                                                                     <p className="text-[#6B5C42]">REPORTED BY</p>
-                                                                    <p className="text-black">James Ian Antonio</p>
+                                                                    <p className="text-black">{selectedItem.admin_full_name}</p>
                                                                 </div>
                                                                 <div className="flex flex-col text-xs mt-5 flex-1">
                                                                     <p className="text-[#6B5C42]">DATE LOGGED</p>

@@ -13,21 +13,24 @@ import { useNavigate } from "react-router-dom";
 export default function Notification() {
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
-    const userId = 2;
+    const userId = localStorage.getItem("user_id");
+    
+    
 
     const [notifications, setNotifications] = useState();
     const [notificationId, setNotificationId] = useState();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [notificationIndex, setNotificationIndex] = useState();
 
     const handleNotificationClick = async (id, index) => {
   try {
     setIsLoading(true);
-
+    const token = localStorage.getItem("token");
     await fetch(
       `${API_URL}/api/notifications/${id}/read`,
       {
         method: "PATCH",
+        Authorization : `Bearer ${token}`
       }
     );
 
@@ -44,14 +47,25 @@ export default function Notification() {
 };
 
     useEffect(() => {
-        fetch(`${API_URL}/api/notifications/user/${userId}`)
+        const token = localStorage.getItem("token")
+        fetch(`${API_URL}/api/notifications/user/${userId}`,
+                   {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+        )
             .then((res) => res.json())
             .then((data) => {
                 console.log(data);
                 setNotifications(data);
+                if(data){
+                    setIsLoading(false);
+                }
             })
             .catch((err) => {
                 console.error(err);
+                setIsLoading(false);
             });
     }, [])
 

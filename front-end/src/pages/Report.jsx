@@ -19,8 +19,10 @@ import InfoIcon from "../assets/info_icon.png"
 import toast from "react-hot-toast";
 
 export default function Report() {
+
   const API_URL = import.meta.env.VITE_API_URL;
   const [userID, setUserID] = useState(2);
+
 
 
   //new
@@ -88,7 +90,7 @@ export default function Report() {
 
   const handleCancel = () => {
     setIsCancel(true);
-  } 
+  }
   const handleKeepEditing = () => {
     setIsCancel(false);
   }
@@ -98,20 +100,22 @@ export default function Report() {
     setSubmitted(true);
 
     toast.custom((e) => (
-          <Toast icon={InfoIcon} message="Edit has been cancelled."/>
-        ));
+      <Toast icon={InfoIcon} message="Edit has been cancelled." />
+    ));
   }
   const handleEditReport = () => {
     setNextPage(false);
     setSubmitted(false);
     setIsEdit(true);
-    
+
   }
 
   const handleUpdate = async () => {
 
-    try{
-    setIsUpdating(true);
+
+
+    try {
+      setIsUpdating(true);
       const formData = new FormData();
 
       formData.append("image", selectedFile);
@@ -126,11 +130,14 @@ export default function Report() {
         "lost_date",
         `${dateLost} ${timeLost}`
       );
-
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/lost-reports/${createdReportID}`,
         {
           method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         }
       );
@@ -147,20 +154,20 @@ export default function Report() {
       console.log(data);
 
 
-       
+
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
 
-      if(response.ok){
+      if (response.ok) {
         setIsUpdating(false);
         setSubmitted(true);
         toast.custom((e) => (
-          <Toast icon={InfoIcon} message="Report edited successfully."/>
+          <Toast icon={InfoIcon} message="Report edited successfully." />
         ));
       }
-    }catch (err) {
+    } catch (err) {
       console.error(err);
     }
 
@@ -168,7 +175,7 @@ export default function Report() {
   //new
   const handleSubmit = async () => {
     try {
-  
+
       setIsSubmitting(true);
       const formData = new FormData();
 
@@ -184,11 +191,14 @@ export default function Report() {
         "lost_date",
         `${dateLost} ${timeLost}`
       );
-
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/lost-reports`,
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         }
       );
@@ -199,7 +209,7 @@ export default function Report() {
       console.log(data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Something went wrong");+
+        throw new Error(data.error || "Something went wrong");
         setIsSubmitting(false);
       }
 
@@ -223,9 +233,9 @@ export default function Report() {
         fileInputRef.current.value = "";
       }
 
-      if(response.ok){
+      if (response.ok) {
         setIsSubmitting(false);
-        
+
 
         setCreatedReportID(data.report.lost_report_id);
         setCreatedItemID(data.item.item_id);
@@ -245,53 +255,56 @@ export default function Report() {
   //     setImage(URL.createObjectURL(file));
   //   }
   // };
-const handleChange = async (e) => {
-  const file = e.target.files[0];
+  const handleChange = async (e) => {
+    const file = e.target.files[0];
 
-  if (!file) return;
+    if (!file) return;
 
-  setSelectedFile(file);
-  setImage(URL.createObjectURL(file));
+    setSelectedFile(file);
+    setImage(URL.createObjectURL(file));
 
-  try {
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-    const formData = new FormData();
-    formData.append("image", file);
+      const formData = new FormData();
+      formData.append("image", file);
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/gemini-item-listing/describe-item`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
-    const response = await fetch(
-  "https://foundnest-backend.onrender.com/api/gemini-item-listing/describe-item",
-  {
-    method: "POST",
-    body: formData,
-  }
-);
+      const data = await response.json();
 
-    const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "AI analysis failed");
+      }
 
-    if (!response.ok) {
-      throw new Error(data.error || "AI analysis failed");
+      setItemName(data.itemName || "");
+      setDescription(data.detailedDescription || "");
+      setContents(data.contents || "");
+
+      const matchedCategory = categories.find(
+        (category) =>
+          category.category_name.toLowerCase() ===
+          data.category.toLowerCase()
+      );
+
+      if (matchedCategory) {
+        setCategoryID(String(matchedCategory.category_id));
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setItemName(data.itemName || "");
-    setDescription(data.detailedDescription || "");
-    setContents(data.contents || "");
-
-    const matchedCategory = categories.find(
-      (category) =>
-        category.category_name.toLowerCase() ===
-        data.category.toLowerCase()
-    );
-
-    if (matchedCategory) {
-      setCategoryID(String(matchedCategory.category_id));
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
 
 
@@ -307,6 +320,7 @@ const handleChange = async (e) => {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     fetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
@@ -320,11 +334,11 @@ const handleChange = async (e) => {
 
   return (
     <>
-      <div className={`${submitted? "hidden" : ""}`} >
-      <PageLabel label="Lost Item Report Form" />
+      <div className={`${submitted ? "hidden" : ""}`} >
+        <PageLabel label="Lost Item Report Form" />
       </div>
       <div className={`${submitted ? "bg-(--color-primary) flex flex-col items-center justify-center" : "bg-(--color-secondary)"}  min-h-screen px-4`}>
-        
+
 
         {!nextPage ?
           (<>
@@ -335,7 +349,7 @@ const handleChange = async (e) => {
                 <img
                   src={image}
                   alt="Uploaded"
-                  onClick={() => {setShowImageOptions(true)}}
+                  onClick={() => { setShowImageOptions(true) }}
                   className="w-full max-h-50 object-cover rounded-xl cursor-pointer hover:opacity-80 transition"
                 />
               ) : (
@@ -344,12 +358,12 @@ const handleChange = async (e) => {
                     <i className="fa-solid fa-plus text-white"></i>
                   </label> */}
                   <button
-  type="button"
-  onClick={() => setShowImageOptions(true)}
-  className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center"
->
-  <i className="fa-solid fa-plus text-white"></i>
-</button>
+                    type="button"
+                    onClick={() => setShowImageOptions(true)}
+                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center"
+                  >
+                    <i className="fa-solid fa-plus text-white"></i>
+                  </button>
                 </div>
               )}
               {/* <input
@@ -360,21 +374,21 @@ const handleChange = async (e) => {
                 onChange={handleChange}
               /> */}
               <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleChange}
-            />
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleChange}
+              />
 
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleChange}
-            />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleChange}
+              />
               {!image && (
                 <>
                   <p className="text-sm text-(--color-tertiary) opacity-70 font-medium mt-2">
@@ -394,23 +408,23 @@ const handleChange = async (e) => {
             <div className="pb-5"></div>
             <div className="flex justify-between items-center pb-20">
               <p className="text-xs">Page 1 out of 2</p>
-              
+
               <div className="flex gap-2">
-                  {isEdit?
+                {isEdit ?
                   (
-                  <>
-                    <ButtonNegative label="Cancel" onClick={handleCancel}  />
-                  </>
+                    <>
+                      <ButtonNegative label="Cancel" onClick={handleCancel} />
+                    </>
                   )
                   :
                   (
-                  <>
-              
-                  </>
+                    <>
+
+                    </>
                   )
-                  }
-                  <ButtonPositive label="Next" enable={isPage1Valid} onClick={() => setNextPage(true)} />
-                </div>
+                }
+                <ButtonPositive label="Next" enable={isPage1Valid} onClick={() => setNextPage(true)} />
+              </div>
             </div>
           </>)
           :
@@ -464,18 +478,18 @@ const handleChange = async (e) => {
                 <p className="text-xs">Page 2 out of 2</p>
                 <div className="flex gap-2">
                   <ButtonNegative label="Back" onClick={() => { setNextPage(false) }} />
-                  {isEdit?
-                  (
-                  <>
-                    <ButtonPositive label="Confirm" enable={timeValid} onClick={handleUpdate} />
-                  </>
-                  )
-                  :
-                  (
-                  <>
-                    <ButtonPositive label="Submit" enable={timeValid} onClick={handleSubmit} />
-                  </>
-                  )
+                  {isEdit ?
+                    (
+                      <>
+                        <ButtonPositive label="Confirm" enable={timeValid} onClick={handleUpdate} />
+                      </>
+                    )
+                    :
+                    (
+                      <>
+                        <ButtonPositive label="Submit" enable={timeValid} onClick={handleSubmit} />
+                      </>
+                    )
                   }
                 </div>
               </div>
@@ -492,38 +506,38 @@ const handleChange = async (e) => {
           (
             <>
               <div className="h-fit w-fit px-3 flex flex-col gap-8">
-                  <div className="h-28 w-full flex gap-2 justify-evenly ">
-                        <img className="h-full w-2/5" src={heart} alt="smiley heart" />
-                        <div className="flex flex-col gap-2 h-full w-full ">
-                            <p className="text-white font-bold text-md">Report Successful!</p>
-                            <p className="text-white/70 font-bold text-xs text-justify">We've secured your lost report and immediately started searching for a match. Rest assured, we'll notify you if we find it.</p>
-                        </div>
+                <div className="h-28 w-full flex gap-2 justify-evenly ">
+                  <img className="h-full w-2/5" src={heart} alt="smiley heart" />
+                  <div className="flex flex-col gap-2 h-full w-full ">
+                    <p className="text-white font-bold text-md">Report Successful!</p>
+                    <p className="text-white/70 font-bold text-xs text-justify">We've secured your lost report and immediately started searching for a match. Rest assured, we'll notify you if we find it.</p>
                   </div>
-                  <div className="h-full w-full rounded-xl  bg-white">
-                    <div className="h-full w-full flex flex-col gap-2 p-4">
-                      <p className=" font-bold text-xs">What happens next?</p>
-                      <div className="pl-5 flex flex-col gap-2">
-                        
-                        <li className=" text-xs">Your detailed description has been added to our records.</li>
-                        <li className=" text-xs">Our system is now automatically searching and comparing your report against all old and newly found items.</li>
-                        <li className=" text-xs">We will notify you immediately via email or in-app notifications if a potential match is reported by a finder..</li>
-                       
-                      </div>
-                      
+                </div>
+                <div className="h-full w-full rounded-xl  bg-white">
+                  <div className="h-full w-full flex flex-col gap-2 p-4">
+                    <p className=" font-bold text-xs">What happens next?</p>
+                    <div className="pl-5 flex flex-col gap-2">
+
+                      <li className=" text-xs">Your detailed description has been added to our records.</li>
+                      <li className=" text-xs">Our system is now automatically searching and comparing your report against all old and newly found items.</li>
+                      <li className=" text-xs">We will notify you immediately via email or in-app notifications if a potential match is reported by a finder..</li>
+
+                    </div>
+
                   </div>
-                  <HorizontalBreak/>
+                  <HorizontalBreak />
                   <div className=" flex justify-between px-3 py-3 ">
                     <div className="flex justify-evenly gap-1" onClick={handleEditReport}>
                       <i className="fa-regular fa-pen-to-square text-primary"></i>
                       <p className="text-xs text-primary">Edit Report</p>
                     </div>
                     <div className="flex gap-1">
-                      <p className="text-xs text-primary">Go to my Report History</p>  
+                      <p className="text-xs text-primary">Go to my Report History</p>
                       <i className="fa-solid fa-arrow-right text-primary"></i>
                     </div>
                   </div>
-    
-                  </div>
+
+                </div>
               </div>
             </>
           )
@@ -536,65 +550,65 @@ const handleChange = async (e) => {
         }
         {isLoading ?
           (
-            <>  
-              <Loading label="Analyzing Image"/>
+            <>
+              <Loading label="Analyzing Image" />
             </>
           )
           :
           (
             <>
-             
+
             </>
           )
 
         }
         {isSubmitting &&
           (
-            <>  
-              <Loading label="Creating Lost Report"/>
+            <>
+              <Loading label="Creating Lost Report" />
             </>
           )
         }
         {isUpdating &&
           (
-            <>  
-              <Loading label="Updating Lost Report"/>
+            <>
+              <Loading label="Updating Lost Report" />
             </>
           )
         }
         {isCancel ?
           (
-            <>  
-              <AlertDialog message="Discard changes? Unsaved edits will be lost." b1Label="Keep Editing" b2Label="Discard" b1OnClick={handleKeepEditing} b2OnClick={handleDiscard}/>
+            <>
+              <AlertDialog message="Discard changes? Unsaved edits will be lost." b1Label="Keep Editing" b2Label="Discard" b1OnClick={handleKeepEditing} b2OnClick={handleDiscard} />
             </>
           )
           :
           (
             <>
-  
+
             </>
           )
 
         }
         {showImageOptions && (
-              <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
-                <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
-                  <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
-                      setShowImageOptions(false);
-                      cameraInputRef.current?.click();
-                    }}/>
-                    <ButtonPositive label="Choose from Gallery" enable={showImageOptions}  onClick={() => {
-                      setShowImageOptions(false);
-                      galleryInputRef.current?.click();
-                    }}/>
-                    <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)}/>
-               
-        
-             
-                </div>
-              </div>
-            )}
-        
+          <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
+            <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
+              <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                cameraInputRef.current?.click();
+              }} />
+              <ButtonPositive label="Choose from Gallery" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                galleryInputRef.current?.click();
+              }} />
+              <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
+
+
+
+            </div>
+          </div>
+        )}
+
 
       </div>
     </>

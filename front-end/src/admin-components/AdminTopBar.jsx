@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { useState } from "react";
 
 export default function AdminTopBar({tabName}) {
-
+    const fullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
     return (
         <>
             <div className="h-full w-full bg-white flex">
@@ -43,7 +43,7 @@ export default function AdminTopBar({tabName}) {
                         </NavLink>
                         <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
                             <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
-                            <p className="text-sm text-[#1A1208]">James Ian Antonio</p>
+                            <p className="text-sm text-[#1A1208]">{fullName}</p>
                         </div>
                     </div>
                 </div>

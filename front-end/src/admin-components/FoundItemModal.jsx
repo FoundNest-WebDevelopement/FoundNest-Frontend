@@ -15,10 +15,11 @@ export default function FoundItemModal({
     locations = [],
     allLocations = [],
 }) {
+
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const [adminID] = useState(1);
-    const [userId] = useState(2);
+    const adminID = localStorage.getItem("admin_id")
+    const userId = localStorage.getItem("user_id")
     const [selectedFile, setSelectedFile] = useState(null);
     const [image, setImage] = useState(null);
     const [itemName, setItemName] = useState("");
@@ -115,12 +116,15 @@ export default function FoundItemModal({
 
             const formData = new FormData();
             formData.append("image", file);
-
+            const token = localStorage.getItem("token")
             const response = await fetch(
                 `${API_URL}/api/gemini-item-listing/describe-item`,
                 {
                     method: "POST",
                     body: formData,
+                    headers : {
+                        Authorization: `Bearer ${token}`
+                    }
                 }
             );
 
@@ -177,10 +181,13 @@ export default function FoundItemModal({
             formData.append("additional_notes", additionalNotes);
             formData.append("office_id", currentLocation);
             formData.append("user_id", userId);
-
+               const token = localStorage.getItem("token")
             const response = await fetch(`${API_URL}/api/found-reports`, {
                 method: "POST",
                 body: formData,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
             });
 
             const data = await response.json();

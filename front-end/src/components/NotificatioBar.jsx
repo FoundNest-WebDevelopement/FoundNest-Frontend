@@ -10,7 +10,7 @@ export default function NotificationBar() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const [unreadCount, setUnreadCount] = useState(0);
-  const userId = 2;
+  const userId = localStorage.getItem("user_id")
 
   useEffect(() => {
   const fetchUnreadCount = () => {
@@ -26,7 +26,7 @@ export default function NotificationBar() {
   fetchUnreadCount();
 
   // RUN EVRY 10secs
-  const interval = setInterval(fetchUnreadCount, 5000);
+  const interval = setInterval(fetchUnreadCount, 2000);
 
   return () => clearInterval(interval);
 }, [API_URL, userId]);
