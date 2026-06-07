@@ -58,10 +58,10 @@ function Login() {
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
-          navigate("/admin");
+          navigate("/admin"); 
         } else {
           navigate("/home");
-        }
+        } 
       } else {
         setError(data.message || "Invalid email or password. Please try again.");
       }

@@ -9,6 +9,8 @@ import ItemManagementTable from "../admin-components/ItemManagementTable";
 import FoundItemModal from "../admin-components/FoundItemModal";
 import QRScanModal from "../admin-components/QRScanModal";
 import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+
 
 
 export default function ItemManagement() {
@@ -103,39 +105,59 @@ export default function ItemManagement() {
     useEffect(() => {
         fetch(`${API_URL}/api/categories`)
             .then((res) => res.json())
-            .then((data) => setCategories(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                setCategories(data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        fetch(`${API_URL}/api/found-reports`, {
-            headers: { Authorization: `Bearer ${token}` },
+useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetchWithAuth(`${API_URL}/api/found-reports`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            setReports(data);
         })
-            .then((res) => res.json())
-            .then((data) => setReports(data))
-            .catch((err) => console.error(err));
-    }, []);
+        .catch((err) => console.error(err));
+}, []);
 
     useEffect(() => {
         fetch(`${API_URL}/api/offices`)
             .then((res) => res.json())
-            .then((data) => setLocations(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                setLocations(data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
     useEffect(() => {
         fetch(`${API_URL}/api/gates`)
             .then((res) => res.json())
-            .then((data) => setGates(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                setGates(data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
     useEffect(() => {
         fetch(`${API_URL}/api/shared-spaces`)
             .then((res) => res.json())
-            .then((data) => setSharedSpaces(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                setSharedSpaces(data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
     // HANDLE CLEAR FILTER
@@ -167,6 +189,33 @@ export default function ItemManagement() {
         setOpenLogItem(true);
     };
 
+        //export csv
+    const downloadCSV = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await fetchWithAuth(
+    `${API_URL}/api/export/found-reports`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const blob = await response.blob();
+
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "found-reports.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.URL.revokeObjectURL(url);
+};
+
     return (
         <>
             <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
@@ -182,27 +231,9 @@ export default function ItemManagement() {
                         />
                     </div>
                     <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-                        <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} />
-                        <AdminButton
-                            icon={QrCode}
-                            label="Log via QR"
-                            isBorder={true}
-                            isShadow={true}
-                            isIcon={true}
-                            onClick={() => setOpenQRScan(true)}
-                        />
-                        <AdminButton
-                            icon={Plus}
-                            label="Log New Item"
-                            isSolid={true}
-                            isBorder={true}
-                            isShadow={true}
-                            isIcon={true}
-                            onClick={() => {
-                                setQrPrefillData(null);
-                                setOpenLogItem(true);
-                            }}
-                        />
+                        <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={downloadCSV}/>
+                        <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
+                        <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => { setOpenLogItem(true) }} />
                     </div>
                 </div>
 

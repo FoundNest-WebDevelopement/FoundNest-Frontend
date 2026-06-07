@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import { Pencil, X, QrCode } from "lucide-react"
+import { Pencil, X, QrCode, Info } from "lucide-react"
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js"
 import formatNotificationDate from "../utils/fotmatNotifications.js";
 import AdminTextField from "./AdminTextField.jsx";
 import FoundReportItemManagementModal from "./FoundReportemManagementModal.jsx";
+
 
 
 export default function ItemManagementTable({
@@ -37,7 +38,9 @@ export default function ItemManagementTable({
 
 
     const [selectedItem, setSelectedItem] = useState(null);
-     const [itemInfo, setItemInfo] = useState(true);
+    const [itemInfo, setItemInfo] = useState(true);
+
+
 
     
    
@@ -67,7 +70,7 @@ export default function ItemManagementTable({
                         </thead>
 
                         <tbody>
-                            {paginatedReports.map((item, index) => (
+                            {paginatedReports?.map((item, index) => (
                                 <tr
                                     key={item.item_id}
                                     className={
@@ -104,11 +107,13 @@ export default function ItemManagementTable({
                                         ${item.status === "claimed" && "bg-green-100 text-green-700" }
                                         ${item.status == "unclaimed" && "bg-gray-200 text-gray-700"}
                                         ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20" } 
+                                       ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
                                         `}
                                         >
                                         {item.status === 'claimed' && "Claimed"}
                                             {item.status === 'unclaimed' && "Unclaimed"}
                                             {item.status === 'to_be_disposed' && "For Disposal"}
+                                                {item.status === 'disposed' && "Disposed"}
                                         </span>
                                     </td>
 
@@ -119,10 +124,21 @@ export default function ItemManagementTable({
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
-                                            disabled={item.status === 'claimed'}
                                             onClick={() => { setSelectedItem(item)}}
                                         >
+                                            {(
+                                            item.status === "unclaimed" ||
+                                            item.status === "to_be_disposed"
+                                            ) && (
                                             <Pencil size={18} className="text-primary" />
+                                            )}
+                                           {(
+                                            item.status === "claimed" ||
+                                            item.status === "disposed"
+                                            ) && (
+                                            <Info size={18} className="text-primary" />
+                                            )}
+
                                         </button>
                                     </td>
 
