@@ -282,6 +282,7 @@ export default function ItemManagement() {
                             categories={categories}
                             locations={locations}
                             allLocations={allLocations}
+                            onUpdated={setReports}
                         />
                     </>
                 )

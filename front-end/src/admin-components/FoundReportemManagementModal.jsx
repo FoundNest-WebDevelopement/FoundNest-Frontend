@@ -179,15 +179,12 @@ export default function FoundReportItemManagementModal(
                 "claimant_photo",
                 selectedFile
             );
-            const token = localStorage.getItem("token")
+        
             const response = await fetchWithAuth(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}/claim`,
                 {
                     method: "POST",
                     body: formData,
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    }
                 }
             );
 
@@ -203,12 +200,7 @@ export default function FoundReportItemManagementModal(
             // Refresh table
 
             const reportsResponse = await fetchWithAuth(
-                `${API_URL}/api/found-reports`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    }
-                }
+                `${API_URL}/api/found-reports`
             );
 
             const reportsData =
@@ -392,16 +384,13 @@ export default function FoundReportItemManagementModal(
 
             const formData = new FormData();
             formData.append("image", file);
-            const token = localStorage.getItem("token");
+    
             const response = await fetchWithAuth(
                 `${API_URL}/api/gemini-item-listing/describe-item`,
                 {
 
                     method: "POST",
                     body: formData,
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
                 }
             );
 
@@ -486,13 +475,12 @@ export default function FoundReportItemManagementModal(
             if (editImageFile) {
                 formData.append("image", editImageFile);
             }
-            const token = localStorage.getItem("token");
+       
             const response = await fetchWithAuth(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}`,
                 {
                     method: "PUT",
                     body: formData,
-                    Authorization: `Bearer ${token}`,
                 }
             );
 
@@ -503,11 +491,7 @@ export default function FoundReportItemManagementModal(
             }
 
             const refreshedResponse = await fetchWithAuth(
-                `${API_URL}/api/found-reports`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
-            }
+                `${API_URL}/api/found-reports`
             );
             const refreshedReports = await refreshedResponse.json();
 
@@ -537,14 +521,9 @@ export default function FoundReportItemManagementModal(
     const fetchItemHistory = async (itemId) => {
         setIsLoading(true);
         try {
-            const token = localStorage.getItem("token");
+  
             const response = await fetchWithAuth(
-                `${API_URL}/api/item-history/${itemId}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+                `${API_URL}/api/item-history/${itemId}`
             );
 
             const data = await response.json();
@@ -573,13 +552,9 @@ export default function FoundReportItemManagementModal(
 
     // for claim tab
     const fetchLostReports = async (search) => {
-        const token = localStorage.getItem("token");
+  
         const response = await fetchWithAuth(
-            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
+            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`
         );
 
         const data = await response.json();
@@ -643,15 +618,10 @@ export default function FoundReportItemManagementModal(
             if (!donationDate) {
                 throw new Error("Disposal date is required.");
             }
-            const token = localStorage.getItem("token");
             const response = await fetchWithAuth(
                 `${API_URL}/api/disposed-item`,
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
                     body: JSON.stringify({
                         found_report_id: selectedItem.found_report_id,
                         item_id: selectedItem.item_id,
@@ -672,12 +642,7 @@ export default function FoundReportItemManagementModal(
             }
             // Refresh table
             const reportsResponse = await fetchWithAuth(
-                `${API_URL}/api/found-reports`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+                `${API_URL}/api/found-reports`
             );
 
             const reportsData = await reportsResponse.json();

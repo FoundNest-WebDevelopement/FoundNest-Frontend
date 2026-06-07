@@ -15,6 +15,7 @@ export default function FoundItemModal({
     categories = [],
     locations = [],
     allLocations = [],
+    onUpdated,
 }) {
 
     const API_URL = import.meta.env.VITE_API_URL;
@@ -123,9 +124,6 @@ export default function FoundItemModal({
                 {
                     method: "POST",
                     body: formData,
-                    headers : {
-                        Authorization: `Bearer ${token}`
-                    }
                 }
             );
 
@@ -166,7 +164,6 @@ export default function FoundItemModal({
             
         try {
             setIsSubmitting(true);
-            console.log("specificLocation:", specificLocation);
 
             const formData = new FormData();
             formData.append("image", selectedFile);
@@ -182,13 +179,10 @@ export default function FoundItemModal({
             formData.append("additional_notes", additionalNotes);
             formData.append("office_id", currentLocation);
             formData.append("user_id", userId);
-               const token = localStorage.getItem("token")
+     
             const response = await fetchWithAuth(`${API_URL}/api/found-reports`, {
                 method: "POST",
                 body: formData,
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
             });
 
             const data = await response.json();
@@ -197,6 +191,18 @@ export default function FoundItemModal({
                 throw new Error(data.error || "Failed to list found item");
             }
 
+             // Refresh table
+            const reportsResponse = await fetchWithAuth(
+                `${API_URL}/api/found-reports`
+            );
+
+            const reportsData = await reportsResponse.json();
+            if (Array.isArray(reportsData)) {
+                onUpdated?.(reportsData);
+            }
+    
+
+            alert("Item Listed Succesfully")
             resetForm();
             setOpen(false);
         } catch (error) {
