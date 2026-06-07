@@ -6,6 +6,7 @@ import AdminDateInput from "./AdminDateInput";
 import AdminHourInput from "./AdminHourInput";
 import AdminLocationDropDown from "./AdminLocationDropDown";
 import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 
 export default function FoundItemModal({
@@ -117,7 +118,7 @@ export default function FoundItemModal({
             const formData = new FormData();
             formData.append("image", file);
             const token = localStorage.getItem("token")
-            const response = await fetch(
+            const response = await fetchWithAuth(
                 `${API_URL}/api/gemini-item-listing/describe-item`,
                 {
                     method: "POST",
@@ -182,7 +183,7 @@ export default function FoundItemModal({
             formData.append("office_id", currentLocation);
             formData.append("user_id", userId);
                const token = localStorage.getItem("token")
-            const response = await fetch(`${API_URL}/api/found-reports`, {
+            const response = await fetchWithAuth(`${API_URL}/api/found-reports`, {
                 method: "POST",
                 body: formData,
                 headers: {

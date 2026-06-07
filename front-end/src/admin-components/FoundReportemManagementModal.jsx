@@ -5,35 +5,37 @@ import formatNotificationDate from "../utils/fotmatNotifications.js";
 import AdminTextField from "./AdminTextField.jsx";
 import AdminDateInput from "./AdminDateInput.jsx";
 import AdminTextArea from "./AdminTextArea.jsx";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+
 
 
 export default function FoundReportItemManagementModal(
 
-    {selectedItem = [],
-    setSelectedItem,
-    itemInfo,
-    setItemInfo,
-    categories = [],
-    locations = [],
-    onUpdated,
-    allLocations = [],
-   }
-){
+    { selectedItem = [],
+        setSelectedItem,
+        itemInfo,
+        setItemInfo,
+        categories = [],
+        locations = [],
+        onUpdated,
+        allLocations = [],
+    }
+) {
 
-    console.log(selectedItem)
+
 
     const API_URL = import.meta.env.VITE_API_URL;
-     const [isLoading, setIsLoading] = useState(false);
-     const adminId = localStorage.getItem("admin_id");
-     console.log("ADMINNN" +  adminId)
-     const userId = localStorage.getItem("user_id");
+    const [isLoading, setIsLoading] = useState(false);
+    const adminId = localStorage.getItem("admin_id");
+    const userId = localStorage.getItem("user_id");
 
-       //HANDLE STATUS UPDATE TAB
+    //HANDLE STATUS UPDATE TAB
     const [claimTab, setClaimTab] = useState(false);
     const [disposedTab, setDisposedTab] = useState(false);
     const [editTab, setEditTab] = useState(true);
 
     //claim tab variables
+ 
     const [identifierToggle, setIdentifierToggle] = useState(false);
     const [claimantImage, setClaimantImage] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -42,21 +44,24 @@ export default function FoundReportItemManagementModal(
     const [linkReport, setLinkReport] = useState(null);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [fullName, setFullName] = useState("");
-    const [claimForm, setClaimForm] = useState({
-        claimant_full_name: "",
-        claimant_email: "",
-        claimant_contact_number: "",
-        verification_details: "",
-    });
-    
+    const [claimantEmail, setClaimantEmail] = useState("");
+    const [claimantNumber, setClaimantNumber] = useState("");
+    const [verificationDetails, setVerificationDetails] = useState("");
+
+           const isValidPhone = /^09\d{9}$/.test(
+        claimantNumber
+        );
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+  claimantEmail
+);
+
+
     const fileInputRef = useRef(null);
     const resetClaimForm = () => {
-        setClaimForm({
-            claimant_full_name: "",
-            claimant_email: "",
-            claimant_contact_number: "",
-            verification_details: "",
-        });
+        setClaimantEmail("")
+        setFullName("");
+        setClaimantNumber("")
+        setVerificationDetails("")
         setClaimantImage(null);
         setSelectedFile(null);
         setLinkReport(null);
@@ -77,17 +82,23 @@ export default function FoundReportItemManagementModal(
         setClaimantImage(URL.createObjectURL(file));
 
     };
+
+
     const isClaimValid =
         fullName.trim() &&
         (
-            claimForm.claimant_contact_number.trim() ||
-            claimForm.claimant_email.trim()
+            claimantNumber.trim() ||
+            claimantEmail.trim()
         ) &&
         selectedFile &&
-        claimForm.verification_details.trim();
+        verificationDetails.trim();
+
+        
+    const [isReleasing, setIsReleasing] = useState(false)
     const handleItemRelease = async () => {
+        setIsReleasing(true);
         try {
- 
+
 
             if (!selectedItem?.found_report_id) {
                 throw new Error(
@@ -103,8 +114,8 @@ export default function FoundReportItemManagementModal(
             }
 
             if (
-                !claimForm.claimant_email.trim() &&
-                !claimForm.claimant_contact_number.trim()
+                !claimantEmail.trim() &&
+                !claimantNumber.trim()
             ) {
                 throw new Error(
                     "Email or Contact Number is required."
@@ -117,7 +128,7 @@ export default function FoundReportItemManagementModal(
                 );
             }
 
-            if (!claimForm.verification_details.trim()) {
+            if (!verificationDetails.trim()) {
                 throw new Error(
                     "Verification details are required."
                 );
@@ -132,17 +143,17 @@ export default function FoundReportItemManagementModal(
 
             formData.append(
                 "claimant_email",
-                claimForm.claimant_email
+                claimantEmail
             );
 
             formData.append(
                 "claimant_contact_number",
-                claimForm.claimant_contact_number
+                claimantNumber
             );
 
             formData.append(
                 "verification_details",
-                claimForm.verification_details
+                verificationDetails
             );
 
             // Admin Processing Claim
@@ -169,7 +180,7 @@ export default function FoundReportItemManagementModal(
                 selectedFile
             );
             const token = localStorage.getItem("token")
-            const response = await fetch(
+            const response = await fetchWithAuth(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}/claim`,
                 {
                     method: "POST",
@@ -186,11 +197,12 @@ export default function FoundReportItemManagementModal(
                 throw new Error(
                     data.error || "Failed to release item."
                 );
+                setIsReleasing(false);
             }
 
             // Refresh table
-         
-            const reportsResponse = await fetch(
+
+            const reportsResponse = await fetchWithAuth(
                 `${API_URL}/api/found-reports`,
                 {
                     headers: {
@@ -212,10 +224,12 @@ export default function FoundReportItemManagementModal(
             setSelectedItem(null);
             setClaimTab(false);
             setEditTab(true);
+            setIsReleasing(false);
 
             alert("Item released successfully.");
 
         } catch (error) {
+            setIsReleasing(false);
 
             console.error(error);
 
@@ -224,31 +238,31 @@ export default function FoundReportItemManagementModal(
         }
     };
 
-        //HANDLE PAGINATION IN OPEN EDIT
+    //HANDLE PAGINATION IN OPEN EDIT
 
-    
-        //Item history
-        const [itemHistory, setItemHistory] = useState([]);
 
-        
-     //open claim form
-     const startClaiming = () => {
+    //Item history
+    const [itemHistory, setItemHistory] = useState([]);
+
+
+    //open claim form
+    const startClaiming = () => {
         setClaimTab(true);
         setEditTab(false);
-        setOpenUpdateStatus(false) ;
-     }   
+        setOpenUpdateStatus(false);
+    }
 
-     // open disposed form
-     const startDisposing = () => {
+    // open disposed form
+    const startDisposing = () => {
         setDisposedTab(true);
         setClaimTab(false);
         setEditTab(false);
-        setOpenUpdateStatus(false) ;
-     }
+        setOpenUpdateStatus(false);
+    }
 
-        //OPEN EDIT VARIABLES
+    //OPEN EDIT VARIABLES
     const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
-     const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const editImageInputRef = useRef(null);
@@ -378,14 +392,16 @@ export default function FoundReportItemManagementModal(
 
             const formData = new FormData();
             formData.append("image", file);
-             const token = localStorage.getItem("token");
-            const response = await fetch(
+            const token = localStorage.getItem("token");
+            const response = await fetchWithAuth(
                 `${API_URL}/api/gemini-item-listing/describe-item`,
                 {
-                    
+
                     method: "POST",
                     body: formData,
-                    Authorization : `Bearer ${token}`
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
                 }
             );
 
@@ -471,7 +487,7 @@ export default function FoundReportItemManagementModal(
                 formData.append("image", editImageFile);
             }
             const token = localStorage.getItem("token");
-            const response = await fetch(
+            const response = await fetchWithAuth(
                 `${API_URL}/api/found-reports/${selectedItem.found_report_id}`,
                 {
                     method: "PUT",
@@ -485,13 +501,13 @@ export default function FoundReportItemManagementModal(
             if (!response.ok) {
                 throw new Error(data.error || "Failed to update found item");
             }
-     
-            const refreshedResponse = await fetch(
-                `${API_URL}/api/found-reports`,{
-                    headers : {
-                        Authorization : `Bearer ${token}`,
-                    }
+
+            const refreshedResponse = await fetchWithAuth(
+                `${API_URL}/api/found-reports`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
                 }
+            }
             );
             const refreshedReports = await refreshedResponse.json();
 
@@ -522,11 +538,11 @@ export default function FoundReportItemManagementModal(
         setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const response = await fetch(
-                `${API_URL}/api/item-history/${itemId}` ,
+            const response = await fetchWithAuth(
+                `${API_URL}/api/item-history/${itemId}`,
                 {
-                    headers : {
-                        Authorization : `Bearer ${token}`
+                    headers: {
+                        Authorization: `Bearer ${token}`
                     }
                 }
             );
@@ -557,13 +573,13 @@ export default function FoundReportItemManagementModal(
 
     // for claim tab
     const fetchLostReports = async (search) => {
-       const token = localStorage.getItem("token");
-        const response = await fetch(
-            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`,{
-                headers : {
-                    Authorization : `Bearer ${token}`,
-                },
-            }
+        const token = localStorage.getItem("token");
+        const response = await fetchWithAuth(
+            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }
         );
 
         const data = await response.json();
@@ -581,721 +597,845 @@ export default function FoundReportItemManagementModal(
         fetchLostReports(searchTerm);
 
     }, [searchTerm]);
-    return(
+
+
+    //variable for disposal form
+    const [itemWhereabouts, setItemWhereabouts] = useState("");
+    const [donationDate, setDonationDate] = useState("");
+    const [notes, setNotes] = useState("");
+    const [isDisposing, setIsDisposing] = useState(false);
+
+
+    const handleCancelDisposed = async () => {
+        setClaimTab(false),
+            setEditTab(true),
+            setDisposedTab(false);
+    }
+
+    const isValidDisposalDate = (dateStr) => {
+        if (!dateStr) return false;
+
+        const selectedDate = new Date(`${dateStr}T00:00:00`);
+
+        if (isNaN(selectedDate.getTime())) {
+            return false;
+        }
+
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        return selectedDate <= today;
+    };
+    const disposalDateValid = isValidDisposalDate(donationDate);
+
+    const isDisposalValid =
+        itemWhereabouts?.trim() &&
+        donationDate &&
+        disposalDateValid;
+  
+
+    const handleDisposedItem = async () => {
+        setIsDisposing(true);
+        try {
+            if (!itemWhereabouts?.trim()) {
+                throw new Error("Disposal location is required.");
+            }
+            if (!donationDate) {
+                throw new Error("Disposal date is required.");
+            }
+            const token = localStorage.getItem("token");
+            const response = await fetchWithAuth(
+                `${API_URL}/api/disposed-item`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        found_report_id: selectedItem.found_report_id,
+                        item_id: selectedItem.item_id,
+                        office_name: selectedItem.office_name,
+                        disposed_by_admin_id: adminId,
+                        disposal_whereabouts: itemWhereabouts,
+                        additional_notes: notes,
+                        disposal_date: donationDate,
+                    }),
+                }
+            );
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Failed to dispose item."
+                );
+                   setIsDisposing(false);
+            }
+            // Refresh table
+            const reportsResponse = await fetchWithAuth(
+                `${API_URL}/api/found-reports`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const reportsData = await reportsResponse.json();
+            if (Array.isArray(reportsData)) {
+                onUpdated?.(reportsData);
+            }
+
+            // reset form
+            setItemWhereabouts("");
+            setDonationDate("");
+            setNotes("");
+            setDisposedTab(false);
+            setEditTab(true);
+            // close modal
+            setSelectedItem(null);
+            setIsDisposing(false);
+
+            alert("Item disposed successfully.");
+
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
+        }
+    };
+
+
+
+    return (
         <>
-            
-                    <>
-                        <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
-                            <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col overflow-y-scroll ">
-                                <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
-                                    <div>
-                                        <p className="font-semibold text-sm text-white xl:text-xl">  {selectedItem.item_name}</p>
-                                    </div>
-                                    <div className={` border-2   p-1 px-2 rounded-full text-[8px] xl:text-xs 
-                                        ${selectedItem.status === 'unclaimed' && "text-[#6B5C42] border-[#DDD9CF] bg-[#F5F5F5]" } 
-                                        ${selectedItem.status === 'claimed' && " border-green-700 bg-green-100 text-green-700" } 
-                                        ${selectedItem.status === 'to_be_disposed' && "text-[#FFA500] border-[#FFA500] bg-[#FFEDCC]" } 
+
+            <>
+                <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
+                    <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col overflow-y-scroll ">
+                        <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
+                            <div>
+                                <p className="font-semibold text-sm text-white xl:text-xl">  {selectedItem.item_name}</p>
+                            </div>
+                            <div className={` border-2   p-1 px-2 rounded-full text-[8px] xl:text-xs 
+                                        ${selectedItem.status === 'unclaimed' && "text-[#6B5C42] border-[#DDD9CF] bg-[#F5F5F5]"} 
+                                        ${selectedItem.status === 'claimed' && " border-green-700 bg-green-100 text-green-700"} 
+                                        ${selectedItem.status === 'to_be_disposed' && "text-[#FFA500] border-[#FFA500] bg-[#FFEDCC]"} 
+                                        ${selectedItem.status === 'disposed' && "text-[#553D25] border-[#553D25] bg-[#DDD1C5]"} 
                                        `}>
-                                        <p className=" ">
-                                            {selectedItem.status === 'claimed' && "Claimed"}
-                                            {selectedItem.status === 'unclaimed' && "Unclaimed"}
-                                            {selectedItem.status === 'to_be_disposed' && "For Disposal"}
-                                            </p>
-                                    </div>
-                                    <div className="ml-auto pr-6">
-                                        <button onClick={handleCloseDetails}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-                                    </div>
-                                </div>
+                                <p className=" ">
+                                    {selectedItem.status === 'claimed' && "Claimed"}
+                                    {selectedItem.status === 'unclaimed' && "Unclaimed"}
+                                    {selectedItem.status === 'to_be_disposed' && "For Disposal"}
+                                    {selectedItem.status === 'disposed' && "Disposed"}
+                                </p>
+                            </div>
+                            <div className="ml-auto pr-6">
+                                <button onClick={handleCloseDetails}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                            </div>
+                        </div>
 
 
-                                {editTab &&
-                                    (
-                                        
-                                        <>
-                                            <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
-                                                <button className={`text-[#6B5C42]  text-sm px-5
+                        {editTab &&
+                            (
+
+                                <>
+                                    <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
+                                        <button className={`text-[#6B5C42]  text-sm px-5
                                     ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
                                      `}
-                                                    onClick={() => setItemInfo(true)}>Item Info</button>
-                                                <button className={`text-[#6B5C42] text-sm px-5 
+                                            onClick={() => setItemInfo(true)}>Item Info</button>
+                                        <button className={`text-[#6B5C42] text-sm px-5 
                                         ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"}`}
-                                                    onClick={handleHiistoryTab}>History</button>
-                                            </div>
-                                            <div className="h-full w-full p-5 pt-15">
-                                                {itemInfo ?
-                                                    (
-                                                        <>
-                                                            <div className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden">
-                                                                {isEditing ? (
-                                                                    <>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => editImageInputRef.current?.click()}
-                                                                            className="w-full h-full flex flex-col items-center justify-center gap-2 cursor-pointer"
-                                                                        >
-                                                                            <img
-                                                                                src={editImagePreview || selectedItem.image_url}
-                                                                                alt={selectedItem.item_name}
-                                                                                className="w-full h-full object-contain"
-                                                                            />
-                                                                            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                                                                                Click image to replace photo.
-                                                                            </span>
-                                                                        </button>
-                                                                        <input
-                                                                            ref={editImageInputRef}
-                                                                            type="file"
-                                                                            accept="image/*"
-                                                                            className="hidden"
-                                                                            onChange={handleEditImageChange}
-                                                                        />
-                                                                        {isAnalyzing && (
-                                                                            <span className="absolute top-2 right-2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                                                                                Analyzing image...
-                                                                            </span>
-                                                                        )}
-                                                                    </>
-                                                                ) : (
-                                                                    <img src={selectedItem.image_url} alt={selectedItem.item_name} className="w-full h-full object-contain" />
+                                            onClick={handleHiistoryTab}>History</button>
+                                    </div>
+                                    <div className="h-full w-full p-5 pt-15">
+                                        {itemInfo ?
+                                            (
+                                                <>
+                                                    <div className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => editImageInputRef.current?.click()}
+                                                                    className="w-full h-full flex flex-col items-center justify-center gap-2 cursor-pointer"
+                                                                >
+                                                                    <img
+                                                                        src={editImagePreview || selectedItem.image_url}
+                                                                        alt={selectedItem.item_name}
+                                                                        className="w-full h-full object-contain"
+                                                                    />
+                                                                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                                                                        Click image to replace photo.
+                                                                    </span>
+                                                                </button>
+                                                                <input
+                                                                    ref={editImageInputRef}
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    className="hidden"
+                                                                    onChange={handleEditImageChange}
+                                                                />
+                
+                                                            </>
+                                                        ) : (
+                                                            <img src={selectedItem.image_url} alt={selectedItem.item_name} className="w-full h-full object-contain" />
+                                                        )}
+                                                    </div>
+                                                     {isAnalyzing && (
+                                                                    <span className="text-primary text-[10px] pt-2 py-1  ">
+                                                                        Analyzing image...
+                                                                    </span>
                                                                 )}
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">ITEM ID</p>
-                                                                    <p className="text-black">SI-00{selectedItem.item_id}</p>
-                                                                </div>
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">CATEGORY{isEditing && <span className="text-primary"> *</span>}</p>
-                                                                    {isEditing ? (
-                                                                        <select
-                                                                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.category_id}
-                                                                            onChange={(e) => handleEditChange("category_id", e.target.value)}
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">ITEM ID</p>
+                                                            <p className="text-black">SI-00{selectedItem.item_id}</p>
+                                                        </div>
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">CATEGORY{isEditing && <span className="text-primary"> *</span>}</p>
+                                                            {isEditing ? (
+                                                                <select
+                                                                    className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.category_id}
+                                                                    onChange={(e) => handleEditChange("category_id", e.target.value)}
+                                                                >
+                                                                    <option value="" disabled>Select category</option>
+                                                                    {categories.map((category) => (
+                                                                        <option key={category.category_id} value={category.category_id}>
+                                                                            {category.category_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.category_name}</p>
+                                                            )}
+                                                        </div>
+
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">ITEM NAME{isEditing && <span className="text-primary"> *</span>}</p>
+                                                            {isEditing ? (
+                                                                <input
+                                                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.item_name}
+                                                                    onChange={(e) => handleEditChange("item_name", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.item_name}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className={`flex ${isEditing && "flex-col"}`}>
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">LOCATION FOUND{isEditing && <span className="text-primary"> *</span>}</p>
+                                                            {isEditing ? (
+                                                                <select
+                                                                    className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.location_found}
+                                                                    onChange={(e) => handleEditChange("location_found", e.target.value)}
+                                                                    required
+                                                                >
+
+                                                                    <option hidden disabled value={editForm.location_found}>
+                                                                        {editForm.location_found}
+                                                                    </option>
+
+                                                                    {allLocations.map((option, index) => (
+                                                                        <option
+                                                                            key={index}
+                                                                            value={option.name}
                                                                         >
-                                                                            <option value="" disabled>Select category</option>
-                                                                            {categories.map((category) => (
-                                                                                <option key={category.category_id} value={category.category_id}>
-                                                                                    {category.category_name}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.category_name}</p>
-                                                                    )}
+                                                                            {option.name}
+                                                                        </option>
+                                                                    ))}
+
+                                                                </select>
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.location_found}</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">DATE & TIME FOUND{isEditing && <span className="text-primary"> *</span>}</p>
+                                                            {isEditing ? (
+                                                                <div className="flex gap-2 mt-1">
+                                                                    <input
+                                                                        type="date"
+                                                                        className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
+                                                                        value={editForm.found_date}
+                                                                        max={getTodayDateString()}
+                                                                        onChange={(e) => handleEditDateChange(e.target.value)}
+                                                                    />
+                                                                    <input
+                                                                        type="time"
+                                                                        className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
+                                                                        value={editForm.found_time}
+                                                                        disabled={!editDateValid}
+                                                                        onChange={(e) => handleEditChange("found_time", e.target.value)}
+                                                                    />
                                                                 </div>
+                                                            ) : (
+                                                                <p className="text-black">{foramtDateTimeNew(selectedItem.found_date)}</p>
+                                                            )}
+                                                        </div>
 
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">ITEM NAME{isEditing && <span className="text-primary"> *</span>}</p>
-                                                                    {isEditing ? (
-                                                                        <input
-                                                                            className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.item_name}
-                                                                            onChange={(e) => handleEditChange("item_name", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.item_name}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className={`flex ${isEditing && "flex-col"}`}>
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">LOCATION FOUND{isEditing && <span className="text-primary"> *</span>}</p>
-                                                                    {isEditing ? (
-                                                                        <select
-                                                                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.location_found}
-                                                                            onChange={(e) => handleEditChange("location_found", e.target.value)}
-                                                                            required
-                                                                        >
+                                                    </div>
+                                                    {isEditing && editForm.found_date && !editDateValid && (
+                                                        <p className="text-xs text-red-500 mt-1">Date found cannot be in the future.</p>
+                                                    )}
+                                                    {isEditing && !editDateValid && (
+                                                        <p className="text-xs text-yellow-500 mt-1">Enter a valid date before choosing a time.</p>
+                                                    )}
+                                                    {isEditing && editDateValid && editForm.found_time && !editTimeValid && (
+                                                        <p className="text-xs text-red-500 mt-1">Time found cannot be in the future.</p>
+                                                    )}
+                                                    {isEditing && !hasRequiredEditFields && (
+                                                        <p className="text-xs text-red-500 mt-1">
+                                                            Fill in item name, category, location found, date, and time.
+                                                        </p>
+                                                    )}
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">SPECIFIC LOCATION</p>
+                                                            {isEditing ? (
+                                                                <input
+                                                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.specific_location}
+                                                                    onChange={(e) => handleEditChange("specific_location", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.specific_location || "N/A"}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">DESCRIPTION</p>
+                                                            {isEditing ? (
+                                                                <textarea
+                                                                    className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
+                                                                    value={editForm.description}
+                                                                    onChange={(e) => handleEditChange("description", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.description}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">CONTENTS</p>
+                                                            {isEditing ? (
+                                                                <input
+                                                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.contents}
+                                                                    onChange={(e) => handleEditChange("contents", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">  {selectedItem.contents || "N/A"}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">REPORTED BY</p>
+                                                            <p className="text-black">{selectedItem.admin_full_name}</p>
+                                                        </div>
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">DATE LOGGED</p>
+                                                            <p className="text-black"> {new Date(selectedItem.date_reported).toLocaleDateString()}</p>
+                                                        </div>
 
-                                                                            <option hidden disabled value={editForm.location_found}>
-                                                                                {editForm.location_found}
-                                                                            </option>
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">SURRENDERED BY</p>
+                                                            {isEditing ? (
+                                                                <input
+                                                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.reported_by}
+                                                                    onChange={(e) => handleEditChange("reported_by", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.reported_by}</p>
+                                                            )}
+                                                        </div>
 
-                                                                            {allLocations.map((option, index) => (
-                                                                                <option
-                                                                                    key={index}
-                                                                                    value={option.name}
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">ADDITIONAL NOTES</p>
+                                                            {isEditing ? (
+                                                                <textarea
+                                                                    className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
+                                                                    value={editForm.additional_notes}
+                                                                    onChange={(e) => handleEditChange("additional_notes", e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-black">  {selectedItem.additional_notes || "N/A"}</p>
+                                                            )}
+                                                        </div>
+
+                                                    </div>
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">CURRENT LCOATION</p>
+                                                            {isEditing ? (
+                                                                <select
+                                                                    className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.office_id}
+                                                                    onChange={(e) => handleEditChange("office_id", e.target.value)}
+                                                                >
+                                                                    <option value="">No office</option>
+                                                                    {locations.map((office) => (
+                                                                        <option key={office.office_id} value={office.office_id}>
+                                                                            {office.office_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.office_name}</p>
+                                                            )}
+                                                        </div>
+
+                                                    </div>
+                                                    <div className="h-fit text-[9px] xl:text-xs  font-medium flex gap-2 xl:gap-3 mt-2 ">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1"
+                                                                    onClick={handleCancelEdit}
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={isSaving || isAnalyzing || !isEditFormValid}
+                                                                    className="h-full border-primary border px-5 py-3 rounded-md bg-primary text-white flex-1 disabled:opacity-50 "
+                                                                    onClick={handleSaveEdit}
+                                                                >
+                                                                    {isSaving
+                                                                        ? "Saving..."
+                                                                        : isAnalyzing
+                                                                            ? "Analyzing..."
+                                                                            : "Save Changes"}
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40"
+                                                                onClick={startEditing}
+                                                                disabled={(selectedItem.status === "claimed" || selectedItem.status === "disposed")}
+                                                            >
+                                                                Edit Item Details
+                                                            </button>
+                                                        )}
+                                                        {!isEditing &&
+                                                            (
+                                                                <>
+                                                                    <div className="relative ">
+                                                                        {openUpdateStatus &&
+                                                                            (
+                                                                                <>
+                                                                                    <div className="absolute bottom-11 h-fit w-45 bg-white border -translate-x-14 xl:-translate-x-5 border-[#DDD9CF] rounded-md">
+                                                                                        <button className="text-xs p-2 border-b border-[#DDD9CF] w-full"
+                                                                                            onClick={startClaiming}>
+                                                                                            <p className="ml-2">Mark as Claimed</p>
+                                                                                        </button>
+                                                                                        {selectedItem.status === 'to_be_disposed' &&
+                                                                                            (
+                                                                                                <button className="text-xs p-2 border-b border-[#DDD9CF] w-full"
+                                                                                                    onClick={startDisposing}>
+                                                                                                    <p className="ml-2">Mark as Disposed</p>
+                                                                                                </button>
+                                                                                            )
+                                                                                        }
+
+                                                                                    </div>
+                                                                                </>
+                                                                            )
+
+                                                                        }
+                                                                        {!isEditing &&
+                                                                            <button 
+                                                                                className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 disabled:opacity-40"
+                                                                                onClick={() => { setOpenUpdateStatus(!openUpdateStatus) }}
+                                                                                disabled={(selectedItem.status === "claimed" || selectedItem.status === "disposed")}
                                                                                 >
-                                                                                    {option.name}
-                                                                                </option>
-                                                                            ))}
+                                                                                Update Status <i className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white`}></i>
+                                                                            </button>
+                                                                        }
+                                                                    </div>
+                                                                </>
+                                                            )
 
-                                                                        </select>
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.location_found}</p>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">DATE & TIME FOUND{isEditing && <span className="text-primary"> *</span>}</p>
-                                                                    {isEditing ? (
-                                                                        <div className="flex gap-2 mt-1">
-                                                                            <input
-                                                                                type="date"
-                                                                                className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
-                                                                                value={editForm.found_date}
-                                                                                max={getTodayDateString()}
-                                                                                onChange={(e) => handleEditDateChange(e.target.value)}
-                                                                            />
-                                                                            <input
-                                                                                type="time"
-                                                                                className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
-                                                                                value={editForm.found_time}
-                                                                                disabled={!editDateValid}
-                                                                                onChange={(e) => handleEditChange("found_time", e.target.value)}
-                                                                            />
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p className="text-black">{foramtDateTimeNew(selectedItem.found_date)}</p>
-                                                                    )}
-                                                                </div>
+                                                        }
 
-                                                            </div>
-                                                            {isEditing && editForm.found_date && !editDateValid && (
-                                                                <p className="text-xs text-red-500 mt-1">Date found cannot be in the future.</p>
-                                                            )}
-                                                            {isEditing && !editDateValid && (
-                                                                <p className="text-xs text-yellow-500 mt-1">Enter a valid date before choosing a time.</p>
-                                                            )}
-                                                            {isEditing && editDateValid && editForm.found_time && !editTimeValid && (
-                                                                <p className="text-xs text-red-500 mt-1">Time found cannot be in the future.</p>
-                                                            )}
-                                                            {isEditing && !hasRequiredEditFields && (
-                                                                <p className="text-xs text-red-500 mt-1">
-                                                                    Fill in item name, category, location found, date, and time.
-                                                                </p>
-                                                            )}
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">SPECIFIC LOCATION</p>
-                                                                    {isEditing ? (
-                                                                        <input
-                                                                            className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.specific_location}
-                                                                            onChange={(e) => handleEditChange("specific_location", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.specific_location || "N/A"}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">DESCRIPTION</p>
-                                                                    {isEditing ? (
-                                                                        <textarea
-                                                                            className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
-                                                                            value={editForm.description}
-                                                                            onChange={(e) => handleEditChange("description", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.description}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">CONTENTS</p>
-                                                                    {isEditing ? (
-                                                                        <input
-                                                                            className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.contents}
-                                                                            onChange={(e) => handleEditChange("contents", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">  {selectedItem.contents || "N/A"}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">REPORTED BY</p>
-                                                                    <p className="text-black">{selectedItem.admin_full_name}</p>
-                                                                </div>
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">DATE LOGGED</p>
-                                                                    <p className="text-black"> {new Date(selectedItem.date_reported).toLocaleDateString()}</p>
-                                                                </div>
 
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">SURRENDERED BY</p>
-                                                                    {isEditing ? (
-                                                                        <input
-                                                                            className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.reported_by}
-                                                                            onChange={(e) => handleEditChange("reported_by", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.reported_by}</p>
-                                                                    )}
-                                                                </div>
+                                                    </div>
+                                                    <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
 
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">ADDITIONAL NOTES</p>
-                                                                    {isEditing ? (
-                                                                        <textarea
-                                                                            className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
-                                                                            value={editForm.additional_notes}
-                                                                            onChange={(e) => handleEditChange("additional_notes", e.target.value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <p className="text-black">  {selectedItem.additional_notes || "N/A"}</p>
-                                                                    )}
-                                                                </div>
+                                                        {!isEditing &&
+                                                            (
+                                                                <button
+                                                                    type="button"
+                                                                    className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
+                                                                     active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40`}
+                                                                    disabled={(selectedItem.status === "claimed" || selectedItem.status === "disposed")}
 
-                                                            </div>
-                                                            <div className=" flex">
-                                                                <div className="flex flex-col text-xs mt-5 flex-1">
-                                                                    <p className="text-[#6B5C42]">CURRENT LCOATION</p>
-                                                                    {isEditing ? (
-                                                                        <select
-                                                                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                                                            value={editForm.office_id}
-                                                                            onChange={(e) => handleEditChange("office_id", e.target.value)}
-                                                                        >
-                                                                            <option value="">No office</option>
-                                                                            {locations.map((office) => (
-                                                                                <option key={office.office_id} value={office.office_id}>
-                                                                                    {office.office_name}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    ) : (
-                                                                        <p className="text-black">{selectedItem.office_name}</p>
-                                                                    )}
-                                                                </div>
+                                                                >
+                                                                    <QrCode size="20" />
+                                                                    <p >Print QR Code</p>
+                                                                </button>
+                                                            )
 
-                                                            </div>
-                                                            <div className="h-fit text-[9px] xl:text-xs  font-medium flex gap-2 xl:gap-3 mt-2 ">
-                                                                {isEditing ? (
-                                                                    <>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1"
-                                                                            onClick={handleCancelEdit}
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={isSaving || isAnalyzing || !isEditFormValid}
-                                                                            className="h-full border-primary border px-5 py-3 rounded-md bg-primary text-white flex-1 disabled:opacity-50 "
-                                                                            onClick={handleSaveEdit}
-                                                                        >
-                                                                            {isSaving
-                                                                                ? "Saving..."
-                                                                                : isAnalyzing
-                                                                                    ? "Analyzing..."
-                                                                                    : "Save Changes"}
-                                                                        </button>
-                                                                    </>
-                                                                ) : (
-                                                                    <button
-                                                                        type="button"
-                                                                        className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 "
-                                                                        onClick={startEditing}
-                                                                    >
-                                                                        Edit Item Details
-                                                                    </button>
-                                                                )}
-                                                                {!isEditing &&
+                                                        }
+
+                                                    </div>
+                                                </>
+                                            )
+                                            :
+                                            (
+                                                <>
+                                                    {!isLoading ?
+
+                                                        (<>
+                                                            {itemHistory.length > 0 ?
                                                                 (
                                                                     <>
-                                                                    <div className="relative ">
-                                                                    {openUpdateStatus &&
-                                                                        (
-                                                                            <>
-                                                                                <div className="absolute bottom-11 h-fit w-45 bg-white border -translate-x-14 xl:-translate-x-5 border-[#DDD9CF] rounded-md">
-                                                                                    <button className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                                                                        onClick={startClaiming }>
-                                                                                        <p className="ml-2">Mark as Claimed</p>
-                                                                                    </button>
-                                                                                    {selectedItem.status === 'to_be_disposed' &&
-                                                                                        (
-                                                                                            <button className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                                                                        onClick={startDisposing }>                                                                 
-                                                                                        <p className="ml-2">Mark as Disposed</p>
-                                                                                    </button>
-                                                                                        )
-                                                                                    }
+                                                                        {itemHistory?.map((history) => {
+                                                                            return (
+                                                                                <div className="w-full  bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg flex gap-2 p-3 mb-2" key={history.history_id}>
+                                                                                    <div className=" h-full">
+                                                                                        <i className="fa-regular fa-clock text-(--color-quaternary)"></i>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <p className="text-xs">{history.history_type}</p>
+                                                                                        <p className="text-[10px] text-[#6B5C42] mb-1">{history.details}</p>
+                                                                                        <p className="text-[10px] text-[#6B5C42]">{history.full_name || "N/A"} · <span>{formatNotificationDate(history.created_at)}</span></p>
 
+                                                                                    </div>
                                                                                 </div>
-                                                                            </>
-                                                                        )
+                                                                            )
+                                                                        })
 
-                                                                    }
-                                                                    {!isEditing &&
-                                                                        <button className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 "
-                                                                            onClick={() => { setOpenUpdateStatus(!openUpdateStatus) }}>
-                                                                            Update Status <i className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white`}></i>
-                                                                        </button>
-                                                                    }
-                                                                </div>
+                                                                        }
                                                                     </>
                                                                 )
-                                                                    
-                                                                }
-
-
-                                                            </div>
-                                                            <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
-
-                                                                {!isEditing &&
-                                                                    (
-                                                                        <button
-                                                                            type="button"
-                                                                            className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
-        active:scale-95 border border-primary text-primary w-full justify-center`}
-
-                                                                        >
-                                                                            <QrCode size="20" />
-                                                                            <p >Print QR Code</p>
-                                                                        </button>
-                                                                    )
-
-                                                                }
-
-                                                            </div>
-                                                        </>
-                                                    )
-                                                    :
-                                                    (
-                                                        <>
-                                                            {!isLoading ?
-
-                                                                (<>
-                                                                    {itemHistory.length > 0 ?
-                                                                        (
-                                                                            <>
-                                                                                {itemHistory?.map((history) => {
-                                                                                    return (
-                                                                                        <div className="w-full  bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg flex gap-2 p-3 mb-2" key={history.history_id}>
-                                                                                            <div className=" h-full">
-                                                                                                <i className="fa-regular fa-clock text-(--color-quaternary)"></i>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <p className="text-xs">{history.history_type}</p>
-                                                                                                <p className="text-[10px] text-[#6B5C42] mb-1">{history.details}</p>
-                                                                                                <p className="text-[10px] text-[#6B5C42]">{history.full_name || "N/A"} · <span>{formatNotificationDate(history.created_at)}</span></p>
-
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    )
-                                                                                })
-
-                                                                                }
-                                                                            </>
-                                                                        )
-                                                                        :
-                                                                        (<>
-                                                                            <span className="text-[#6B5C42] text-sm">No history yet</span>
-                                                                        </>)
-
-                                                                    }
-                                                                </>)
                                                                 :
                                                                 (<>
-                                                                    <span className="text-[#6B5C42] text-sm">Fetching item history . . .</span>
-
+                                                                    <span className="text-[#6B5C42] text-sm">No history yet</span>
                                                                 </>)
 
                                                             }
-                                                        </>
+                                                        </>)
+                                                        :
+                                                        (<>
+                                                            <span className="text-[#6B5C42] text-sm">Fetching item history . . .</span>
+
+                                                        </>)
+
+                                                    }
+                                                </>
+                                            )
+
+                                        }
+                                        <div className="h-5"></div>
+
+
+
+                                    </div>
+
+
+
+                                </>
+
+                            )
+
+                        }
+                        {claimTab &&
+
+                            (
+                                <>
+                                    <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
+                                        <button className={`text-[#6B5C42]  text-sm px-5
+                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
+                                     `}
+                                        >Mark as Claimed</button>
+                                    </div>
+                                    <div className="h-full w-full p-5 pt-15">
+                                        <AdminTextField
+                                            title="Claimant Full Name"
+                                            reqField={true}
+                                            placeholder="Full name of claimant"
+                                            value={fullName}
+                                            onChange={setFullName}
+                                        />
+                                        <div className="w-full mt-3 flex flex-col gap-2">
+                                            <p className="text-sm font-medium">BulSU Email / Contact Number <span className="text-primary">*</span></p>
+                                            <div className="w-full h-10 flex ">
+                                                <button
+                                                    className={`flex-1 text-[#6B5C42] rounded-l-lg text-xs font-semibold border border-[#DDD9CF]
+                                                    ${!identifierToggle && "text-white bg-primary border-primary"}`}
+                                                    onClick={() => { setIdentifierToggle(false) }}
+                                                >Email</button>
+                                                <button
+                                                    className={`flex-1  text-[#6B5C42] rounded-r-lg  text-xs font-semibold border border-[#DDD9CF]
+                                                    ${identifierToggle && "text-white bg-primary border-primary"}`}
+                                                    onClick={() => { setIdentifierToggle(true) }}
+                                                >Contact No.</button>
+
+
+                                            </div>
+                                            {identifierToggle ?
+                                                (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
+                                                            placeholder="e.g. 09XXXXXXXXX"
+                                                            value={claimantNumber}
+                                                            onChange={(e) =>
+                                                                setClaimantNumber(e.target.value)
+                                                            }
+                                                        />
+                                                    </>
+                                                )
+                                                :
+                                                (
+                                                    <input
+                                                        type="email"
+                                                        className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
+                                                        placeholder="e.g. juan@gmail.com"
+                                                        value={claimantEmail}
+                                                        onChange={(e) =>
+                                                            setClaimantEmail(e.target.value)
+                                                        }
+                                                    />
+                                                )
+
+
+                                            }
+                                            {!isValidEmail && claimantEmail && 
+                                            <span className="text-xs text-primary">Please enter a valid Email</span>
+                                            }
+                                             {!isValidPhone && claimantNumber && 
+                                            <span className="text-xs text-primary">Please enter a valid phone number</span>
+                                            }
+                                            <span className="text-xs text-[#6B5C42]">At least one identifier is required.</span>
+                                        </div>
+                                        <div className="mt-3">
+                                            <p className="text-sm font-medium">Proof of Claim Photo Upload <span className="text-primary">*</span></p>
+                                            <p className="text-xs text-[#6B5C42]">Take or upload a photo of the claimant holding or standing with the claimed item.</p>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                                            >
+                                                {claimantImage ? (
+                                                    <>
+                                                        <img
+                                                            src={claimantImage}
+                                                            alt="Selected found item"
+                                                            className="h-full w-full object-contain"
+                                                        />
+                                                        <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                                                            Click image to replace photo.
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
+                                                        <p className="text-[#6B5C42] text-xs">Click to upload photo.</p>
+                                                    </>
+                                                )}
+                                            </button>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleClaimantFileChange}
+                                            />
+                                            <div className="mt-3">
+                                                <p className="text-sm font-medium">
+                                                    Verification Details
+                                                    <span className="text-primary">*</span>
+                                                </p>
+
+                                                <p className="text-xs text-[#6B5C42]">
+                                                    Describe how ownership was verified.
+                                                </p>
+
+                                                <textarea
+                                                    className="textarea w-full bg-white border border-[#DDD9CF] rounded-md mt-1"
+                                                    rows={3}
+                                                    placeholder="Example: Claimant identified contents inside the wallet and presented a valid school ID."
+                                                    value={verificationDetails}
+                                                    onChange={(e) =>
+                                                       setVerificationDetails(e.target.value)
+                                                    }
+                                                />
+                                            </div>
+
+                                        </div>
+                                        <div className="mt-3 flex flex-col">
+                                            <p className="text-sm font-medium">Link to a Lost Report <span className="text-black/40">(Optional)</span></p>
+                                            <p className="text-[#6B5C42] text-xs">If the claimant has an existing lost report for this item, link it here. The report will be automatically marked as Resolved when the item is released.</p>
+                                            <div className="relative w-full">
+                                                {showSearchResults &&
+                                                    searchResults?.length > 0 && (
+                                                        <div className="w-full h-fit border border-[#DDD9CF] rounded-md">
+
+                                                            <div className="absolute bottom-full w-full h-fit border border-[#DDD9CF] rounded-md bg-white z-50">
+                                                                {searchResults.map((result) => (
+                                                                    <button
+                                                                        key={result.lost_report_id}
+                                                                        type="button"
+                                                                        className="w-full text-sm flex p-2  border-b border-b-[#DDD9CF] hover:bg-gray-100"
+                                                                        onClick={() => {
+                                                                            setLinkReport(result);
+                                                                            setShowSearchResults(false);
+                                                                        }}
+                                                                    >
+                                                                        <p className="flex-1 text-left">
+                                                                            RPT-{String(result.lost_report_id).padStart(4, "0")}
+                                                                        </p>
+
+                                                                        <p className="flex-1 text-left">
+                                                                            {result.item_name}
+                                                                        </p>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                        </div>
+                                                    )
+                                                }
+
+                                                {linkReport &&
+                                                    (
+                                                        <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
+                                                            <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
+                                                                <p className="flex-1 overflow-x-auto min-w-0 truncate">RPT-00{linkReport.lost_report_id}</p>
+                                                                <p className="flex-1 min-w-0 truncate">{linkReport.item_name}</p>
+                                                                <button
+                                                                    onClick={() => { setLinkReport(null) }}
+                                                                ><i className="fa-solid fa-trash-can text-primary"></i></button>
+                                                            </div>
+                                                        </div>
                                                     )
 
                                                 }
-                                                <div className="h-5"></div>
 
-
-
-                                            </div>
-
-
-
-                                        </>
-                                    
-                                    )
-
-                                }
-                                {claimTab &&
-
-                                    (
-                                        <>
-                                            <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
-                                                <button className={`text-[#6B5C42]  text-sm px-5
-                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
-                                     `}
-                                                >Mark as Claimed</button>
-                                            </div>
-                                            <div className="h-full w-full p-5 pt-15">
-                                                <AdminTextField
-                                                    title="Claimant Full Name"
-                                                    reqField={true}
-                                                    placeholder="Full name of claimant"
-                                                    value={fullName}
-                                                    onChange={setFullName}
-                                                />
-                                                <div className="w-full mt-3 flex flex-col gap-2">
-                                                    <p className="text-sm font-medium">BulSU Email / Contact Number <span className="text-primary">*</span></p>
-                                                    <div className="w-full h-10 flex ">
-                                                        <button
-                                                            className={`flex-1 text-[#6B5C42] rounded-l-lg text-xs font-semibold border border-[#DDD9CF]
-                                                    ${!identifierToggle && "text-white bg-primary border-primary"}`}
-                                                            onClick={() => { setIdentifierToggle(false) }}
-                                                        >BulSU Email</button>
-                                                        <button
-                                                            className={`flex-1  text-[#6B5C42] rounded-r-lg  text-xs font-semibold border border-[#DDD9CF]
-                                                    ${identifierToggle && "text-white bg-primary border-primary"}`}
-                                                            onClick={() => { setIdentifierToggle(true) }}
-                                                        >Contact No.</button>
-
-
-                                                    </div>
-                                                    {identifierToggle ?
-                                                        (
-                                                            <>
-                                                                <input
-                                                                    type="text"
-                                                                    className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
-                                                                    placeholder="e.g. 09XXXXXXXXX"
-                                                                    value={claimForm.claimant_contact_number}
-                                                                    onChange={(e) =>
-                                                                        setClaimForm({
-                                                                            ...claimForm,
-                                                                            claimant_contact_number: e.target.value,
-                                                                        })
-                                                                    }
-                                                                />
-                                                            </>
-                                                        )
-                                                        :
-                                                        (
-                                                            <input
-                                                                type="email"
-                                                                className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
-                                                                placeholder="e.g. 2023100450@ms.bulsu.edu.ph"
-                                                                value={claimForm.claimant_email}
-                                                                onChange={(e) =>
-                                                                    setClaimForm({
-                                                                        ...claimForm,
-                                                                        claimant_email: e.target.value,
-                                                                    })
-                                                                }
-                                                            />
-                                                        )
-
-
-                                                    }
-                                                    <span className="text-xs text-[#6B5C42]">At least one identifier is required.</span>
-                                                </div>
-                                                <div className="mt-3">
-                                                    <p className="text-sm font-medium">Proof of Claim Photo Upload <span className="text-primary">*</span></p>
-                                                    <p className="text-xs text-[#6B5C42]">Take or upload a photo of the claimant holding or standing with the claimed item.</p>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
-                                                    >
-                                                        {claimantImage ? (
-                                                            <>
-                                                                <img
-                                                                    src={claimantImage}
-                                                                    alt="Selected found item"
-                                                                    className="h-full w-full object-contain"
-                                                                />
-                                                                <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                                                                    Click image to replace photo.
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
-                                                                <p className="text-[#6B5C42] text-xs">Click to upload photo.</p>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        onChange={handleClaimantFileChange}
-                                                    />
-                                                    <div className="mt-3">
-                                                        <p className="text-sm font-medium">
-                                                            Verification Details
-                                                            <span className="text-primary">*</span>
-                                                        </p>
-
-                                                        <p className="text-xs text-[#6B5C42]">
-                                                            Describe how ownership was verified.
-                                                        </p>
-
-                                                        <textarea
-                                                            className="textarea w-full bg-white border border-[#DDD9CF] rounded-md mt-1"
-                                                            rows={3}
-                                                            placeholder="Example: Claimant identified contents inside the wallet and presented a valid school ID."
-                                                            value={claimForm.verification_details}
-                                                            onChange={(e) =>
-                                                                setClaimForm({
-                                                                    ...claimForm,
-                                                                    verification_details: e.target.value,
-                                                                })
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                </div>
-                                                <div className="mt-3 flex flex-col">
-                                                    <p className="text-sm font-medium">Link to a Lost Report <span className="text-black/40">(Optional)</span></p>
-                                                    <p className="text-[#6B5C42] text-xs">If the claimant has an existing lost report for this item, link it here. The report will be automatically marked as Resolved when the item is released.</p>
-                                                    <div className="relative w-full">
-                                                        {showSearchResults &&
-                                                            searchResults?.length > 0 && (
-                                                                <div className="w-full h-fit border border-[#DDD9CF] rounded-md">
-
-                                                                    <div className="absolute bottom-full w-full h-fit border border-[#DDD9CF] rounded-md bg-white z-50">
-                                                                        {searchResults.map((result) => (
-                                                                            <button
-                                                                                key={result.lost_report_id}
-                                                                                type="button"
-                                                                                className="w-full text-xs flex p-1 px-2 border-b border-b-[#DDD9CF] hover:bg-gray-100"
-                                                                                onClick={() => {
-                                                                                    setLinkReport(result);
-                                                                                    setShowSearchResults(false);
-                                                                                }}
-                                                                            >
-                                                                                <p className="flex-1 text-left">
-                                                                                    RPT-{String(result.lost_report_id).padStart(4, "0")}
-                                                                                </p>
-
-                                                                                <p className="flex-1 text-left">
-                                                                                    {result.item_name}
-                                                                                </p>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-
-                                                                </div>
-                                                            )
-                                                        }
-
-                                                        {linkReport &&
-                                                            (
-                                                                <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
-                                                                    <div className="w-full text-xs flex p-1 px-2 border-b border-b-[#DDD9CF]">
-                                                                        <p className="flex-1 overflow-x-auto min-w-0 truncate">RPT-00{linkReport.lost_report_id}</p>
-                                                                        <p className="flex-1 min-w-0 truncate">{linkReport.item_name}</p>
-                                                                        <button
-                                                                            onClick={() => { setLinkReport(null) }}
-                                                                        ><i className="fa-solid fa-trash-can text-primary"></i></button>
-                                                                    </div>
-                                                                </div>
-                                                            )
-
-                                                        }
-
-                                                        <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
+                                                <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
                                                             items-center mt-2">
-                                                            <i className="fa-solid fa-magnifying-glass text-primary ml-2"></i>
-                                                            <span className="text-xs ml-2">RPT-00</span>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Search"
-                                                                className="input input-bordered flex-1"
-                                                                onFocus={() => setShowSearchResults(true)}
-                                                                onBlur={() => {
-                                                                    setTimeout(() => {
-                                                                        setShowSearchResults(false);
-                                                                    }, 200);
-                                                                }}
-                                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                    <i className="fa-solid fa-magnifying-glass text-primary ml-2"></i>
+                                                    <span className="text-xs ml-2">RPT-00</span>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search"
+                                                        className="input input-bordered flex-1"
+                                                        onFocus={() => setShowSearchResults(true)}
+                                                        onBlur={() => {
+                                                            setTimeout(() => {
+                                                                setShowSearchResults(false);
+                                                            }, 200);
+                                                        }}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                    />
                                                 </div>
-                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                                <div className="w-full h-10  flex gap-2 text-xs">
-                                                    <button className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                                                            onClick={()=>{setClaimTab(false), setEditTab(true)}}
-                                                        >Cancel</button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={!isClaimValid}
-                                                        onClick={handleItemRelease}
-                                                        className={`flex-1 h-full bg-primary font-medium text-white rounded-md ${!isClaimValid && "opacity-50"}`}
-                                                    >
-                                                        Confirm Release
-                                                    </button>
-                                                </div>
-                                                <div className="h-5">
-
-                                                </div>
-
-
                                             </div>
-                                        </>
-                                    )
+                                        </div>
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                        <div className="w-full h-10  flex gap-2 text-xs">
+                                            <button className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                                                onClick={() => { setClaimTab(false), setEditTab(true) }}
+                                            >Cancel</button>
+                                            <button
+                                                type="button"
+                                                disabled={(!isClaimValid || isReleasing || ((!isValidEmail && claimantEmail)  || (!isValidPhone && claimantNumber)))}
+                                                onClick={handleItemRelease}
+                                                className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 `}
+                                            >
+                                                {isReleasing? "Releasing..." : "Confirm Release"}
+                                            </button>
+                                        </div>
+                                        <div className="h-5">
+
+                                        </div>
 
 
-                                }
-                                {disposedTab && 
-                                (
-                                    <>
-                                      <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50 ">
-                                                <button className={` text-sm px-5
+                                    </div>
+                                </>
+                            )
+
+
+                        }
+                        {disposedTab &&
+                            (
+                                <>
+                                    <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50 ">
+                                        <button className={` text-sm px-5
                                     bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) 
                                      `}
-                                                >Mark as Disposed</button>
-                                            </div>
-                                            <div className="h-full w-full p-5 pt-15 flex flex-col">
-                                                <div className="flex flex-col gap-2 mb-5">
-                                                    <p className="text-md font-medium">Confirm Disposal</p>
-                                                    <p className="text-xs text-justify">This item will be marked for donation.   Please provide the donation details before   confirming.</p>
-                                                </div>
-                                                <AdminTextField
-                                                    title="Disposed To/Location"
-                                                    reqField={true}
-                                                />
-                                                <AdminDateInput
-                                                    title="Date of Donation"
-                                                    reqField={true}
-                                                />
-                                                <AdminTextArea
-                                                title="Additional Notes"
-                                                    reqField={true}
-                                                    
-                                                />
-                                                  <div className="w-full h-10  flex gap-2 text-xs mt-auto">
-                                                    <button className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                                                            onClick={()=>{setClaimTab(false), setEditTab(true)}}
-                                                        >Cancel</button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleItemRelease}
-                                                        className={`flex-1 h-full bg-[#FFDFA3] font-medium text-[#FFA500] rounded-md`}
-                                                    >
-                                                        Confirm Release
-                                                    </button>
-                                                </div>
-                                                    
-                                            </div>
-                                    </>
-                                )
+                                        >Mark as Disposed</button>
+                                    </div>
+                                    <div className="h-full w-full p-5 pt-15 flex flex-col">
+                                        <div className="flex flex-col gap-2 mb-5">
+                                            <p className="text-md font-medium">Confirm Disposal</p>
+                                            <p className="text-xs text-justify">This item will be marked for donation.   Please provide the donation details before   confirming.</p>
+                                        </div>
+                                        <AdminTextField
+                                            title="Disposed To/Location"
+                                            reqField={true}
+                                            value={itemWhereabouts}
+                                            onChange={setItemWhereabouts}
+                                        />
+                                        <AdminDateInput
+                                            title="Date of Donation"
+                                            reqField={true}
+                                            value={donationDate}
+                                            onChange={setDonationDate}
+                                        />
+                                        {donationDate && !disposalDateValid && (
+                                            <p className="text-xs text-primary">
+                                                Disposal date cannot be in the future.
+                                            </p>
+                                        )}
+                                        <AdminTextArea
+                                            title="Additional Notes"
+                                            reqField={true}
+                                            value={notes}
+                                            onChange={setNotes}
+                                        />
+                                        <div className="w-full h-10  flex gap-2 text-xs mt-auto">
+                                            <button className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                                                onClick={handleCancelDisposed}
+                                            >Cancel</button>
+                                            <button
+                                                type="button"
+                                                disabled={!isDisposalValid || isDisposing}
+                                                onClick={handleDisposedItem}
+                                                className={`flex-1 h-full bg-[#DDD1C5]  font-medium text-[#553D25] rounded-md disabled:opacity-40`}
+                                            >
+                                                {isDisposing? "Disposing..." : "Confirm Dispossal"}
+                                            </button>
+                                        </div>
 
-                                }
-                            </div>
+                                    </div>
+                                </>
+                            )
 
-                        </div>
-                    </>
-                
+                        }
+                    </div>
+
+                </div>
+            </>
+
         </>
     )
 }
