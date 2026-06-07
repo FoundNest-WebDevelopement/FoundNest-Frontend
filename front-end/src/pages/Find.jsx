@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import PageLabel from "../components/PageLabel";
 import FoundItemCard from "../components/FoundItemCard";
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown";
-import { FOUND_REPORT_STATUS } from "../../../back-end/constants/found_item_status";
+import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown";
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown";
 import CategoriesDropDownFilter from "../components/CategoriesDropDownFilter";
