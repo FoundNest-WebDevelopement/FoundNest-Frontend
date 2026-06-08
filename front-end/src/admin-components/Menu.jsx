@@ -27,10 +27,14 @@ export default function Menu({onChange}){
     );
   } catch (err) {
     console.error(err);
-  } finally {
+ } finally {
+    const rememberedEmail = localStorage.getItem("remembered_email");
     localStorage.clear();
+    if (rememberedEmail) {
+        localStorage.setItem("remembered_email", rememberedEmail);
+    }
     navigate("/login");
-  }
+}
 };
 
   const navItems = [
