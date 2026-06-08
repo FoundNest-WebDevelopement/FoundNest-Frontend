@@ -72,6 +72,7 @@ function Login() {
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
+          localStorage.setItem("office_name", data.user.office_name || "");
           navigate("/admin"); 
         } else {
           navigate("/home");
