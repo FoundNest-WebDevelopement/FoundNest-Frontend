@@ -1,4 +1,4 @@
-import { Download, QrCode, Plus, Table } from "lucide-react"
+import { Download, QrCode, Plus } from "lucide-react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown"
 import { useEffect, useState } from "react";
@@ -7,7 +7,8 @@ import AdminStatusDropDown from "../admin-components/AdminStatusDropDown";
 import AdminDateInput from "../admin-components/AdminDateInput";
 import ItemManagementTable from "../admin-components/ItemManagementTable";
 import FoundItemModal from "../admin-components/FoundItemModal";
-import { FOUND_REPORT_STATUS } from "../../../back-end/constants/found_item_status";
+import QRScanModal from "../admin-components/QRScanModal";
+import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useSearchParams } from "react-router-dom";
 
@@ -16,12 +17,11 @@ import { useSearchParams } from "react-router-dom";
 export default function ItemManagement() {
     const API_URL = import.meta.env.VITE_API_URL;
 
-
-    //test
     const adminId = localStorage.getItem("admin_id");
 
-
     const [openLogItem, setOpenLogItem] = useState(false);
+    const [openQRScan, setOpenQRScan] = useState(false);
+    const [qrPrefillData, setQrPrefillData] = useState(null);
     const [categories, setCategories] = useState([]);
     
     const [reports, setReports] = useState([]);
@@ -40,35 +40,31 @@ export default function ItemManagement() {
     const [locations, setLocations] = useState([]);
 
     const allLocations = [
-  ...locations?.map((building) => ({
-    id: building.office_id,
-    name: building.office_name,
-    type: "college",
-  })),
+        ...locations?.map((building) => ({
+            id: building.office_id,
+            name: building.office_name,
+            type: "college",
+        })),
+        ...sharedSpaces?.map((space) => ({
+            id: space.shared_space_id,
+            name: space.shared_space_name,
+            type: "shared-space",
+        })),
+        ...gates?.map((gate) => ({
+            id: gate.gate_id,
+            name: gate.gate_name,
+            type: "gate",
+        })),
+    ];
 
-  ...sharedSpaces?.map((space) => ({
-    id: space.shared_space_id,
-    name: space.shared_space_name,
-    type: "shared-space",
-  })),
-
-  ...gates?.map((gate) => ({
-    id: gate.gate_id,
-    name: gate.gate_name,
-    type: "gate",
-  })),
-];
-
-
-
-    //TEMP VARIABLES FILTER STORAGE
+    // TEMP VARIABLES FILTER STORAGE
     const [searchTemp, setSearchTemp] = useState("");
     const [dateFoundTemp, setDateFoundTemp] = useState("");
     const [locationTemp, setLocationTemp] = useState("");
     const [categoryTemp, setCategoryTemp] = useState("");
     const [statusTemp, setStatusTemp] = useState("unclaimed");
 
-    //SEARCH AND FILTER VARIABLES 
+    // SEARCH AND FILTER VARIABLES 
     const [search, setSearch] = useState("");
     const [dateFound, setDateFound] = useState("");
     const [location, setLocation] = useState("");
@@ -78,7 +74,7 @@ export default function ItemManagement() {
 
 
 
-    //SEARCH AND FILTER FUNCTION 
+    // SEARCH AND FILTER FUNCTION 
     const filteredReports = reports.filter((report) => {
         const query = search.toLowerCase();
 
@@ -113,7 +109,6 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
         const matchesDate =
             !dateFound || reportDate === dateFound;
 
-
         return (
             matchesSearch &&
             matchesCategory &&
@@ -123,8 +118,7 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
         );
     });
 
-    //REPORTS AND OTHER FETCH
-
+    // FETCH REPORTS AND OTHER DATA
     useEffect(() => {
         fetch(`${API_URL}/api/categories`)
             .then((res) => res.json())
@@ -143,9 +137,7 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
         .then((data) => {
             setReports(data);
         })
-        .catch((err) => {
-            console.error(err);
-        });
+        .catch((err) => console.error(err));
 }, []);
 
  useEffect(() => {
@@ -185,8 +177,6 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
             });
     }, []);
 
-
-
     useEffect(() => {
         fetch(`${API_URL}/api/shared-spaces`)
             .then((res) => res.json())
@@ -198,31 +188,34 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
             });
     }, []);
 
-
-
-    // HAMDLE CLEAR FILTER
+    // HANDLE CLEAR FILTER
     const handleClearFilters = () => {
         setSearch("");
         setLocation("");
         setCategory("");
         setStatus("unclaimed");
         setDateFound("");
-
         setSearchTemp("");
         setLocationTemp("");
         setCategoryTemp("");
         setStatusTemp("unclaimed");
         setDateFoundTemp("");
-    }
+    };
 
-    // HAMDLE APPLY FILTER
+    // HANDLE APPLY FILTER
     const handleApplyFilters = () => {
         setSearch(searchTemp);
         setLocation(locationTemp);
         setCategory(categoryTemp);
         setStatus(statusTemp);
         setDateFound(dateFoundTemp);
-    }
+    };
+
+    // HANDLE QR SCAN USE DATA — open FoundItemModal with prefilled data
+    const handleQRUseData = (data) => {
+        setQrPrefillData(data);
+        setOpenLogItem(true);
+    };
 
         //export csv
     const downloadCSV = async () => {
@@ -250,8 +243,8 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
         <>
             <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
 
-                <div className="flex h-10 w-full ">
-                    <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                <div className="flex h-10 w-full">
+                    <div className="flex flex-1 border border-[#DDD9CF] rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                         <input
                             type="text"
                             placeholder="Search"
@@ -262,12 +255,12 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
                     </div>
                     <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
                         <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={downloadCSV}/>
-                        <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} />
+                        <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
                         <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => { setOpenLogItem(true) }} />
                     </div>
                 </div>
-                <div className="py-1 px-4 border  border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md ">
 
+                <div className="py-1 px-4 border border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md">
                     <div className="flex w-full h-full gap-2 items-center justify-center">
                         <div className="flex-1">
                             <AdminLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={locations} />
@@ -281,15 +274,14 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
                         <div className="flex-1">
                             <AdminDateInput value={dateFoundTemp} onChange={setDateFoundTemp} />
                         </div>
-                        <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
-                            <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
-                            <AdminButton isIcon={false} label="Clear " isBorder={false} isShadow={false} onClick={handleClearFilters} />
+                        <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
+                            <AdminButton isIcon={false} isSolid={true} label="Apply Filters" isBorder={true} isShadow={true} onClick={handleApplyFilters} />
+                            <AdminButton isIcon={false} label="Clear" isBorder={false} isShadow={false} onClick={handleClearFilters} />
                         </div>
                     </div>
-
                 </div>
-              <div className="w-full min-w-0">
-                  
+
+                <div className="w-full min-w-0">
                     <ItemManagementTable
                         reports={filteredReports}
                         categories={categories}
@@ -299,26 +291,29 @@ const paddedItemId = String(report.item_id).padStart(5, "0");
                         selectedItem={selectedItem}
                         setSelectedItem={setSelectedItem}
                     />
-    
-              </div>
+                </div>
             </div>
-            {openLogItem &&
-                (
-                    <>
-                        <FoundItemModal
-                            open={openLogItem}
-                            setOpen={setOpenLogItem}
-                            categories={categories}
-                            locations={locations}
-                            allLocations={allLocations}
-                            onUpdated={setReports}
-                        />
-                    </>
-                )
 
-            }
-        
+            {/* Log New Item Modal */}
+            {openLogItem && (
+                <FoundItemModal
+                    open={openLogItem}
+                    setOpen={setOpenLogItem}
+                    categories={categories}
+                    locations={locations}
+                    allLocations={allLocations}
+                    prefillData={qrPrefillData}
+                />
+            )}
+
+            {/* QR Scan Modal */}
+            {openQRScan && (
+                <QRScanModal
+                    open={openQRScan}
+                    setOpen={setOpenQRScan}
+                    onUseData={handleQRUseData}
+                />
+            )}
         </>
-    )
+    );
 }
-

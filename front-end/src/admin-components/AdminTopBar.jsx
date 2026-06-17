@@ -9,13 +9,13 @@ export default function AdminTopBar({tabName}) {
         <>
             <div className="h-full w-full bg-white flex">
                 <div className="h-full w-60 bg-primary ">
-                    <div className="h-full w-full flex items-center justify-center gap-2 ">
+                    <div className="h-full w-full flex items-center justify-start px-4 gap-2 ">
                         <div className="bg-(--color-quaternary) w-fit h-fit p-1 rounded-md ">
                             <img src={icon} alt="LFMS Icon" className="h-8" />
                         </div>
                         <div className="flex flex-col">
                             <p className="text-md font-bold text-(--color-quaternary)">FoundNest</p>
-                            <p className="text-xs text-white ">Pimentel Office Admin</p>
+                            <p className="text-xs text-white ">{localStorage.getItem("office_name") || "Office Admin"}</p>
                         </div>
                     </div>
                     <hr className="border border-white/12 opacity-30" />

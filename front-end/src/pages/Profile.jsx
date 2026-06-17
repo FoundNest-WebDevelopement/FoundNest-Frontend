@@ -283,7 +283,12 @@ export default function Profile() {
               {/* Log out */}
               <button
                 onClick={() => {
+                  const rememberedEmail =
+                    localStorage.getItem("remembered_email");
                   localStorage.clear();
+                  if (rememberedEmail) {
+                    localStorage.setItem("remembered_email", rememberedEmail);
+                  }
                   navigate("/");
                 }}
                 className="flex items-center gap-4 px-4 py-4 w-full"

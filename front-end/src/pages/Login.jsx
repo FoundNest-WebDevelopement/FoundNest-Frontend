@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,6 +25,14 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("remembered_email");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const isLoginValid = email.trim() !== "" && password.trim() !== "";
 
@@ -51,6 +59,12 @@ function Login() {
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("course_section", data.user.course_section || "");
 
+        // Remember Me
+        if (rememberMe) {
+          localStorage.setItem("remembered_email", email);
+        } else {
+          localStorage.removeItem("remembered_email");
+        }
 
         // Role based redirect
         if (data.user.user_role === "super_admin") {
@@ -58,6 +72,7 @@ function Login() {
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
+          localStorage.setItem("office_name", data.user.office_name || "");
           navigate("/admin"); 
         } else {
           navigate("/home");
@@ -119,7 +134,7 @@ function Login() {
             />
             Remember me
           </label>
-          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs">
+          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text text-xs">
             Forgot password?
           </button>
         </div>
