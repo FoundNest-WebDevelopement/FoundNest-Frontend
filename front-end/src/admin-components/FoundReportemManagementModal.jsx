@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react"
-import { Pencil, X, QrCode } from "lucide-react"
+import { Pencil, X, QrCode, Link2 } from "lucide-react"
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js"
 import formatNotificationDate from "../utils/fotmatNotifications.js";
 import AdminTextField from "./AdminTextField.jsx";
 import AdminDateInput from "./AdminDateInput.jsx";
 import AdminTextArea from "./AdminTextArea.jsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useNavigate } from "react-router-dom";
+
 
 
 
@@ -22,12 +24,17 @@ export default function FoundReportItemManagementModal(
     }
 ) {
 
+            console.log(selectedItem)
+    const officeId = localStorage.getItem("office_location");
+
+
 
 
     const API_URL = import.meta.env.VITE_API_URL;
     const [isLoading, setIsLoading] = useState(false);
     const adminId = localStorage.getItem("admin_id");
     const userId = localStorage.getItem("user_id");
+    const navigate = useNavigate();
 
     //HANDLE STATUS UPDATE TAB
     const [claimTab, setClaimTab] = useState(false);
@@ -47,6 +54,16 @@ export default function FoundReportItemManagementModal(
     const [claimantEmail, setClaimantEmail] = useState("");
     const [claimantNumber, setClaimantNumber] = useState("");
     const [verificationDetails, setVerificationDetails] = useState("");
+
+       //format item  id
+    const formatItemId = (id) => {
+        return `SI-${String(id).padStart(5, "0")}`;
+    };
+
+     //format item  id
+    const formatReportId = (id) => {
+        return `RPT-${String(id).padStart(5, "0")}`;
+    };
 
            const isValidPhone = /^09\d{9}$/.test(
         claimantNumber
@@ -139,6 +156,10 @@ export default function FoundReportItemManagementModal(
             formData.append(
                 "claimant_full_name",
                 fullName
+            );
+            formData.append(
+                "office_id", 
+                officeId
             );
 
             formData.append(
@@ -552,9 +573,13 @@ export default function FoundReportItemManagementModal(
 
     // for claim tab
     const fetchLostReports = async (search) => {
+
+        const normalizedSearch = search
+        .replace(/^rpt-/i, "") 
+        .replace(/^0+/, "");  
   
         const response = await fetchWithAuth(
-            `${API_URL}/api/lost-reports/search/rptlink?search=${search}`
+            `${API_URL}/api/lost-reports/search/rptlink?search=${normalizedSearch}`
         );
 
         const data = await response.json();
@@ -694,7 +719,7 @@ export default function FoundReportItemManagementModal(
                                 </p>
                             </div>
                             <div className="ml-auto pr-6">
-                                <button onClick={handleCloseDetails}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                                <button onClick={handleCloseDetails} className="cursor-pointer"><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
                             </div>
                         </div>
 
@@ -704,19 +729,62 @@ export default function FoundReportItemManagementModal(
 
                                 <>
                                     <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
-                                        <button className={`text-[#6B5C42]  text-sm px-5
-                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
+                                        <button className={`text-[#6B5C42]  text-sm px-5 cursor-pointer
+                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) "} 
                                      `}
                                             onClick={() => setItemInfo(true)}>Item Info</button>
                                         <button className={`text-[#6B5C42] text-sm px-5 
-                                        ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"}`}
+                                        ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) "} cursor-pointer`}
                                             onClick={handleHiistoryTab}>History</button>
                                     </div>
                                     <div className="h-full w-full p-5 pt-15">
                                         {itemInfo ?
                                             (
                                                 <>
+                                                    {selectedItem.linked_report && selectedItem.status === 'claimed' &&
+                                                            <div className="flex flex-col gap-2 mb-4">
+                                                 <div className="flex items-center gap-2">
+                                                    <Link2 size={15} />
+                                                    <p className="text-black font-semibold text-sm">LINKED LOST REPORT</p>
+                                                </div>
+                                                <div className=" flex flex-col w-full  gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-2 xl:p-4">
+                                                    <div className="flex justify-between text-[10px] xl:text-xs">
+                                                        <div className="text-black font-semibold  rounded-md p-1 px-2 ">
+                                                            <p className="font-bold">{formatReportId(selectedItem.linked_report)}</p>
+                                                        </div>
+                                                        <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold flex text-center">
+                                                            <p>{selectedItem.lost_report_status}</p>
+                                                        </div>
+                                                    </div>
+                                                     <div className="flex gap-2">
+                                                {selectedItem.lost_item_image_url &&
+                                                    <div className="w-12 h-10 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                                    <img src={selectedItem.lost_item_image_url} alt={selectedItem.lost_item_name}
+                                                        className="w-full h-full object-contain" />
+                                                </div>
+
+                                                }
+                                                <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
+                                                        <p className="font-semibold">{selectedItem.lost_item_name}</p>
+                                                        <p className="text-[#6B5C42]">{selectedItem.lost_item_category_name}</p>
+                                                </div>
+                                             
+                                            </div>
+                                              <div className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
+                                                 onClick={() =>
+                                                    navigate(
+                                                        `/admin/report_management?reportId=${selectedItem.linked_report}`
+                                                    )
+                                                }
+                                                >
+                                                  <p>View Lost Report &nbsp; </p>
+                                                     <i className="fa-solid fa-arrow-right"></i>
+                                              </div>
+                                                </div>
+                                               </div>
+                                                    }
                                                     <div className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden">
+                                                       
                                                         {isEditing ? (
                                                             <>
                                                                 <button
@@ -754,7 +822,7 @@ export default function FoundReportItemManagementModal(
                                                     <div className=" flex">
                                                         <div className="flex flex-col text-xs mt-5 flex-1">
                                                             <p className="text-[#6B5C42]">ITEM ID</p>
-                                                            <p className="text-black">SI-00{selectedItem.item_id}</p>
+                                                            <p className="text-black">{formatItemId(selectedItem.item_id)}</p>
                                                         </div>
                                                         <div className="flex flex-col text-xs mt-5 flex-1">
                                                             <p className="text-[#6B5C42]">CATEGORY{isEditing && <span className="text-primary"> *</span>}</p>
@@ -1267,7 +1335,7 @@ export default function FoundReportItemManagementModal(
                                                                         }}
                                                                     >
                                                                         <p className="flex-1 text-left">
-                                                                            RPT-{String(result.lost_report_id).padStart(4, "0")}
+                                                                           {formatReportId(result.lost_report_id)}
                                                                         </p>
 
                                                                         <p className="flex-1 text-left">
@@ -1285,7 +1353,7 @@ export default function FoundReportItemManagementModal(
                                                     (
                                                         <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
                                                             <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
-                                                                <p className="flex-1 overflow-x-auto min-w-0 truncate">RPT-00{linkReport.lost_report_id}</p>
+                                                                <p className="flex-1 overflow-x-auto min-w-0 truncate">{formatReportId(linkReport.lost_report_id)}</p>
                                                                 <p className="flex-1 min-w-0 truncate">{linkReport.item_name}</p>
                                                                 <button
                                                                     onClick={() => { setLinkReport(null) }}
@@ -1299,7 +1367,7 @@ export default function FoundReportItemManagementModal(
                                                 <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
                                                             items-center mt-2">
                                                     <i className="fa-solid fa-magnifying-glass text-primary ml-2"></i>
-                                                    <span className="text-xs ml-2">RPT-00</span>
+                                         
                                                     <input
                                                         type="text"
                                                         placeholder="Search"

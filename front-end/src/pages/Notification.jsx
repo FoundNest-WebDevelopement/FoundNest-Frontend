@@ -5,7 +5,7 @@ import formatNotificationDate from "../utils/fotmatNotifications.js";
 
 import { useEffect, useState } from "react";
 import PageLabelWithReturn from "../components/PageLabelWithReturn.jsx";
-
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 import Loading from "../components/Loading.jsx";
 import emptyImage from "../assets/empty_image.png"
 import { useNavigate } from "react-router-dom";
@@ -25,12 +25,10 @@ export default function Notification() {
     const handleNotificationClick = async (id, index) => {
   try {
     setIsLoading(true);
-    const token = localStorage.getItem("token");
-    await fetch(
+    await fetchWithAuth(
       `${API_URL}/api/notifications/${id}/read`,
       {
         method: "PATCH",
-        Authorization : `Bearer ${token}`
       }
     );
 
@@ -47,13 +45,7 @@ export default function Notification() {
 };
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
-        fetch(`${API_URL}/api/notifications/user/${userId}`,
-                   {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+        fetchWithAuth(`${API_URL}/api/notifications/user/${userId}`
         )
             .then((res) => res.json())
             .then((data) => {

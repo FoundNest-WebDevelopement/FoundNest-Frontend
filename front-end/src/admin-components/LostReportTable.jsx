@@ -1,28 +1,26 @@
-import { useEffect, useRef, useState } from "react"
-import { Pencil, X, QrCode, Info } from "lucide-react"
-import foramtDateTimeNew from "../utils/formatDataTimeNew.js"
-import formatNotificationDate from "../utils/fotmatNotifications.js";
-import AdminTextField from "./AdminTextField.jsx";
-import FoundReportItemManagementModal from "./FoundReportemManagementModal.jsx";
+import { useState } from "react";
+import { Pencil, X } from "lucide-react";
+import LostReportMangementModal from "./LostReportMangementModal";
 
-
-
-export default function ItemManagementTable({
-    reports,
+export default function LostReportTable(
+    {
+         reports,
     categories = [],
     locations = [],
     onUpdated,
     allLocations = [],
     selectedItem,
     setSelectedItem,
-
-}) {
-    const API_URL = import.meta.env.VITE_API_URL;
-
+    }
+){
+    //ADMIN CREDENTIALS
     const userId = localStorage.getItem("user_id");
     const adminId = localStorage.getItem("admin_id");
-   
 
+    //Set SelectedItem
+    // const [selectedItem, setSelectedItem] = useState(null);
+
+    //TABLE CONST
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
@@ -35,19 +33,11 @@ export default function ItemManagementTable({
         startIndex + itemsPerPage
     );
 
-
-    const [itemInfo, setItemInfo] = useState(true);
-
-
-    //format item  id
-    const formatItemId = (id) => {
-        return `SI-${String(id).padStart(5, "0")}`;
+     const formatReportId = (id) => {
+        return `RPT-${String(id).padStart(5, "0")}`;
     };
-    
-   
 
-
-    return (
+    return(
         <>
             <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
@@ -57,23 +47,22 @@ export default function ItemManagementTable({
                         <thead className="bg-primary text-white text-center">
                             <tr>
                                 <th className="w-5"></th>
-                                <th className="w-20">ITEM ID</th>
+                                <th className="w-20">REPORT ID</th>
                                 <th className="w-24">PHOTO</th>
                                 <th className="w-48">ITEM NAME</th>
                                 <th className="w-32">CATEGORY</th>
-                                <th className="w-40">LOCATION</th>
-                                <th className="w-32">DATE FOUND</th>
+                                <th className="w-32">DATE REPORTED</th>
                                 <th className="w-37">STATUS</th>
-                                <th className="w-40">LINKED REPORT</th>
+                                <th className="w-40">LINKED ITEM</th>
                                 <th className="w-40">REPORTED BY</th>
                                 <th className="w-24">ACTIONS</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            {paginatedReports?.map((item, index) => (
+                            {paginatedReports?.map((rpt, index) => (
                                 <tr
-                                    key={item.item_id}
+                                    key={rpt.lost_report_id}
                                     className={
                                         index % 2 === 0
                                             ? "bg-white"
@@ -83,63 +72,65 @@ export default function ItemManagementTable({
 
                                     <td className="align-middle">{startIndex + index + 1}</td>
 
-                                    <td className="w-28 align-middle text-center">{formatItemId(item.item_id)}</td>
+                                    <td className="w-28 align-middle text-center">{formatReportId(rpt.lost_report_id)}</td>
 
-                                    <td className="align-middle text-center">
-                                        <img
-                                            src={item.image_url}
-                                            alt={item.image_url}
+                                    <td className="align-middle text-center  flex justify-center ">
+                                        {rpt.image_url? 
+                                        (
+                                            <>
+                                            <img
+                                            src={rpt.image_url}
+                                            alt={rpt.image_url}
                                             className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:scale-105 transition"
-                                            onClick={() => setSelectedImage(item.image_url)}
+                                            onClick={() => setSelectedImage(rpt.image_url)}
                                         />
+                                            </>
+                                        )
+                                        :
+                                        (
+                                            <>
+                                            <div className="flex text-[9px] text-center w-12 h-12 items-center justify-center text-[#2980B9] font-medium">
+                                                <span >no image</span>
+                                            </div>
+                                            </>
+                                        )
+
+                                        }
                                     </td>
 
-                                    <td className="truncate max-w-48 align-middle text-center">{item.item_name}</td>
+                                    <td className="truncate max-w-48 align-middle text-center">{rpt.item_name}</td>
 
-                                    <td className="align-middle text-center">{item.category_name}</td>
+                                    <td className="align-middle text-center">{rpt.category_name}</td>
 
-                                    <td className="align-middle text-center">{item.office_name}</td>
-
-                                    <td className="align-middle text-center bg-re"> {new Date(item.found_date).toLocaleDateString()}</td>
+                                    <td className="align-middle text-center bg-re"> {new Date(rpt.lost_date).toLocaleDateString()}</td>
 
                                     <td className="align-middle text-center">
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-medium 
-                                        ${item.status === "claimed" && "bg-green-100 text-green-700" }
-                                        ${item.status == "unclaimed" && "bg-gray-200 text-gray-700"}
-                                        ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20" } 
-                                       ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
+                                        ${rpt.status === "resolved" && "bg-green-100 text-green-700" }
+                                        ${rpt.status == "open" && "    bg-[#E6F1FB] text-[#2980B9]"}
+                                        ${rpt.status == "cancelled" && "bg-gray-200 text-gray-700"}
+                                    
+                
                                         `}
                                         >
-                                        {item.status === 'claimed' && "Claimed"}
-                                            {item.status === 'unclaimed' && "Unclaimed"}
-                                            {item.status === 'to_be_disposed' && "For Disposal"}
-                                                {item.status === 'disposed' && "Disposed"}
+                                        {rpt.status === 'resolved' && "Resolved"}
+                                            {rpt.status === 'open' && "Open"}
+                                              {rpt.status === 'cancelled' && "Cancelled"}
+            
                                         </span>
                                     </td>
 
-                                    <td className="align-middle text-center font-medium">{item.linked_report ? <span>RPT-00{item.linked_report}</span> : ""}</td>
+                                    <td className="align-middle text-center font-medium">{rpt.found_item_id ? <span>SI-00{rpt.found_item_id}</span> : ""}</td>
 
-                                    <td className="align-middle text-center ">{item.reported_by}</td>
+                                    <td className="align-middle text-center ">{rpt.user_id? rpt.reported_by : rpt.owner_name}</td>
 
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
-                                            onClick={() => { setSelectedItem(item)}}
-                                        >
-                                            {(
-                                            item.status === "unclaimed" ||
-                                            item.status === "to_be_disposed"
-                                            ) && (
-                                            <Pencil size={18} className="text-primary" />
-                                            )}
-                                           {(
-                                            item.status === "claimed" ||
-                                            item.status === "disposed"
-                                            ) && (
-                                            <Info size={18} className="text-primary" />
-                                            )}
-
+                                            onClick={() => { setSelectedItem(rpt)}}
+                                        > 
+                                            <Pencil size={18} className="text-primary" />                       
                                         </button>
                                     </td>
 
@@ -148,7 +139,7 @@ export default function ItemManagementTable({
                             {paginatedReports.length === 0 && (
                                 <tr>
                                     <td colSpan={11} className="text-center py-8 text-[#6B5C42]">
-                                        No found items to display.
+                                        No Lost Report to display.
                                     </td>
                                 </tr>
                             )}
@@ -223,13 +214,35 @@ export default function ItemManagementTable({
                 </div>
             )}
 
+                {/* Image Modal */}
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+                    <div className="relative bg-white p-3 rounded-2xl">
+
+                        <button
+                            className="absolute top-2 right-2 btn btn-sm btn-circle"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <X size={16} />
+                        </button>
+
+                        <img
+                            src={selectedImage}
+                            alt="Preview"
+                            className="max-w-125 max-h-125 rounded-xl"
+                        />
+
+                    </div>
+
+                </div>
+            )}
+
             {selectedItem &&
                 (
-                    <FoundReportItemManagementModal 
+                    <LostReportMangementModal
                     selectedItem={selectedItem}
-                    itemInfo={itemInfo}
                     setSelectedItem={setSelectedItem}
-                    setItemInfo={setItemInfo}
                     categories={categories}
                     locations={locations}
                     allLocations={allLocations}

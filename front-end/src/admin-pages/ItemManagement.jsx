@@ -9,11 +9,13 @@ import ItemManagementTable from "../admin-components/ItemManagementTable";
 import FoundItemModal from "../admin-components/FoundItemModal";
 import { FOUND_REPORT_STATUS } from "../../../back-end/constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useSearchParams } from "react-router-dom";
 
 
 
 export default function ItemManagement() {
     const API_URL = import.meta.env.VITE_API_URL;
+
 
     //test
     const adminId = localStorage.getItem("admin_id");
@@ -24,6 +26,13 @@ export default function ItemManagement() {
     
     const [reports, setReports] = useState([]);
     const statuses = Object.values(FOUND_REPORT_STATUS);
+
+    //Redirect states
+    const [searchParams] = useSearchParams();
+
+    const [selectedItem, setSelectedItem] = useState(null);
+
+    const navigatedItemId = searchParams.get("itemId");
 
     //LOCATIONS STORAGE
      const [gates, setGates] = useState([]);
@@ -57,25 +66,34 @@ export default function ItemManagement() {
     const [dateFoundTemp, setDateFoundTemp] = useState("");
     const [locationTemp, setLocationTemp] = useState("");
     const [categoryTemp, setCategoryTemp] = useState("");
-    const [statusTemp, setStatusTemp] = useState("");
+    const [statusTemp, setStatusTemp] = useState("unclaimed");
 
     //SEARCH AND FILTER VARIABLES 
     const [search, setSearch] = useState("");
     const [dateFound, setDateFound] = useState("");
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState("");
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState("unclaimed");
+
+
+
 
     //SEARCH AND FILTER FUNCTION 
     const filteredReports = reports.filter((report) => {
         const query = search.toLowerCase();
 
+        const formattedItemId = `SI-${String(report.item_id).padStart(5, "0")}`;
+const paddedItemId = String(report.item_id).padStart(5, "0");
+
         const matchesSearch =
-            !query ||
-            report.item_name?.toLowerCase().includes(query) ||
-            report.category_name?.toLowerCase().includes(query) ||
-            report.location_found?.toLowerCase().includes(query) ||
-            report.reported_by?.toLowerCase().includes(query);
+    !query ||
+    String(report.item_id).includes(query) ||
+    paddedItemId.includes(query) ||
+    formattedItemId.toLowerCase().includes(query.toLowerCase()) ||
+    report.item_name?.toLowerCase().includes(query) ||
+    report.category_name?.toLowerCase().includes(query) ||
+    report.location_found?.toLowerCase().includes(query) ||
+    report.reported_by?.toLowerCase().includes(query);
 
         const matchesCategory =
             !category ||
@@ -118,13 +136,9 @@ export default function ItemManagement() {
             });
     }, []);
    useEffect(() => {
-    const token = localStorage.getItem("token");
 
-    fetchWithAuth(`${API_URL}/api/found-reports`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    })
+
+    fetchWithAuth(`${API_URL}/api/found-reports`)
         .then((res) => res.json())
         .then((data) => {
             setReports(data);
@@ -133,6 +147,22 @@ export default function ItemManagement() {
             console.error(err);
         });
 }, []);
+
+ useEffect(() => {
+        if (!navigatedItemId || reports.length === 0) return;
+
+        const report = reports.find(
+            r =>
+                String(r.item_id) ===
+                String(navigatedItemId)
+        );
+
+        if (report) {
+            setSelectedItem(report);
+        }
+    }, [navigatedItemId, reports]);
+
+
     useEffect(() => {
         fetch(`${API_URL}/api/offices`)
             .then((res) => res.json())
@@ -168,18 +198,20 @@ export default function ItemManagement() {
             });
     }, []);
 
+
+
     // HAMDLE CLEAR FILTER
     const handleClearFilters = () => {
         setSearch("");
         setLocation("");
         setCategory("");
-        setStatus("");
+        setStatus("unclaimed");
         setDateFound("");
 
         setSearchTemp("");
         setLocationTemp("");
         setCategoryTemp("");
-        setStatusTemp("");
+        setStatusTemp("unclaimed");
         setDateFoundTemp("");
     }
 
@@ -197,12 +229,7 @@ export default function ItemManagement() {
   const token = localStorage.getItem("token");
 
   const response = await fetchWithAuth(
-    `${API_URL}/api/export/found-reports`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+    `${API_URL}/api/export/found-reports`
   );
 
   const blob = await response.blob();
@@ -269,6 +296,8 @@ export default function ItemManagement() {
                         locations={locations}
                         onUpdated={setReports}
                         allLocations={allLocations}
+                        selectedItem={selectedItem}
+                        setSelectedItem={setSelectedItem}
                     />
     
               </div>

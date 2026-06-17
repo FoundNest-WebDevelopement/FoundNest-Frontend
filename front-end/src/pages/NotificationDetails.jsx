@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import PageLabelWithReturn from "../components/PageLabelWithReturn";
 import messageIconSolid from "../assets/message_icon_solid.png"
 import formatDateTime from "../utils/formatDateTime.js";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 export default function NotificationDetails(){
 
@@ -14,17 +15,11 @@ const {id} = useParams();
     const API_URL = import.meta.env.VITE_API_URL;
 useEffect(() => {
   const fetchNotifications = async () => {
-    const token = localStorage.getItem("token");
     try {
       setIsLoading(true);
 
-      const response = await fetch(
-        `${API_URL}/api/notifications/${id}`,
-        {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+      const response = await fetchWithAuth(
+        `${API_URL}/api/notifications/${id}`
       );
 
       const data = await response.json();

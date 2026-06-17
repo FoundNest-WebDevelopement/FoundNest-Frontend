@@ -2,6 +2,7 @@ import logo from "../assets/logo.png";
 import { NavLink } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 
 
@@ -14,7 +15,7 @@ export default function NotificationBar() {
 
   useEffect(() => {
   const fetchUnreadCount = () => {
-    fetch(`${API_URL}/api/notifications/unread-count/${userId}`)
+    fetchWithAuth(`${API_URL}/api/notifications/unread-count/${userId}`)
       .then((res) => res.json())
       .then((data) => {
         setUnreadCount(data.unreadCount);

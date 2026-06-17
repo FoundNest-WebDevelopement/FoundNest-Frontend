@@ -17,11 +17,76 @@ import AlertDialog from "../components/AlertDialog";
 import Toast from "../components/Toast";
 import InfoIcon from "../assets/info_icon.png"
 import toast from "react-hot-toast";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 export default function Report() {
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const [userID, setUserID] = useState(2);
+  const [userID, setUserID] = localStorage.getItem("user_id");
+
+  //locations
+  const [gates, setGates] = useState([]);
+  const [sharedSpaces, setSharedSpaces] = useState([]);
+  const [locations, setLocations] = useState([]);
+
+  // --- DROPDOWN UI STATES ---
+  const [openLocations, setOpenLocations] = useState(false);
+  const [openCollgeBuilding, setOpenCollgeBuilding] = useState(false);
+  const [openSharedSpaces, setOpenSharedSpaces] = useState(false);
+  const [openGates, setOpenGates] = useState(false);
+  const [openOthers, setOpenOthers] = useState(false);
+  const [dsiableOtherLcoations, setdDisableOtherLcoations] = useState(false);
+
+  const getDropdownLabel = () => {
+    if (totalLocations === 0) return "Select Locations";
+    if (totalLocations === 1) {
+      if (cantRemember) return "Can't remember";
+      if (selectedCollegeBuilding.length === 1) return selectedCollegeBuilding[0];
+      if (selectedSharedSpaces.length === 1) return selectedSharedSpaces[0];
+      if (selectedGates.length === 1) return selectedGates[0];
+      if (selectedOthers.length === 1) return selectedOthers[0];
+    }
+    return `Locations (${totalLocations})`;
+  };
+
+  // --- SELECTED DATA STATES ---
+  const [selectedCollegeBuilding, setSelectedCollegeBuilding] = useState([]);
+  const [selectedSharedSpaces, setSelectedSharedSpaces] = useState([]);
+  const [selectedGates, setSelectedGates] = useState([]);
+  const [selectedOthers, setSelectedOthers] = useState([]);
+  const [cantRemember, setCantRemember] = useState(false);
+
+  const totalLocations =
+    selectedCollegeBuilding.length +
+    selectedSharedSpaces.length +
+    selectedGates.length +
+    selectedOthers.length +
+    (cantRemember ? 1 : 0);
+
+  // --- CHECKBOX TOGGLE HANDLERS ---
+  const handleCollgeClick = (officeName) => {
+    setSelectedCollegeBuilding((prev) =>
+      prev.includes(officeName)
+        ? prev.filter((name) => name !== officeName)
+        : [...prev, officeName]
+    );
+  };
+
+  const handleSharedSpaceClick = (spaceName) => {
+    setSelectedSharedSpaces((prev) =>
+      prev.includes(spaceName)
+        ? prev.filter((name) => name !== spaceName)
+        : [...prev, spaceName]
+    );
+  };
+
+  const handleGateClick = (gateName) => {
+    setSelectedGates((prev) =>
+      prev.includes(gateName)
+        ? prev.filter((name) => name !== gateName)
+        : [...prev, gateName]
+    );
+  };
 
 
 
@@ -38,7 +103,8 @@ export default function Report() {
   const [contents, setContents] = useState("");
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
-  const [location, setLocation] = useState("");
+  const [locationLost, setLocationLost] = useState("");
+  const [specificlocation, setSpecificLocation] = useState("");
 
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -124,20 +190,29 @@ export default function Report() {
       formData.append("contents", contents);
       formData.append("category_id", categoryID);
       formData.append("user_id", userID);
-      formData.append("location_lost", location);
+      formData.append("specific_location", specificlocation);
 
       formData.append(
         "lost_date",
         `${dateLost} ${timeLost}`
       );
-      const token = localStorage.getItem("token");
-      const response = await fetch(
+
+      if (cantRemember) {
+        formData.append("location_lost", JSON.stringify(["Can't Remember"]));
+      } else {
+        const allSelectedLocations = [
+          ...selectedCollegeBuilding,
+          ...selectedSharedSpaces,
+          ...selectedGates,
+          ...selectedOthers,
+        ];
+        formData.append("location_lost", JSON.stringify(allSelectedLocations));
+      }
+
+      const response = await fetchWithAuth(
         `${API_URL}/api/lost-reports/${createdReportID}`,
         {
           method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
           body: formData,
         }
       );
@@ -185,20 +260,29 @@ export default function Report() {
       formData.append("contents", contents);
       formData.append("category_id", categoryID);
       formData.append("user_id", userID);
-      formData.append("location_lost", location);
+      formData.append("specific_location", specificlocation);
 
       formData.append(
         "lost_date",
         `${dateLost} ${timeLost}`
       );
-      const token = localStorage.getItem("token");
-      const response = await fetch(
+
+      if (cantRemember) {
+        formData.append("location_lost", JSON.stringify(["Can't Remember"]));
+      } else {
+        const allSelectedLocations = [
+          ...selectedCollegeBuilding,
+          ...selectedSharedSpaces,
+          ...selectedGates,
+          ...selectedOthers,
+        ];
+        formData.append("location_lost", JSON.stringify(allSelectedLocations));
+      }
+
+      const response = await fetchWithAuth(
         `${API_URL}/api/lost-reports`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
           body: formData,
         }
       );
@@ -268,14 +352,10 @@ export default function Report() {
 
       const formData = new FormData();
       formData.append("image", file);
-      const token = localStorage.getItem("token");
-      const response = await fetch(
+      const response = await fetchWithAuth(
         `${API_URL}/api/gemini-item-listing/describe-item`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
           body: formData,
         }
       );
@@ -320,7 +400,6 @@ export default function Report() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     fetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
@@ -331,6 +410,44 @@ export default function Report() {
         console.error(err);
       });
   }, []);
+
+        //OFFICES FETCH
+            useEffect(() => {
+                fetch(`${API_URL}/api/offices`)
+                    .then((res) => res.json())
+                    .then((data) => {
+                        setLocations(data);
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            }, []);
+            //GATES FETCH
+            useEffect(() => {
+                fetch(`${API_URL}/api/gates`)
+                    .then((res) => res.json())
+                    .then((data) => {
+                        setGates(data);
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            }, []);
+            //SHARED SPACES FETCH
+            useEffect(() => {
+                fetch(`${API_URL}/api/shared-spaces`)
+                    .then((res) => res.json())
+                    .then((data) => {
+                        setSharedSpaces(data);
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            }, []);
+
+
+
+
 
   return (
     <>
@@ -350,7 +467,7 @@ export default function Report() {
                   src={image}
                   alt="Uploaded"
                   onClick={() => { setShowImageOptions(true) }}
-                  className="w-full max-h-50 object-cover rounded-xl cursor-pointer hover:opacity-80 transition"
+                  className="w-full max-h-50 object-contain rounded-xl cursor-pointer hover:opacity-80 transition"
                 />
               ) : (
                 <div className="p-1 border border-dashed rounded-full border-(--color-primary)">
@@ -461,7 +578,195 @@ export default function Report() {
               {dateValid && timeLost && !timeValid && (
                 <p className="text-xs text-red-500 mt-1 ml-1">Time cannot be in the future.</p>
               )}
-              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={location} onChange={setLocation} error={false} />
+               {/* <TextField title="Location Lost" value={locationLost} onChange={setLocationLost} error={false} /> */}
+               {/* LOCATIONS FILTER DROPDOWN */}
+            <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
+            <div className="relative w-full mt-2">
+              <button
+                className={`w-full p-3 text-xs ${
+                  openLocations ? " border-primary text-black border" : " "
+                } 
+                ${totalLocations === 0? "text-[#4B2D23]/50" : "text-black"}
+                rounded-md  flex items-center justify-between min-w-37.5 shadow-sm bg-white `}
+                onClick={() => setOpenLocations(!openLocations)}
+              >
+                <span className="font-medium truncate max-w-55 text-left">
+                  {getDropdownLabel()}
+                </span>
+                <i
+                  className={`fa-solid fa-angle-${
+                    openLocations ? "up" : "down"
+                  } ml-2 text-primary shrink-0`}
+                />
+              </button>
+
+              {openLocations && (
+                <div className="absolute top-full left-0 mt-1 w-full z-50">
+                  <div className="border border-primary bg-white rounded-md p-2 flex flex-col gap-2 shadow-lg max-h-[60vh] overflow-y-auto">
+                    {/* 1. College Buildings */}
+                    <div className="flex flex-col rounded-md">
+                      <button
+                        onClick={() =>
+                          setOpenCollgeBuilding(!openCollgeBuilding)
+                        }
+                        disabled={dsiableOtherLcoations}
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                      >
+                        <span>
+                          College Buildings{" "}
+                          {selectedCollegeBuilding.length > 0 &&
+                            `(${selectedCollegeBuilding.length})`}
+                        </span>
+                        <i
+                          className={`fa-solid fa-angle-${
+                            openCollgeBuilding ? "up" : "down"
+                          } text-primary`}
+                        ></i>
+                      </button>
+                      {openCollgeBuilding && (
+                        <div className="flex flex-wrap gap-2 pt-2 px-1">
+                          {locations?.map((building) => (
+                            <label
+                              key={building.office_id}
+                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedCollegeBuilding.includes(
+                                  building.office_name
+                                )}
+                                onChange={() =>
+                                  handleCollgeClick(building.office_name)
+                                }
+                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                              />
+                              {building.office_name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Shared Spaces */}
+                    <div className="flex flex-col rounded-md">
+                      <button
+                        onClick={() => setOpenSharedSpaces(!openSharedSpaces)}
+                        disabled={dsiableOtherLcoations}
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                      >
+                        <span>
+                          Shared Spaces{" "}
+                          {selectedSharedSpaces.length > 0 &&
+                            `(${selectedSharedSpaces.length})`}
+                        </span>
+                        <i
+                          className={`fa-solid fa-angle-${
+                            openSharedSpaces ? "up" : "down"
+                          } text-primary`}
+                        ></i>
+                      </button>
+                      {openSharedSpaces && (
+                        <div className="flex flex-wrap gap-2 pt-2 px-1">
+                          {sharedSpaces?.map((space) => (
+                            <label
+                              key={space.shared_space_id}
+                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedSharedSpaces.includes(
+                                  space.shared_space_name
+                                )}
+                                onChange={() =>
+                                  handleSharedSpaceClick(space.shared_space_name)
+                                }
+                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                              />
+                              {space.shared_space_name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Gates */}
+                    <div className="flex flex-col rounded-md">
+                      <button
+                        onClick={() => setOpenGates(!openGates)}
+                        disabled={dsiableOtherLcoations}
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                      >
+                        <span>
+                          Gates{" "}
+                          {selectedGates.length > 0 &&
+                            `(${selectedGates.length})`}
+                        </span>
+                        <i
+                          className={`fa-solid fa-angle-${
+                            openGates ? "up" : "down"
+                          } text-primary`}
+                        ></i>
+                      </button>
+                      {openGates && (
+                        <div className="flex flex-wrap gap-2 pt-2 px-1">
+                          {gates?.map((gate) => (
+                            <label
+                              key={gate.gate_id}
+                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedGates.includes(gate.gate_name)}
+                                onChange={() => handleGateClick(gate.gate_name)}
+                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                              />
+                              {gate.gate_name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  
+
+                    <hr className="my-1 border-gray-200" />
+
+                    {/* 5. Can't Remember Option */}
+                    <label
+                      className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full transition-colors ${
+                        cantRemember
+                          ? "bg-[#e5d4b8] text-primary"
+                          : "bg-[#F2F2F2] hover:bg-gray-200"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={cantRemember}
+                        onChange={() => {
+                          const newValue = !cantRemember;
+                          setCantRemember(newValue);
+                          setOpenCollgeBuilding(false);
+                          setOpenGates(false);
+                          setOpenSharedSpaces(false)
+
+                          // Clear other selections when "Can't remember" is checked
+                            setSelectedCollegeBuilding([]);
+                            setSelectedSharedSpaces([]);
+                            setSelectedGates([]);
+                            setSelectedOthers([]);  
+                              setdDisableOtherLcoations(!dsiableOtherLcoations);
+                              
+                        }}
+                        className="w-4 h-4 accent-primary cursor-pointer ml-1"
+                      />
+                      Can't remember the location
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+             
+              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} />
               <div className=" bg-primary/20 text-primary-content w-full my-3 rounded-md">
                 <div className="card-body">
                   <div className="w-full flex items-center">

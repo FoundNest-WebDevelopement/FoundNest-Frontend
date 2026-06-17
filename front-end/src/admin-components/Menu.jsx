@@ -2,18 +2,21 @@
 import { LayoutDashboard, Package, FileChartColumnIncreasing, Building2, MessageSquare, Repeat, UserRoundCog } from "lucide-react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { LogOut } from "lucide-react"
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 export default function Menu({onChange}){
 
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
 
+
+
  const handleLogout = async () => {
   try {
     const refreshToken =
       localStorage.getItem("refreshToken");
 
-    await fetch(
+    await fetchWithAuth(
       `${API_URL}/api/auth/logout`,
       {
         method: "POST",
