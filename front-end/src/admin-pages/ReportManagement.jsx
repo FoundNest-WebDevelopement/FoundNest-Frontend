@@ -5,7 +5,7 @@ import AdminDateInput from "../admin-components/AdminDateInput"
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
-import { LOST_REPORT_STATUS } from "../../../back-end/constants/lost_item_status"
+import { LOST_REPORT_STATUS } from "../constants/lost_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import LostReportTable from "../admin-components/LostReportTable"
 import LostReportModal from "../admin-components/LostReportModal"
