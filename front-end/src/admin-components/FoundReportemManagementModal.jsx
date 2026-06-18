@@ -1,12 +1,20 @@
+<<<<<<< HEAD
 import { useEffect, useRef, useState } from "react";
 import { Pencil, X, QrCode } from "lucide-react";
 import QRCodeLib from "qrcode";
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
+=======
+import { useEffect, useRef, useState } from "react"
+import { Pencil, X, QrCode, Link2 } from "lucide-react"
+import foramtDateTimeNew from "../utils/formatDataTimeNew.js"
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 import formatNotificationDate from "../utils/fotmatNotifications.js";
 import AdminTextField from "./AdminTextField.jsx";
 import AdminDateInput from "./AdminDateInput.jsx";
 import AdminTextArea from "./AdminTextArea.jsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useNavigate } from "react-router-dom";
+
 
 export default function FoundReportItemManagementModal({
   selectedItem = [],
@@ -65,17 +73,32 @@ export default function FoundReportItemManagementModal({
   const handleClaimantFileChange = async (e) => {
     const file = e.target.files[0];
 
+<<<<<<< HEAD
     if (!file) return;
+=======
+            console.log(selectedItem)
+    const officeId = localStorage.getItem("office_location");
+
+
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 
     setSelectedFile(file);
     setClaimantImage(URL.createObjectURL(file));
   };
 
+<<<<<<< HEAD
   const isClaimValid =
     fullName.trim() &&
     (claimantNumber.trim() || claimantEmail.trim()) &&
     selectedFile &&
     verificationDetails.trim();
+=======
+    const API_URL = import.meta.env.VITE_API_URL;
+    const [isLoading, setIsLoading] = useState(false);
+    const adminId = localStorage.getItem("admin_id");
+    const userId = localStorage.getItem("user_id");
+    const navigate = useNavigate();
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 
   const [isReleasing, setIsReleasing] = useState(false);
   const handleItemRelease = async () => {
@@ -90,9 +113,28 @@ export default function FoundReportItemManagementModal({
         throw new Error("Claimant full name is required.");
       }
 
+<<<<<<< HEAD
       if (!claimantEmail.trim() && !claimantNumber.trim()) {
         throw new Error("Email or Contact Number is required.");
       }
+=======
+       //format item  id
+    const formatItemId = (id) => {
+        return `SI-${String(id).padStart(5, "0")}`;
+    };
+
+     //format item  id
+    const formatReportId = (id) => {
+        return `RPT-${String(id).padStart(5, "0")}`;
+    };
+
+           const isValidPhone = /^09\d{9}$/.test(
+        claimantNumber
+        );
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+  claimantEmail
+);
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 
       if (!selectedFile) {
         throw new Error("Proof of claim photo is required.");
@@ -147,9 +189,21 @@ export default function FoundReportItemManagementModal({
 
       const reportsData = await reportsResponse.json();
 
+<<<<<<< HEAD
       if (Array.isArray(reportsData)) {
         onUpdated?.(reportsData);
       }
+=======
+            // Claim Details
+            formData.append(
+                "claimant_full_name",
+                fullName
+            );
+            formData.append(
+                "office_id", 
+                officeId
+            );
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 
       // Reset form
       resetClaimForm();
@@ -332,10 +386,262 @@ export default function FoundReportItemManagementModal({
         throw new Error(data.error || "AI analysis failed");
       }
 
+<<<<<<< HEAD
       setEditForm((current) => {
         const matchedCategory = categories.find(
           (item) =>
             item.category_name.toLowerCase() === data.category?.toLowerCase(),
+=======
+    const editDateValid = isValidPastOrToday(editForm.found_date);
+    const editTimeValid =
+        editDateValid && isTimeNotFuture(editForm.found_date, editForm.found_time);
+    const hasRequiredEditFields = Boolean(
+        editForm.item_name.trim() &&
+        editForm.category_id &&
+        editForm.location_found.trim() &&
+        editForm.found_date &&
+        editForm.found_time
+    );
+    const isEditFormValid = Boolean(
+        hasRequiredEditFields &&
+        editDateValid &&
+        editTimeValid
+    );
+
+    // item info button
+    const startEditing = () => {
+        if (!selectedItem) return;
+
+        const foundDate = selectedItem.found_date
+            ? new Date(selectedItem.found_date)
+            : null;
+
+        setEditForm({
+            item_name: selectedItem.item_name || "",
+            category_id: selectedItem.category_id || "",
+            location_found: selectedItem.location_found || "",
+            specific_location: selectedItem.specific_location || "",
+            found_date: foundDate ? foundDate.toISOString().split("T")[0] : "",
+            found_time: foundDate
+                ? foundDate.toTimeString().slice(0, 5)
+                : "",
+            description: selectedItem.description || "",
+            contents: selectedItem.contents || "",
+            reported_by: selectedItem.reported_by || "",
+            additional_notes: selectedItem.additional_notes || "",
+            office_id: selectedItem.office_id || "",
+        });
+
+        setEditImageFile(null);
+        setEditImagePreview(selectedItem.image_url || null);
+        setIsEditing(true);
+        setOpenUpdateStatus(false);
+    };
+
+    const handleEditChange = (field, value) => {
+        setEditForm((current) => ({
+            ...current,
+            [field]: value,
+        }));
+    };
+
+    const handleEditDateChange = (value) => {
+        setEditForm((current) => ({
+            ...current,
+            found_date: value,
+            found_time: "",
+        }));
+    };
+
+    const handleEditImageChange = async (e) => {
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        setEditImageFile(file);
+        setEditImagePreview(URL.createObjectURL(file));
+
+        try {
+            setIsAnalyzing(true);
+
+            const formData = new FormData();
+            formData.append("image", file);
+    
+            const response = await fetchWithAuth(
+                `${API_URL}/api/gemini-item-listing/describe-item`,
+                {
+
+                    method: "POST",
+                    body: formData,
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "AI analysis failed");
+            }
+
+            setEditForm((current) => {
+                const matchedCategory = categories.find(
+                    (item) =>
+                        item.category_name.toLowerCase() ===
+                        data.category?.toLowerCase()
+                );
+
+                return {
+                    ...current,
+                    item_name: data.itemName || current.item_name,
+                    description: data.detailedDescription || current.description,
+                    contents: data.contents || current.contents,
+                    category_id: matchedCategory
+                        ? String(matchedCategory.category_id)
+                        : current.category_id,
+                };
+            });
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    //edit
+    const handleCancelEdit = () => {
+        setEditImageFile(null);
+        setEditImagePreview(null);
+
+        if (editImageInputRef.current) {
+            editImageInputRef.current.value = "";
+        }
+
+        setIsEditing(false);
+    };
+
+    const handleCloseDetails = () => {
+        setSelectedItem(null);
+        setItemHistory(false)
+        setIsEditing(false);
+        setOpenUpdateStatus(false);
+        setEditImageFile(null);
+        setEditImagePreview(null);
+        setIsAnalyzing(false);
+        setDisposedTab(false);
+        resetClaimForm();
+        setItemInfo(true);
+    };
+
+
+    //edit 
+    const handleSaveEdit = async () => {
+        if (!selectedItem || !isEditFormValid) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+
+            const formData = new FormData();
+            formData.append("item_name", editForm.item_name.trim());
+            formData.append("category_id", editForm.category_id);
+            formData.append("location_found", editForm.location_found.trim());
+            formData.append("specific_location", editForm.specific_location);
+            formData.append("found_date", `${editForm.found_date} ${editForm.found_time}`);
+            formData.append("description", editForm.description);
+            formData.append("contents", editForm.contents);
+            formData.append("reported_by", editForm.reported_by);
+            formData.append("additional_notes", editForm.additional_notes);
+            formData.append("office_id", editForm.office_id);
+            formData.append("user_id", userId);
+
+            if (editImageFile) {
+                formData.append("image", editImageFile);
+            }
+       
+            const response = await fetchWithAuth(
+                `${API_URL}/api/found-reports/${selectedItem.found_report_id}`,
+                {
+                    method: "PUT",
+                    body: formData,
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to update found item");
+            }
+
+            const refreshedResponse = await fetchWithAuth(
+                `${API_URL}/api/found-reports`
+            );
+            const refreshedReports = await refreshedResponse.json();
+
+            if (Array.isArray(refreshedReports)) {
+                onUpdated?.(refreshedReports);
+
+                const updatedSelected = refreshedReports.find(
+                    (report) =>
+                        report.found_report_id === selectedItem.found_report_id
+                );
+
+                if (updatedSelected) {
+                    setSelectedItem(updatedSelected);
+                }
+            }
+
+            setEditImageFile(null);
+            setEditImagePreview(null);
+            setIsEditing(false);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const fetchItemHistory = async (itemId) => {
+        setIsLoading(true);
+        try {
+  
+            const response = await fetchWithAuth(
+                `${API_URL}/api/item-history/${itemId}`
+            );
+
+            const data = await response.json();
+            setItemHistory(data);
+            if (response.ok) {
+                setIsLoading(false);
+            }
+
+        } catch (error) {
+            console.error(error);
+            setIsLoading(false);
+        }
+    }
+
+
+
+    useEffect(() => {
+        if (!selectedItem?.item_id) return;
+
+        fetchItemHistory(selectedItem.item_id);
+    }, [selectedItem]);
+
+    const handleHiistoryTab = () => {
+        setItemInfo(false)
+    }
+
+    // for claim tab
+    const fetchLostReports = async (search) => {
+
+        const normalizedSearch = search
+        .replace(/^rpt-/i, "") 
+        .replace(/^0+/, "");  
+  
+        const response = await fetchWithAuth(
+            `${API_URL}/api/lost-reports/search/rptlink?search=${normalizedSearch}`
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
         );
 
         return {
@@ -499,6 +805,7 @@ export default function FoundReportItemManagementModal({
     fetchLostReports(searchTerm);
   }, [searchTerm]);
 
+<<<<<<< HEAD
   //variable for disposal form
   const [itemWhereabouts, setItemWhereabouts] = useState("");
   const [donationDate, setDonationDate] = useState("");
@@ -562,6 +869,31 @@ export default function FoundReportItemManagementModal({
                             <p class="item-name">${selectedItem.item_name}</p>
                             <img src="${qrImageUrl}" alt="QR Code" />
                             <p class="brand">FoundNest</p>
+=======
+            <>
+                <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
+                    <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col overflow-y-scroll ">
+                        <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
+                            <div>
+                                <p className="font-semibold text-sm text-white xl:text-xl">  {selectedItem.item_name}</p>
+                            </div>
+                            <div className={` border-2   p-1 px-2 rounded-full text-[8px] xl:text-xs 
+                                        ${selectedItem.status === 'unclaimed' && "text-[#6B5C42] border-[#DDD9CF] bg-[#F5F5F5]"} 
+                                        ${selectedItem.status === 'claimed' && " border-green-700 bg-green-100 text-green-700"} 
+                                        ${selectedItem.status === 'to_be_disposed' && "text-[#FFA500] border-[#FFA500] bg-[#FFEDCC]"} 
+                                        ${selectedItem.status === 'disposed' && "text-[#553D25] border-[#553D25] bg-[#DDD1C5]"} 
+                                       `}>
+                                <p className=" ">
+                                    {selectedItem.status === 'claimed' && "Claimed"}
+                                    {selectedItem.status === 'unclaimed' && "Unclaimed"}
+                                    {selectedItem.status === 'to_be_disposed' && "For Disposal"}
+                                    {selectedItem.status === 'disposed' && "Disposed"}
+                                </p>
+                            </div>
+                            <div className="ml-auto pr-6">
+                                <button onClick={handleCloseDetails} className="cursor-pointer"><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                            </div>
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
                         </div>
                     </body>
                 </html>
@@ -581,6 +913,7 @@ export default function FoundReportItemManagementModal({
   const isValidDisposalDate = (dateStr) => {
     if (!dateStr) return false;
 
+<<<<<<< HEAD
     const selectedDate = new Date(`${dateStr}T00:00:00`);
 
     if (isNaN(selectedDate.getTime())) {
@@ -835,6 +1168,124 @@ export default function FoundReportItemManagementModal({
                               >
                                 {editForm.location_found}
                               </option>
+=======
+                                <>
+                                    <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
+                                        <button className={`text-[#6B5C42]  text-sm px-5 cursor-pointer
+                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) "} 
+                                     `}
+                                            onClick={() => setItemInfo(true)}>Item Info</button>
+                                        <button className={`text-[#6B5C42] text-sm px-5 
+                                        ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) "} cursor-pointer`}
+                                            onClick={handleHiistoryTab}>History</button>
+                                    </div>
+                                    <div className="h-full w-full p-5 pt-15">
+                                        {itemInfo ?
+                                            (
+                                                <>
+                                                    {selectedItem.linked_report && selectedItem.status === 'claimed' &&
+                                                            <div className="flex flex-col gap-2 mb-4">
+                                                 <div className="flex items-center gap-2">
+                                                    <Link2 size={15} />
+                                                    <p className="text-black font-semibold text-sm">LINKED LOST REPORT</p>
+                                                </div>
+                                                <div className=" flex flex-col w-full  gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-2 xl:p-4">
+                                                    <div className="flex justify-between text-[10px] xl:text-xs">
+                                                        <div className="text-black font-semibold  rounded-md p-1 px-2 ">
+                                                            <p className="font-bold">{formatReportId(selectedItem.linked_report)}</p>
+                                                        </div>
+                                                        <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold flex text-center">
+                                                            <p>{selectedItem.lost_report_status}</p>
+                                                        </div>
+                                                    </div>
+                                                     <div className="flex gap-2">
+                                                {selectedItem.lost_item_image_url &&
+                                                    <div className="w-12 h-10 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                                    <img src={selectedItem.lost_item_image_url} alt={selectedItem.lost_item_name}
+                                                        className="w-full h-full object-contain" />
+                                                </div>
+
+                                                }
+                                                <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
+                                                        <p className="font-semibold">{selectedItem.lost_item_name}</p>
+                                                        <p className="text-[#6B5C42]">{selectedItem.lost_item_category_name}</p>
+                                                </div>
+                                             
+                                            </div>
+                                              <div className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
+                                                 onClick={() =>
+                                                    navigate(
+                                                        `/admin/report_management?reportId=${selectedItem.linked_report}`
+                                                    )
+                                                }
+                                                >
+                                                  <p>View Lost Report &nbsp; </p>
+                                                     <i className="fa-solid fa-arrow-right"></i>
+                                              </div>
+                                                </div>
+                                               </div>
+                                                    }
+                                                    <div className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden">
+                                                       
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => editImageInputRef.current?.click()}
+                                                                    className="w-full h-full flex flex-col items-center justify-center gap-2 cursor-pointer"
+                                                                >
+                                                                    <img
+                                                                        src={editImagePreview || selectedItem.image_url}
+                                                                        alt={selectedItem.item_name}
+                                                                        className="w-full h-full object-contain"
+                                                                    />
+                                                                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                                                                        Click image to replace photo.
+                                                                    </span>
+                                                                </button>
+                                                                <input
+                                                                    ref={editImageInputRef}
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    className="hidden"
+                                                                    onChange={handleEditImageChange}
+                                                                />
+                
+                                                            </>
+                                                        ) : (
+                                                            <img src={selectedItem.image_url} alt={selectedItem.item_name} className="w-full h-full object-contain" />
+                                                        )}
+                                                    </div>
+                                                     {isAnalyzing && (
+                                                                    <span className="text-primary text-[10px] pt-2 py-1  ">
+                                                                        Analyzing image...
+                                                                    </span>
+                                                                )}
+                                                    <div className=" flex">
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">ITEM ID</p>
+                                                            <p className="text-black">{formatItemId(selectedItem.item_id)}</p>
+                                                        </div>
+                                                        <div className="flex flex-col text-xs mt-5 flex-1">
+                                                            <p className="text-[#6B5C42]">CATEGORY{isEditing && <span className="text-primary"> *</span>}</p>
+                                                            {isEditing ? (
+                                                                <select
+                                                                    className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                                                                    value={editForm.category_id}
+                                                                    onChange={(e) => handleEditChange("category_id", e.target.value)}
+                                                                >
+                                                                    <option value="" disabled>Select category</option>
+                                                                    {categories.map((category) => (
+                                                                        <option key={category.category_id} value={category.category_id}>
+                                                                            {category.category_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <p className="text-black">{selectedItem.category_name}</p>
+                                                            )}
+                                                        </div>
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
 
                               {allLocations.map((option, index) => (
                                 <option key={index} value={option.name}>
@@ -1420,6 +1871,7 @@ export default function FoundReportItemManagementModal({
                         </div>
                       )}
 
+<<<<<<< HEAD
                       <div
                         className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
                                                             items-center mt-2"
@@ -1474,6 +1926,122 @@ export default function FoundReportItemManagementModal({
                 <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50 ">
                   <button
                     className={` text-sm px-5
+=======
+                                                <p className="text-xs text-[#6B5C42]">
+                                                    Describe how ownership was verified.
+                                                </p>
+
+                                                <textarea
+                                                    className="textarea w-full bg-white border border-[#DDD9CF] rounded-md mt-1"
+                                                    rows={3}
+                                                    placeholder="Example: Claimant identified contents inside the wallet and presented a valid school ID."
+                                                    value={verificationDetails}
+                                                    onChange={(e) =>
+                                                       setVerificationDetails(e.target.value)
+                                                    }
+                                                />
+                                            </div>
+
+                                        </div>
+                                        <div className="mt-3 flex flex-col">
+                                            <p className="text-sm font-medium">Link to a Lost Report <span className="text-black/40">(Optional)</span></p>
+                                            <p className="text-[#6B5C42] text-xs">If the claimant has an existing lost report for this item, link it here. The report will be automatically marked as Resolved when the item is released.</p>
+                                            <div className="relative w-full">
+                                                {showSearchResults &&
+                                                    searchResults?.length > 0 && (
+                                                        <div className="w-full h-fit border border-[#DDD9CF] rounded-md">
+
+                                                            <div className="absolute bottom-full w-full h-fit border border-[#DDD9CF] rounded-md bg-white z-50">
+                                                                {searchResults.map((result) => (
+                                                                    <button
+                                                                        key={result.lost_report_id}
+                                                                        type="button"
+                                                                        className="w-full text-sm flex p-2  border-b border-b-[#DDD9CF] hover:bg-gray-100"
+                                                                        onClick={() => {
+                                                                            setLinkReport(result);
+                                                                            setShowSearchResults(false);
+                                                                        }}
+                                                                    >
+                                                                        <p className="flex-1 text-left">
+                                                                           {formatReportId(result.lost_report_id)}
+                                                                        </p>
+
+                                                                        <p className="flex-1 text-left">
+                                                                            {result.item_name}
+                                                                        </p>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                        </div>
+                                                    )
+                                                }
+
+                                                {linkReport &&
+                                                    (
+                                                        <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
+                                                            <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
+                                                                <p className="flex-1 overflow-x-auto min-w-0 truncate">{formatReportId(linkReport.lost_report_id)}</p>
+                                                                <p className="flex-1 min-w-0 truncate">{linkReport.item_name}</p>
+                                                                <button
+                                                                    onClick={() => { setLinkReport(null) }}
+                                                                ><i className="fa-solid fa-trash-can text-primary"></i></button>
+                                                            </div>
+                                                        </div>
+                                                    )
+
+                                                }
+
+                                                <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
+                                                            items-center mt-2">
+                                                    <i className="fa-solid fa-magnifying-glass text-primary ml-2"></i>
+                                         
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search"
+                                                        className="input input-bordered flex-1"
+                                                        onFocus={() => setShowSearchResults(true)}
+                                                        onBlur={() => {
+                                                            setTimeout(() => {
+                                                                setShowSearchResults(false);
+                                                            }, 200);
+                                                        }}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                        <div className="w-full h-10  flex gap-2 text-xs">
+                                            <button className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                                                onClick={() => { setClaimTab(false), setEditTab(true) }}
+                                            >Cancel</button>
+                                            <button
+                                                type="button"
+                                                disabled={(!isClaimValid || isReleasing || ((!isValidEmail && claimantEmail)  || (!isValidPhone && claimantNumber)))}
+                                                onClick={handleItemRelease}
+                                                className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 `}
+                                            >
+                                                {isReleasing? "Releasing..." : "Confirm Release"}
+                                            </button>
+                                        </div>
+                                        <div className="h-5">
+
+                                        </div>
+
+
+                                    </div>
+                                </>
+                            )
+
+
+                        }
+                        {disposedTab &&
+                            (
+                                <>
+                                    <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50 ">
+                                        <button className={` text-sm px-5
+>>>>>>> 97d7099e888e235874b7e2bb6674fe44bf737364
                                     bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) 
                                      `}
                   >

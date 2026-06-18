@@ -1,28 +1,23 @@
-import { useEffect, useRef, useState } from "react"
-import { Pencil, X, QrCode, Info } from "lucide-react"
-import foramtDateTimeNew from "../utils/formatDataTimeNew.js"
-import formatNotificationDate from "../utils/fotmatNotifications.js";
-import AdminTextField from "./AdminTextField.jsx";
-import FoundReportItemManagementModal from "./FoundReportemManagementModal.jsx";
+import { useState } from "react";
+import { Eye, X } from "lucide-react";
+import TransactionManagementModal from "./TransactionManagementModal";
 
-
-
-export default function ItemManagementTable({
-    reports,
+export default function TransactionTable(   {
+         reports,
     categories = [],
     locations = [],
     onUpdated,
     allLocations = [],
-    selectedItem,
-    setSelectedItem,
-
-}) {
-    const API_URL = import.meta.env.VITE_API_URL;
-
+    }
+){
+    //ADMIN CREDENTIALS
     const userId = localStorage.getItem("user_id");
     const adminId = localStorage.getItem("admin_id");
-   
 
+    //Set Record
+    const [selectedRecord, setSelectedRecord] = useState(null);
+
+    //TABLE CONST
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
@@ -35,19 +30,13 @@ export default function ItemManagementTable({
         startIndex + itemsPerPage
     );
 
-
-    const [itemInfo, setItemInfo] = useState(true);
-
-
-    //format item  id
-    const formatItemId = (id) => {
-        return `SI-${String(id).padStart(5, "0")}`;
+     //format txn  id
+    const formatTXNId = (id) => {
+        return `TXN-${String(id).padStart(5, "0")}`;
     };
-    
-   
 
 
-    return (
+    return(
         <>
             <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
@@ -57,23 +46,21 @@ export default function ItemManagementTable({
                         <thead className="bg-primary text-white text-center">
                             <tr>
                                 <th className="w-5"></th>
-                                <th className="w-20">ITEM ID</th>
-                                <th className="w-24">PHOTO</th>
+                                <th className="w-20">TXN ID</th>
                                 <th className="w-48">ITEM NAME</th>
-                                <th className="w-32">CATEGORY</th>
-                                <th className="w-40">LOCATION</th>
-                                <th className="w-32">DATE FOUND</th>
+                                <th className="w-32">CLAIMANT NAME</th>
+                                <th className="w-32">CONTACT</th>
+                                <th className="w-32">DATE CLAIMED</th>
+                                <th className="w-32">PROCESSED BY</th>
                                 <th className="w-37">STATUS</th>
-                                <th className="w-40">LINKED REPORT</th>
-                                <th className="w-40">REPORTED BY</th>
                                 <th className="w-24">ACTIONS</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            {paginatedReports?.map((item, index) => (
+                            {paginatedReports?.map((rcd, index) => (
                                 <tr
-                                    key={item.found_report_id}
+                                    key={rcd.claim_id}
                                     className={
                                         index % 2 === 0
                                             ? "bg-white"
@@ -81,65 +68,44 @@ export default function ItemManagementTable({
                                     }
                                 >
 
-                                    <td className="align-middle">{startIndex + index + 1}</td>
+                                    <td className="align-middle h-15">{startIndex + index + 1}</td>
 
-                                    <td className="w-28 align-middle text-center">{formatItemId(item.item_id)}</td>
+                                    <td className="w-28 align-middle text-center">{formatTXNId(rcd.claim_id)}</td>
 
-                                    <td className="align-middle text-center">
-                                        <img
-                                            src={item.image_url}
-                                            alt={item.image_url}
-                                            className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:scale-105 transition"
-                                            onClick={() => setSelectedImage(item.image_url)}
-                                        />
-                                    </td>
+                    
 
-                                    <td className="truncate max-w-48 align-middle text-center">{item.item_name}</td>
+                                    <td className="truncate max-w-48 align-middle text-center">{rcd.item_name}</td>
 
-                                    <td className="align-middle text-center">{item.category_name}</td>
+                                    <td className="truncate max-w-48 align-middle text-center">{rcd.claimant_full_name}</td>
 
-                                    <td className="align-middle text-center">{item.office_name}</td>
+                                    <td className="truncate max-w-48 align-middle text-center">{rcd.claimant_email || rcd.claimant_contact_number}</td>
 
-                                    <td className="align-middle text-center bg-re"> {new Date(item.found_date).toLocaleDateString()}</td>
+
+                                    <td className="align-middle text-center bg-re"> {new Date(rcd.claim_date).toLocaleDateString()}</td>
+
+                                    <td className="truncate max-w-48 align-middle text-center">{rcd.processed_by}</td>
 
                                     <td className="align-middle text-center">
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-medium 
-                                        ${item.status === "claimed" && "bg-green-100 text-green-700" }
-                                        ${item.status == "unclaimed" && "bg-gray-200 text-gray-700"}
-                                        ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20" } 
-                                       ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
+                                        ${rcd.claimant_status === true && "bg-green-100 text-green-700" }
+                                        ${rcd.claimant_status == false && "bg-gray-200 text-gray-700"}
+                                    
+                
                                         `}
                                         >
-                                        {item.status === 'claimed' && "Claimed"}
-                                            {item.status === 'unclaimed' && "Unclaimed"}
-                                            {item.status === 'to_be_disposed' && "For Disposal"}
-                                                {item.status === 'disposed' && "Disposed"}
+                                        {rcd.claimant_status === true && "Completed"}
+                                            {rcd.claimant_status === false && "Reverted"}
+            
                                         </span>
                                     </td>
-
-                                    <td className="align-middle text-center font-medium">{item.linked_report ? <span>RPT-00{item.linked_report}</span> : ""}</td>
-
-                                    <td className="align-middle text-center ">{item.reported_by}</td>
 
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
-                                            onClick={() => { setSelectedItem(item)}}
-                                        >
-                                            {(
-                                            item.status === "unclaimed" ||
-                                            item.status === "to_be_disposed"
-                                            ) && (
-                                            <Pencil size={18} className="text-primary" />
-                                            )}
-                                           {(
-                                            item.status === "claimed" ||
-                                            item.status === "disposed"
-                                            ) && (
-                                            <Info size={18} className="text-primary" />
-                                            )}
-
+                                            onClick={() => { setSelectedRecord(rcd)}}
+                                        > 
+                                            <Eye size={18} className="text-primary" />                       
                                         </button>
                                     </td>
 
@@ -148,7 +114,7 @@ export default function ItemManagementTable({
                             {paginatedReports.length === 0 && (
                                 <tr>
                                     <td colSpan={11} className="text-center py-8 text-[#6B5C42]">
-                                        No found items to display.
+                                        No Records to display.
                                     </td>
                                 </tr>
                             )}
@@ -199,7 +165,7 @@ export default function ItemManagementTable({
                 </div>
             </div>
 
-            {/* Image Modal */}
+            {/* Image Modal
             {selectedImage && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
@@ -221,15 +187,15 @@ export default function ItemManagementTable({
                     </div>
 
                 </div>
-            )}
+            )} */}
 
-            {selectedItem &&
+            
+
+            {selectedRecord &&
                 (
-                    <FoundReportItemManagementModal 
-                    selectedItem={selectedItem}
-                    itemInfo={itemInfo}
-                    setSelectedItem={setSelectedItem}
-                    setItemInfo={setItemInfo}
+                    <TransactionManagementModal
+                    selectedRecord={selectedRecord}
+                    setSelectedRecord={setSelectedRecord}
                     categories={categories}
                     locations={locations}
                     allLocations={allLocations}

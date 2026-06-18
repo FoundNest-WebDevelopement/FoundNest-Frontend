@@ -12,6 +12,7 @@ import GateDropDown from "../components/GateDropDown";
 import StatusDropDown from "../components/StatusDropDown";
 import Loading from "../components/Loading";
 import { useNavigate } from "react-router-dom";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 
 
@@ -85,12 +86,8 @@ const locationLabel =
 
   useEffect(() => {
      const token = localStorage.getItem("token");
-    fetch(`${API_URL}/api/found-reports`
-      ,     {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+    fetchWithAuth(`${API_URL}/api/found-reports`
+      ,  
     )
       .then((res) => res.json())
       .then((data) => {

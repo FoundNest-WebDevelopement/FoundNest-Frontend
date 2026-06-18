@@ -10,19 +10,23 @@ import FoundItemModal from "../admin-components/FoundItemModal";
 import QRScanModal from "../admin-components/QRScanModal";
 import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useSearchParams } from "react-router-dom";
 
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
-
   const adminId = localStorage.getItem("admin_id");
 
   const [openLogItem, setOpenLogItem] = useState(false);
   const [openQRScan, setOpenQRScan] = useState(false);
   const [qrPrefillData, setQrPrefillData] = useState(null);
   const [categories, setCategories] = useState([]);
-
   const [reports, setReports] = useState([]);
   const statuses = Object.values(FOUND_REPORT_STATUS);
+
+  // Redirect states
+  const [searchParams] = useSearchParams();
+  const [selectedItem, setSelectedItem] = useState(null);
+  const navigatedItemId = searchParams.get("itemId");
 
   // LOCATIONS STORAGE
   const [gates, setGates] = useState([]);
@@ -52,21 +56,27 @@ export default function ItemManagement() {
   const [dateFoundTemp, setDateFoundTemp] = useState("");
   const [locationTemp, setLocationTemp] = useState("");
   const [categoryTemp, setCategoryTemp] = useState("");
-  const [statusTemp, setStatusTemp] = useState("");
+  const [statusTemp, setStatusTemp] = useState("unclaimed");
 
   // SEARCH AND FILTER VARIABLES
   const [search, setSearch] = useState("");
   const [dateFound, setDateFound] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("unclaimed");
 
   // SEARCH AND FILTER FUNCTION
   const filteredReports = reports.filter((report) => {
     const query = search.toLowerCase();
 
+    const formattedItemId = `SI-${String(report.item_id).padStart(5, "0")}`;
+    const paddedItemId = String(report.item_id).padStart(5, "0");
+
     const matchesSearch =
       !query ||
+      String(report.item_id).includes(query) ||
+      paddedItemId.includes(query) ||
+      formattedItemId.toLowerCase().includes(query.toLowerCase()) ||
       report.item_name?.toLowerCase().includes(query) ||
       report.category_name?.toLowerCase().includes(query) ||
       report.location_found?.toLowerCase().includes(query) ||
@@ -96,59 +106,44 @@ export default function ItemManagement() {
   useEffect(() => {
     fetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
-      .then((data) => {
-        setCategories(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    fetchWithAuth(`${API_URL}/api/found-reports`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setReports(data);
-      })
+      .then((data) => setCategories(data))
       .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
+    fetchWithAuth(`${API_URL}/api/found-reports`)
+      .then((res) => res.json())
+      .then((data) => setReports(data))
+      .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    if (!navigatedItemId || reports.length === 0) return;
+    const report = reports.find(
+      (r) => String(r.item_id) === String(navigatedItemId)
+    );
+    if (report) setSelectedItem(report);
+  }, [navigatedItemId, reports]);
+
+  useEffect(() => {
     fetch(`${API_URL}/api/offices`)
       .then((res) => res.json())
-      .then((data) => {
-        setLocations(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+      .then((data) => setLocations(data))
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/api/gates`)
       .then((res) => res.json())
-      .then((data) => {
-        setGates(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+      .then((data) => setGates(data))
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/api/shared-spaces`)
       .then((res) => res.json())
-      .then((data) => {
-        setSharedSpaces(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+      .then((data) => setSharedSpaces(data))
+      .catch((err) => console.error(err));
   }, []);
 
   // HANDLE CLEAR FILTER
@@ -156,12 +151,12 @@ export default function ItemManagement() {
     setSearch("");
     setLocation("");
     setCategory("");
-    setStatus("");
+    setStatus("unclaimed");
     setDateFound("");
     setSearchTemp("");
     setLocationTemp("");
     setCategoryTemp("");
-    setStatusTemp("");
+    setStatusTemp("unclaimed");
     setDateFoundTemp("");
   };
 
@@ -174,36 +169,23 @@ export default function ItemManagement() {
     setDateFound(dateFoundTemp);
   };
 
-  // HANDLE QR SCAN USE DATA — open FoundItemModal with prefilled data
+  // HANDLE QR SCAN USE DATA
   const handleQRUseData = (data) => {
     setQrPrefillData(data);
     setOpenLogItem(true);
   };
 
-  //export csv
+  // EXPORT CSV
   const downloadCSV = async () => {
-    const token = localStorage.getItem("token");
-
-    const response = await fetchWithAuth(
-      `${API_URL}/api/export/found-reports`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-
+    const response = await fetchWithAuth(`${API_URL}/api/export/found-reports`);
     const blob = await response.blob();
-
     const url = window.URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = "found-reports.csv";
     document.body.appendChild(a);
     a.click();
     a.remove();
-
     window.URL.revokeObjectURL(url);
   };
 
@@ -221,84 +203,29 @@ export default function ItemManagement() {
             />
           </div>
           <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-            <AdminButton
-              icon={Download}
-              label="Export CSV"
-              isBorder={true}
-              isShadow={true}
-              isIcon={true}
-              onClick={downloadCSV}
-            />
-            <AdminButton
-              icon={QrCode}
-              label="Log via QR"
-              isBorder={true}
-              isShadow={true}
-              isIcon={true}
-              onClick={() => setOpenQRScan(true)}
-            />
-            <AdminButton
-              icon={Plus}
-              label="Log New Item"
-              isSolid={true}
-              isBorder={true}
-              isShadow={true}
-              isIcon={true}
-              onClick={() => {
-                setOpenLogItem(true);
-              }}
-            />
+            <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={downloadCSV} />
+            <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
+            <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenLogItem(true)} />
           </div>
         </div>
 
         <div className="py-1 px-4 border border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md">
           <div className="flex w-full h-full gap-2 items-center justify-center">
             <div className="flex-1">
-              <AdminLocationDropDown
-                placeholder="All Locations"
-                value={locationTemp}
-                onChange={setLocationTemp}
-                options={locations}
-              />
+              <AdminLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={locations} />
             </div>
             <div className="flex-1">
-              <AdminCategoriesDropdown
-                placeholder="All Categories"
-                value={categoryTemp}
-                onChange={setCategoryTemp}
-                options={categories}
-              />
+              <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
             </div>
             <div className="flex-1">
-              <AdminStatusDropDown
-                placeholder="All Status"
-                value={statusTemp}
-                onChange={setStatusTemp}
-                options={statuses}
-              />
+              <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
             </div>
             <div className="flex-1">
-              <AdminDateInput
-                value={dateFoundTemp}
-                onChange={setDateFoundTemp}
-              />
+              <AdminDateInput value={dateFoundTemp} onChange={setDateFoundTemp} />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
-              <AdminButton
-                isIcon={false}
-                isSolid={true}
-                label="Apply Filters"
-                isBorder={true}
-                isShadow={true}
-                onClick={handleApplyFilters}
-              />
-              <AdminButton
-                isIcon={false}
-                label="Clear"
-                isBorder={false}
-                isShadow={false}
-                onClick={handleClearFilters}
-              />
+              <AdminButton isIcon={false} isSolid={true} label="Apply Filters" isBorder={true} isShadow={true} onClick={handleApplyFilters} />
+              <AdminButton isIcon={false} label="Clear" isBorder={false} isShadow={false} onClick={handleClearFilters} />
             </div>
           </div>
         </div>
@@ -310,6 +237,8 @@ export default function ItemManagement() {
             locations={locations}
             onUpdated={setReports}
             allLocations={allLocations}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
           />
         </div>
       </div>

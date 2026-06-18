@@ -5,6 +5,7 @@ import formatDateTime from "../utils/formatDateTime";
 import { useNavigate, useParams } from "react-router-dom";
 import Loading from "../components/Loading";
 import AlertDialog from "../components/AlertDialog";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 export default function FoundItemDetails(){
 const { id } = useParams();
@@ -27,12 +28,7 @@ const handleTouchEnd = (e) => {
 const [howToClaim,setHowToClaim] = useState(false);
     useEffect(() => {
         const token = localStorage.getItem("token")
-        fetch(`${API_URL}/api/found-reports/${id}`,
-            {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+        fetchWithAuth(`${API_URL}/api/found-reports/${id}`
 
         )
             .then((res) => res.json())
