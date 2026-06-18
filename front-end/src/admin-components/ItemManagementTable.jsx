@@ -72,7 +72,7 @@ export default function ItemManagementTable({
                         <tbody>
                             {paginatedReports?.map((item, index) => (
                                 <tr
-                                    key={item.item_id}
+                                    key={item.found_report_id}
                                     className={
                                         index % 2 === 0
                                             ? "bg-white"

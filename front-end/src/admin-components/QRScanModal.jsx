@@ -103,6 +103,7 @@ const handleQRDetected = async (decodedText) => {
 
   const handleUseData = () => {
     if (onUseData && qrResult) {
+        console.log("Passing to FoundItemModal:", qrResult)
       onUseData(qrResult);
     }
     setOpen(false);
