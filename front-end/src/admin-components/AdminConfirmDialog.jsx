@@ -7,6 +7,10 @@ export default function AdminConfirmDialog({
   cancelText = "Keep Editing",
   onClose,
   onConfirm,
+  Icon = Info,
+  iconColor = "text-[#4A5568]" ,
+  message,
+  
 }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
@@ -23,10 +27,16 @@ export default function AdminConfirmDialog({
         {/* Body */}
         <div className="p-4">
           <div className="flex justify-center mb-4">
-            <Info size={40} className="text-[#4A5568]" />
+            {/* Renders the passed Icon dynamically */}
+            <Icon size={40} className={iconColor} />
           </div>
 
-          <p className="text-sm text-center">{description}</p>
+          <div className="flex flex-col gap-2">
+              <p className={`text-sm text-center font-medium ${message && "text-center"}`}>{description}</p>
+                {message &&
+                <p className="text-xs text-center text-[#6B5C42] ">{message}</p>
+                }
+          </div>
 
           <hr className="border-(--color-tertiary) my-4 opacity-30" />
 

@@ -8,14 +8,15 @@ export default function TransactionTable(   {
     locations = [],
     onUpdated,
     allLocations = [],
+    selectedRecord,
+    setSelectedRecord,
     }
 ){
     //ADMIN CREDENTIALS
     const userId = localStorage.getItem("user_id");
     const adminId = localStorage.getItem("admin_id");
 
-    //Set Record
-    const [selectedRecord, setSelectedRecord] = useState(null);
+
 
     //TABLE CONST
     const [selectedImage, setSelectedImage] = useState(null);

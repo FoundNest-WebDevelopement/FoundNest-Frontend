@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info } from "lucide-react";
+import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck } from "lucide-react";
 import QRCodeLib from "qrcode";
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
 import formatNotificationDate from "../utils/fotmatNotifications.js";
@@ -29,9 +29,12 @@ export default function FoundReportItemManagementModal({
     const [selectedReport, setSelectedReport] = useState(null);
     const [imageSelected, setImageSelected] = useState(false);
     const [openArchivedDialog, setOpenArchivedDialog] = useState(false);
+    const [openClaimNavigateDialog, setOpenClaimNavigateDialog] = useState(false);
     const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
     const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
     const [openCancelUpdate, setOpenCancelUpdate] = useState(false);
+    const [openConfirmRelease, setOpenConfirmRelease] = useState(false);
+    const [openCancelRelease, setOpenCancelRelease] = useState(false);
     const [originalEditForm, setOriginalEditForm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const adminId = localStorage.getItem("admin_id");
@@ -59,6 +62,10 @@ export default function FoundReportItemManagementModal({
 
   const isValidPhone = /^09\d{9}$/.test(claimantNumber);
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimantEmail);
+
+     const formatTXNId = (id) => {
+        return `TXN-${String(id).padStart(5, "0")}`;
+    };
 
   const fileInputRef = useRef(null);
   const resetClaimForm = () => {
@@ -105,9 +112,19 @@ export default function FoundReportItemManagementModal({
     return `RPT-${String(id).padStart(5, "0")}`;
   };
 
+  const hasClaimFormChanges =
+  fullName.trim() ||
+  claimantEmail.trim() ||
+  claimantNumber.trim() ||
+  verificationDetails.trim() ||
+  selectedFile ||
+  linkReport;
+
+   const [claimId, setClaimId] = useState(null);
   const [isReleasing, setIsReleasing] = useState(false);
   const handleItemRelease = async () => {
     setIsReleasing(true);
+    setOpenConfirmRelease(false);
     try {
       if (!selectedItem?.found_report_id) {
         throw new Error("Please select an item to release.");
@@ -164,6 +181,7 @@ export default function FoundReportItemManagementModal({
         },
       );
 
+      
       const data = await response.json();
 
       if (!response.ok) {
@@ -171,8 +189,12 @@ export default function FoundReportItemManagementModal({
         setIsReleasing(false);
       }
 
-      // Refresh table
+      setClaimId(data.claim.claim_id);
 
+      if(data.claim.claim_id){
+        setOpenClaimNavigateDialog(true);
+      }
+      // Refresh table
       const reportsResponse = await fetchWithAuth(
         `${API_URL}/api/found-reports`,
       );
@@ -182,6 +204,14 @@ export default function FoundReportItemManagementModal({
       if (Array.isArray(reportsData)) {
         onUpdated?.(reportsData);
       }
+
+      const updatedSelected = reportsData.find(
+          (report) => report.found_report_id === selectedItem.found_report_id,
+        );
+
+        if (updatedSelected) {
+          setSelectedItem(updatedSelected);
+        }
 
       // Reset form
       resetClaimForm();
@@ -1155,10 +1185,9 @@ const handleRestoreReport = async (foundReportId) => {
                       <div className="flex flex-col text-xs mt-5 flex-1">
                         <p className="text-[#6B5C42]">DATE LOGGED</p>
                         <p className="text-black">
-                          {" "}
-                          {new Date(
-                            selectedItem.date_reported,
-                          ).toLocaleDateString()}
+                         {
+                          formatDateTime(selectedItem.date_reported)
+                         }
                         </p>
                       </div>
                     </div>
@@ -1664,8 +1693,13 @@ const handleRestoreReport = async (foundReportId) => {
                   <button
                     className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
                     onClick={() => {
-                      setClaimTab(false), setEditTab(true);
-                    }}
+                          if (hasClaimFormChanges) {
+                              setOpenCancelRelease(true);
+                            } else {
+                              setClaimTab(false);
+                              setEditTab(true);
+                            }
+                         }}
                   >
                     Cancel
                   </button>
@@ -1677,7 +1711,10 @@ const handleRestoreReport = async (foundReportId) => {
                       (!isValidEmail && claimantEmail) ||
                       (!isValidPhone && claimantNumber)
                     }
-                    onClick={handleItemRelease}
+                    onClick={
+                      // handleItemRelease
+                      ()=> setOpenConfirmRelease(true)
+                    }
                     className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 `}
                   >
                     {isReleasing ? "Releasing..." : "Confirm Release"}
@@ -1987,25 +2024,63 @@ const handleRestoreReport = async (foundReportId) => {
     </div>
 </div>
                 </>
-            
-            
-            
             )
-
             }
-
              {openCancelUpdate &&
-            (
-              <>
                 <AdminConfirmDialog
                      description={"Any edits you’ve made to this item will be lost. The listing will keep its original details."}
                   onClose={()=>setOpenCancelUpdate(false)}
                   onConfirm={handleCancelEdit}
                   />
-
-              </>
-            )
             }
+            { openConfirmRelease &&
+              <AdminConfirmDialog
+                title="Confirm Release"
+                description={`Confirm release for ${formatItemId(selectedItem.item_id)}`}
+                cancelText="Cancel"
+                confirmText="Confirm Release"
+                onClose={()=>setOpenConfirmRelease(false)}
+                onConfirm={handleItemRelease}
+                />
+            }
+            { openCancelRelease &&
+              <AdminConfirmDialog
+                description={`Cancel the release of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
+                onClose={()=>{
+                  setOpenCancelRelease(false)
+                }  
+                }
+                onConfirm={()=>{
+                    setClaimTab(false);
+                    setEditTab(true);
+                    resetClaimForm();
+                    setOpenCancelRelease(false)
+                }}
+                />
+            }
+
+            { openClaimNavigateDialog &&
+              <AdminConfirmDialog
+                description={`Item ${formatItemId(selectedItem.item_id)} successfully released to ${fullName}.`}
+                onClose={()=>{
+                  setOpenClaimNavigateDialog(false)
+                }  
+                }
+                onConfirm={()=>{
+                    navigate(
+                            `/admin/transactions?claimId=${claimId}`
+                        )
+                }}
+                Icon={CircleCheck}
+                iconColor="text-[#22C55E]"
+                cancelText="Close"
+                confirmText="View Transaction"
+                message={`Transaction ${formatTXNId(claimId)} has been created.`}
+                title="Item Released"
+                
+                />
+            }
+           
            
     </>
   );

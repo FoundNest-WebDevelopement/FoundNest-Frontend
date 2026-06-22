@@ -7,17 +7,25 @@ import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import TransactionTable from "../admin-components/TransactionTable"
+import { useSearchParams } from "react-router-dom";
 
 
 
 export default function Transactions() {
     //API URL
     const API_URL = import.meta.env.VITE_API_URL;
+    
+    //SEARCH PARAMS
+    const [searchParams] = useSearchParams();
+    const navigatedClaimId = searchParams.get("claimId");
 
     const statuses = [
   { label: "Completed", value: true },
   { label: "Reverted", value: false }
 ];
+
+        //Record State
+    const [selectedRecord, setSelectedRecord] = useState(null);
 
     //TEMP VARIABLES FILTER STORAGE
     const [searchTemp, setSearchTemp] = useState("");
@@ -68,6 +76,20 @@ export default function Transactions() {
                 console.error(err);
             });
     }, []);
+    //Handle Navigated Transaction
+    useEffect(() => {
+        if (!navigatedClaimId || records.length === 0) return;
+
+        const selectedTransaction  = records.find(
+            c =>
+                String(c.claim_id) ===
+                String(navigatedClaimId)
+        );
+
+        if (selectedTransaction ) {
+            setSelectedRecord(selectedTransaction );
+        }
+    }, [navigatedClaimId, records]);
     //OFFICES FETCH
     useEffect(() => {
         fetch(`${API_URL}/api/offices`)
@@ -259,6 +281,8 @@ const paddedClaimId =
                     <TransactionTable
                     reports={filteredRecords}
                     onUpdated={setRecords}
+                    setSelectedRecord={setSelectedRecord}
+                    selectedRecord={selectedRecord}
                 />
 
                 </div>
