@@ -21,6 +21,7 @@ export default function TransactionManagementModal(
 
     const API_URL = import.meta.env.VITE_API_URL;
     const [isReverting, setIsReverting] = useState(false);
+  
 
     //Close and reset Modal
     const handleCloseModal = () => {
@@ -142,7 +143,7 @@ export default function TransactionManagementModal(
                                 </div>
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">CATEGORY</p>
-                                    <p className="text-xs">{formatTime(selectedRecord.category_name)}</p>
+                                    <p className="text-xs">{selectedRecord.category_name}</p>
                                 </div>
 
                             </div>
@@ -228,7 +229,8 @@ export default function TransactionManagementModal(
                                             <p className="text-black font-semibold text-sm">{selectedRecord.claimant_full_name}</p>
                                             <div className="flex">
                                                 <div className="flex flex-col flex-1">
-                                                    <p className="text-xs text-[#6B5C42]">EMAIL</p>
+                                                    {selectedRecord.claimant_email && (<p className="text-xs text-[#6B5C42]">EMAIL</p>)}
+                                                    {selectedRecord.claimant_contact_number && (<p className="text-xs text-[#6B5C42]">CONTACT NUMBER</p>)}
                                                     <p className="text-xs text-[#5B5BD5]">{selectedRecord.claimant_email || selectedRecord.claimant_contact_number}</p>
                                                 </div>
                                             </div>
@@ -344,6 +346,7 @@ export default function TransactionManagementModal(
             )
 
             }
+
         </>
     )
 }

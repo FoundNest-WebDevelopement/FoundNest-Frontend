@@ -17,6 +17,7 @@ export default function ItemManagementTable({
     setSelectedItem,
 
 }) {
+    console.log(reports[0])
     const API_URL = import.meta.env.VITE_API_URL;
 
     const userId = localStorage.getItem("user_id");
@@ -109,18 +110,20 @@ export default function ItemManagementTable({
                                         ${item.status == "unclaimed" && "bg-gray-200 text-gray-700"}
                                         ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20" } 
                                        ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
+                                    ${item.status === 'archived' && "bg-violet-100 text-violet-700"}
                                         `}
                                         >
                                         {item.status === 'claimed' && "Claimed"}
                                             {item.status === 'unclaimed' && "Unclaimed"}
                                             {item.status === 'to_be_disposed' && "For Disposal"}
                                                 {item.status === 'disposed' && "Disposed"}
+                                                    {item.status === 'archived' && "Archived"}
                                         </span>
                                     </td>
 
                                     <td className="align-middle text-center font-medium">{item.linked_report ? <span>RPT-00{item.linked_report}</span> : ""}</td>
 
-                                    <td className="align-middle text-center ">{item.reported_by}</td>
+                                    <td className="align-middle text-center ">{item.admin_full_name}</td>
 
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
@@ -129,7 +132,8 @@ export default function ItemManagementTable({
                                         >
                                             {(
                                             item.status === "unclaimed" ||
-                                            item.status === "to_be_disposed"
+                                            item.status === "to_be_disposed" ||
+                                            item.status === "archived"
                                             ) && (
                                             <Pencil size={18} className="text-primary" />
                                             )}

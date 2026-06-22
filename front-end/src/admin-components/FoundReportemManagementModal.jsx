@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, X, QrCode, Link2 } from "lucide-react";
+import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info } from "lucide-react";
 import QRCodeLib from "qrcode";
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
 import formatNotificationDate from "../utils/fotmatNotifications.js";
@@ -8,6 +8,10 @@ import AdminDateInput from "./AdminDateInput.jsx";
 import AdminTextArea from "./AdminTextArea.jsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useNavigate } from "react-router-dom";
+import formatDateTime from "../utils/formatDataTimeNew.js";
+import { toast } from "react-toastify";
+import AdminConfirmDialog from "./AdminConfirmDialog.jsx";
+
 
 export default function FoundReportItemManagementModal({
   selectedItem = [],
@@ -19,7 +23,16 @@ export default function FoundReportItemManagementModal({
   onUpdated,
   allLocations = [],
 }) {
+
   const API_URL = import.meta.env.VITE_API_URL;
+    const [linkModal, setLinkModal] = useState(false);
+    const [selectedReport, setSelectedReport] = useState(null);
+    const [imageSelected, setImageSelected] = useState(false);
+    const [openArchivedDialog, setOpenArchivedDialog] = useState(false);
+    const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
+    const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+    const [openCancelUpdate, setOpenCancelUpdate] = useState(false);
+    const [originalEditForm, setOriginalEditForm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const adminId = localStorage.getItem("admin_id");
   const userId = localStorage.getItem("user_id");
@@ -172,13 +185,11 @@ export default function FoundReportItemManagementModal({
 
       // Reset form
       resetClaimForm();
-
-      setSelectedItem(null);
       setClaimTab(false);
       setEditTab(true);
       setIsReleasing(false);
 
-      alert("Item released successfully.");
+      toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Claimed.`)
     } catch (error) {
       setIsReleasing(false);
 
@@ -280,33 +291,44 @@ export default function FoundReportItemManagementModal({
     hasRequiredEditFields && editDateValid && editTimeValid,
   );
 
+  //chanhe checker in edit 
+  const hasEditChanges =
+  originalEditForm &&
+  (
+    JSON.stringify(editForm) !== JSON.stringify(originalEditForm) ||
+    editImageFile !== null
+  );
+  
   // item info button
-  const startEditing = () => {
-    if (!selectedItem) return;
+const startEditing = () => {
+  if (!selectedItem) return;
 
-    const foundDate = selectedItem.found_date
-      ? new Date(selectedItem.found_date)
-      : null;
+  const foundDate = selectedItem.found_date
+    ? new Date(selectedItem.found_date)
+    : null;
 
-    setEditForm({
-      item_name: selectedItem.item_name || "",
-      category_id: selectedItem.category_id || "",
-      location_found: selectedItem.location_found || "",
-      specific_location: selectedItem.specific_location || "",
-      found_date: foundDate ? foundDate.toISOString().split("T")[0] : "",
-      found_time: foundDate ? foundDate.toTimeString().slice(0, 5) : "",
-      description: selectedItem.description || "",
-      contents: selectedItem.contents || "",
-      reported_by: selectedItem.reported_by || "",
-      additional_notes: selectedItem.additional_notes || "",
-      office_id: selectedItem.office_id || "",
-    });
-
-    setEditImageFile(null);
-    setEditImagePreview(selectedItem.image_url || null);
-    setIsEditing(true);
-    setOpenUpdateStatus(false);
+  const formData = {
+    item_name: selectedItem.item_name || "",
+    category_id: String(selectedItem.category_id || ""),
+    location_found: selectedItem.location_found || "",
+    specific_location: selectedItem.specific_location || "",
+    found_date: foundDate ? foundDate.toISOString().split("T")[0] : "",
+    found_time: foundDate ? foundDate.toTimeString().slice(0, 5) : "",
+    description: selectedItem.description || "",
+    contents: selectedItem.contents || "",
+    reported_by: selectedItem.reported_by || "",
+    additional_notes: selectedItem.additional_notes || "",
+    office_id: String(selectedItem.office_id || ""),
   };
+
+  setEditForm(formData);
+  setOriginalEditForm(formData);
+
+  setEditImageFile(null);
+  setEditImagePreview(selectedItem.image_url || null);
+  setIsEditing(true);
+  setOpenUpdateStatus(false);
+};
 
   const handleEditChange = (field, value) => {
     setEditForm((current) => ({
@@ -376,6 +398,7 @@ export default function FoundReportItemManagementModal({
 
   //edit
   const handleCancelEdit = () => {
+    setOpenCancelUpdate(false);
     setEditImageFile(null);
     setEditImagePreview(null);
 
@@ -401,6 +424,7 @@ export default function FoundReportItemManagementModal({
 
   //edit
   const handleSaveEdit = async () => {
+    setOpenUpdateDialog(false);
     if (!selectedItem || !isEditFormValid) {
       return;
     }
@@ -457,7 +481,13 @@ export default function FoundReportItemManagementModal({
         if (updatedSelected) {
           setSelectedItem(updatedSelected);
         }
+
+        setOriginalEditForm({ ...editForm });
+
       }
+
+      toast.success(`Succesfully updated ${formatItemId(selectedItem.item_id)}`)
+      
 
       setEditImageFile(null);
       setEditImagePreview(null);
@@ -504,6 +534,7 @@ export default function FoundReportItemManagementModal({
     const response = await fetchWithAuth(
       `${API_URL}/api/lost-reports/search/rptlink?search=${normalizedSearch}`,
     );
+
 
     const data = await response.json();
     setSearchResults(data);
@@ -669,6 +700,99 @@ export default function FoundReportItemManagementModal({
     }
   };
 
+  //archive states
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+
+  //Archive Item
+  const handleArchiveReport = async (foundReportId) => {
+    setIsArchiving(true);
+  try {
+    const response = await fetchWithAuth(
+      `${API_URL}/api/found-reports/${foundReportId}/archive`,
+      {
+        method: "PUT",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setIsArchiving(false);
+      throw new Error(data.error || "Failed to archive report");
+    }
+
+    const refreshResponse = await fetchWithAuth(
+      `${API_URL}/api/found-reports`
+    );
+
+    const reports = await refreshResponse.json();
+
+    console.log(reports);
+
+    if (Array.isArray(reports)) {
+      onUpdated?.(reports);
+    }
+     const updatedReport = reports.find(
+          report => report.found_report_id === selectedItem.found_report_id
+      );
+
+    setSelectedItem(updatedReport);
+    setOpenArchivedDialog(false);
+    toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Archived.`)
+    setIsArchiving(false);
+  } catch (error) {
+    setIsArchiving(false);
+     setOpenArchivedDialog(false);
+    console.error(error);
+    alert(error.message);
+  }
+};
+
+const handleRestoreReport = async (foundReportId) => {
+  try {
+    setIsRestoring(true);
+    const response = await fetchWithAuth(
+      `${API_URL}/api/found-reports/${foundReportId}/restore`,
+      {
+        method: "PUT",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to restore report");
+    }
+
+    const refreshResponse = await fetchWithAuth(
+      `${API_URL}/api/found-reports`
+    );
+
+    const reports = await refreshResponse.json();
+
+    if (Array.isArray(reports)) {
+      onUpdated?.(reports);
+    }
+    const updatedReport = reports.find(
+          report => report.found_report_id === selectedItem.found_report_id
+      );
+
+    setSelectedItem(updatedReport);
+    setOpenRestoreDialog(false);
+    setIsRestoring(false);
+     toast.success(`Restored ${formatItemId(selectedItem.item_id)} Succesfully.`)
+
+  } catch (error) {
+    setOpenRestoreDialog(false);
+    setIsRestoring(false);
+    toast.success(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
+    console.error(error);
+    alert(error.message);
+  }
+};
+
   return (
     <>
       <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
@@ -686,6 +810,7 @@ export default function FoundReportItemManagementModal({
                                         ${selectedItem.status === "claimed" && " border-green-700 bg-green-100 text-green-700"} 
                                         ${selectedItem.status === "to_be_disposed" && "text-[#FFA500] border-[#FFA500] bg-[#FFEDCC]"} 
                                         ${selectedItem.status === "disposed" && "text-[#553D25] border-[#553D25] bg-[#DDD1C5]"} 
+                                        ${selectedItem.status === 'archived' && "bg-violet-100 text-violet-700 border-violet-700"}
                                        `}
             >
               <p className=" ">
@@ -693,6 +818,7 @@ export default function FoundReportItemManagementModal({
                 {selectedItem.status === "unclaimed" && "Unclaimed"}
                 {selectedItem.status === "to_be_disposed" && "For Disposal"}
                 {selectedItem.status === "disposed" && "Disposed"}
+                {selectedItem.status === "archived" && "Archived"}
               </p>
             </div>
             <div className="ml-auto pr-6">
@@ -1049,7 +1175,7 @@ export default function FoundReportItemManagementModal({
                           />
                         ) : (
                           <p className="text-black">
-                            {selectedItem.reported_by}
+                            {selectedItem.reported_by || "N/A"}
                           </p>
                         )}
                       </div>
@@ -1102,21 +1228,54 @@ export default function FoundReportItemManagementModal({
                         )}
                       </div>
                     </div>
+                     {selectedItem.status === 'archived' && 
+                (
+                  <>
+                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                  <button
+                            type="button"
+                            className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
+                                                                     active:scale-95 bg-primary text-white w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
+                            onClick={()=>{setOpenRestoreDialog(true)}}                    
+                                                                     >
+                           <i className="fa-solid fa-arrow-rotate-left"></i> Restore Listing                                                   
+                   </button>
+                   <div className=" text-[10px] xl:text-xs gap-1">
+                                            <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from the public feed</p>
+                                    </div>
+                  </>
+                )
+
+                }
                     <div className="h-fit text-[9px] xl:text-xs  font-medium flex gap-2 xl:gap-3 mt-2 ">
                       {isEditing ? (
                         <>
                           <button
                             type="button"
                             className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1"
-                            onClick={handleCancelEdit}
+                            onClick={()=>{
+                                if (hasEditChanges) {
+                        setOpenCancelUpdate(true);
+                      } else {
+                        handleCancelEdit();
+                      }
+                            }}
                           >
-                            Cancel
+                            Cance
                           </button>
                           <button
                             type="button"
-                            disabled={isSaving || isAnalyzing || !isEditFormValid}
+                            disabled={
+                              isSaving ||
+                              isAnalyzing ||
+                              !isEditFormValid ||
+                              !hasEditChanges
+                            }
                             className="h-full border-primary border px-5 py-3 rounded-md bg-primary text-white flex-1 disabled:opacity-50 "
-                            onClick={handleSaveEdit}
+                            onClick={
+                            
+                                ()=> setOpenUpdateDialog(true)
+                            }
                           >
                             {isSaving
                               ? "Saving..."
@@ -1126,10 +1285,16 @@ export default function FoundReportItemManagementModal({
                           </button>
                         </>
                       ) : (
-                        <button
+                        <>
+                        {selectedItem.status !== 'archived' &&
+
+                            <button
                           type="button"
                           className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40"
-                          onClick={startEditing}
+                          onClick={
+                            startEditing
+                          
+                          }
                           disabled={
                             selectedItem.status === "claimed" ||
                             selectedItem.status === "disposed"
@@ -1137,28 +1302,45 @@ export default function FoundReportItemManagementModal({
                         >
                           Edit Item Details
                         </button>
+                        }
+                        </>
                       )}
-                      {!isEditing && (
+                      {!isEditing &&  (
                         <div className="relative ">
                           {openUpdateStatus && (
                             <div className="absolute bottom-11 h-fit w-45 bg-white border -translate-x-14 xl:-translate-x-5 border-[#DDD9CF] rounded-md">
                               <button
                                 className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                onClick={startClaiming}
+                                onClick={()=>{
+                                  startClaiming();
+                                  setOpenUpdateStatus(false);
+                                }}
                               >
                                 <p className="ml-2">Mark as Claimed</p>
                               </button>
                               {selectedItem.status === "to_be_disposed" && (
                                 <button
                                   className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                  onClick={startDisposing}
+                                  onClick={()=>{
+                                    startDisposing();
+                                    setOpenUpdateStatus(false);
+                                  }}
                                 >
                                   <p className="ml-2">Mark as Disposed</p>
                                 </button>
                               )}
+                              <button
+                                className="text-xs p-2 border-b border-[#DDD9CF] w-full text-primary"
+                                onClick={()=> {
+                                  setOpenArchivedDialog(true);
+                                  setOpenUpdateStatus(false);
+                                }}
+                              >
+                                <p className="ml-2">Archive</p>
+                              </button>
                             </div>
                           )}
-                          {!isEditing && (
+                          {!isEditing && selectedItem.status !== "archived" && (
                             <button
                               className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 disabled:opacity-40"
                               onClick={() => {
@@ -1179,7 +1361,7 @@ export default function FoundReportItemManagementModal({
                       )}
                     </div>
                     <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
-                      {!isEditing && (
+                      {!isEditing && selectedItem.status !== 'archived' && (
                         <div className="w-full flex flex-col gap-1">
                           <button
                             type="button"
@@ -1254,6 +1436,7 @@ export default function FoundReportItemManagementModal({
                     )}
                   </>
                 )}
+               
                 <div className="h-5"></div>
               </div>
             </>
@@ -1413,8 +1596,12 @@ export default function FoundReportItemManagementModal({
                               key={result.lost_report_id}
                               type="button"
                               className="w-full text-sm flex p-2  border-b border-b-[#DDD9CF] hover:bg-gray-100"
-                              onClick={() => {
-                                setLinkReport(result);
+                              onMouseDown={() => {
+                                
+                                // setLinkReport(result);
+                                setSelectedReport(result);
+                                console.log(result);
+                                setLinkModal(true);
                                 setShowSearchResults(false);
                               }}
                             >
@@ -1430,8 +1617,9 @@ export default function FoundReportItemManagementModal({
                         </div>
                       </div>
                     )}
-
+                    
                     {linkReport && (
+                      
                       <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
                         <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
                           <p className="flex-1 overflow-x-auto min-w-0 truncate">
@@ -1562,6 +1750,263 @@ export default function FoundReportItemManagementModal({
           )}
         </div>
       </div>
+
+            {linkModal && selectedReport &&
+             (
+                <>
+                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                <p className="font-semibold">Link Report</p>
+                                <button onClick={() => setLinkModal(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                            </div>
+                            <div className="w-full flex flex-col p-3 gap-2">
+                              <div className="w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                  <img
+                                    src={selectedReport.image_url}
+                                    alt={selectedReport.item_name}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                  <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] p-3 xl:p-5 ">
+                                    <div className="flex flex-col  text-xs xl:text-sm gap-2">
+                                        <p className="text-sm xl:text-lg font-semibold text-[#6B5C42]">{formatReportId(selectedReport.lost_report_id)}</p>
+                                         <p className="text-[#6B5C42]">Item Name: <span className="text-black">{selectedReport.item_name}</span></p>
+                                         <p className="text-[#6B5C42]">Reported by: <span className="text-black">{selectedReport.owner_name || selectedReport.reported_by}</span></p>
+                                         <p className="text-[#6B5C42]">Date Lost: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
+                                    </div>
+                                    
+                                       
+                                 </div>
+                                 <div className="text-xs xl:text-sm text-justify">
+                                      <p >
+                                        Linking this report will connect this case to the found item and update the status to ‘<span className="font-semibold">Resolved</span>’. Please verify that the details and item match before proceeding.
+                                      </p>
+                                    </div>
+                                    <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                    <div className="flex gap-2">
+                                    <button
+                                        className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={() => {setLinkModal(false); setSelectedReport(null)}}
+                                    >No</button>
+                                    <button
+                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={()=>{setLinkReport(selectedReport);
+                                          setLinkModal(false);
+                                          setSelectedReport(null);
+                                        }}
+                                        disabled={isLoading}
+                                    >{isLoading ? "Lingking.." : "Confirm Link"}</button>
+                                </div>
+                              
+                            </div>
+                            <div>
+
+                            </div>
+                           
+                         
+                        </div>
+                    </div>
+                </>
+             )
+            
+            }
+
+            {imageSelected &&
+             (
+                <>
+                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                <p className="font-semibold">Link Report</p>
+                                <button onClick={() => setImageSelected(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                            </div>
+                            <div className="w-full flex flex-col p-3 gap-2">
+                              <div className="w-full h-80 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                  <img
+                                    src={selectedReport.image_url}
+                                    alt={selectedReport.item_name}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              
+                            </div>
+                           
+                         
+                        </div>
+                    </div>
+                </>
+             )
+            
+            }
+            {openArchivedDialog &&
+            (
+              
+                <>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                <p className="font-semibold">Archived Item</p>
+                                <button onClick={() => setOpenArchivedDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                            </div>
+                            <div className="flex flex-col flex-1 p-3 gap-3">
+                                <div className="w-full flex flex-col justify-center items-center">
+                                    <Archive size={40} className="text-[#7F8C8D]"/>
+                                    <p className="text-md font-medium">Archive Item?</p>
+                                </div>
+                          
+                                <div className="text-sm text-justify">
+                                    <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
+                                </div>
+                                <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
+                                    <p>Archiving this listing will be recorded in the system under your administrator account.</p>
+                                </div>
+                                <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                <div className="flex gap-2">
+                                    <button
+                                        className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={() => setOpenArchivedDialog(false)}
+                                    >Cancel</button>
+                                    <button
+                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={()=> handleArchiveReport(selectedItem.found_report_id)}
+                                        disabled={isArchiving}
+                                    >
+                                      {isArchiving ? "Archving.." : "Confirm Archived"}
+      
+                                      </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            
+            )
+
+            }
+            {openRestoreDialog && 
+            (
+              
+              
+                <>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                <p className="font-semibold">Restore Listing</p>
+                                <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                            </div>
+                            <div className="flex flex-col flex-1 p-3 gap-3">
+                                <div className="w-full flex flex-col justify-center items-center">
+                                    <ArchiveRestore size={40} className="text-[#0288D1]"/>
+                                    <p className="text-md font-medium">Restore Listing?</p>
+                                </div>
+                          
+                                <div className="text-sm text-justify">
+                                    <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
+                                </div>
+        
+                                <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                <div className="flex gap-2">
+                                    <button
+                                        className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={() => setOpenRestoreDialog(false)}
+                                    >Cancel</button>
+                                    <button
+                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={()=> handleRestoreReport(selectedItem.found_report_id)}
+                                        disabled={isRestoring}
+                                    >
+                                      {isRestoring ? "Restoring.." : "Confirm Restore"}
+      
+                                      </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            
+            
+            )
+
+            }
+            {openUpdateDialog && 
+            (
+              
+              
+              
+                <>
+               <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+    <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
+        
+        {/* Header */}
+        <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+            <p className="font-semibold">Confirm Update</p>
+            <button onClick={() => setOpenUpdateDialog(false)}>
+                <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
+            </button>
+        </div>
+        
+        <div className="flex flex-col flex-1 p-3 gap-3">
+            {/* Icon & Title */}
+            <div className="w-full flex flex-col justify-center items-center mt-2">
+                <Info size={40} className="text-[#4A5568]"/>
+                <p className="text-md font-medium mt-2">Update Item?</p>
+            </div>
+      
+            {/* Update Message */}
+            <div className="text-sm text-center px-2 text-gray-700">
+                <p>Are you sure you want to save these changes on Item <span className="font-semibold text-black">{formatItemId(selectedItem.item_id)}</span>?.</p>
+            </div>
+
+            <hr className="border-(--color-tertiary) my-2 opacity-30" />
+            
+            {/* Buttons */}
+            <div className="flex gap-2">
+                <button
+                    className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                    onClick={() => setOpenUpdateDialog(false)}
+                >
+                    Keep Editing
+                </button>
+                <button
+                    className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                    onClick={handleSaveEdit} 
+                >
+                    {isLoading ? "Updating..." : "Update Item"}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+                </>
+            
+            
+            
+            )
+
+            }
+
+             {openCancelUpdate &&
+            (
+              <>
+                <AdminConfirmDialog
+                     description={"Any edits you’ve made to this item will be lost. The listing will keep its original details."}
+                  onClose={()=>setOpenCancelUpdate(false)}
+                  onConfirm={handleCancelEdit}
+                  />
+
+              </>
+            )
+            }
+           
     </>
   );
 }

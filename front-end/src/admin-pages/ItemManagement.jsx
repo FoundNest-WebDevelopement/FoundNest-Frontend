@@ -82,13 +82,16 @@ export default function ItemManagement() {
       report.location_found?.toLowerCase().includes(query) ||
       report.reported_by?.toLowerCase().includes(query);
 
+      
+
     const matchesCategory =
       !category || String(report.category_id) === String(category);
 
     const matchesLocation =
       !location || String(report.office_id) === String(location);
 
-    const matchesStatus = !status || report.status === status;
+    // const matchesStatus = !status || report.status === status;
+    const matchesStatus = !status || report.status === status.toLocaleLowerCase();
 
     const reportDate = new Date(report.found_date).toISOString().split("T")[0];
     const matchesDate = !dateFound || reportDate === dateFound;
@@ -162,10 +165,18 @@ export default function ItemManagement() {
 
   // HANDLE APPLY FILTER
   const handleApplyFilters = () => {
+    console.log(statusTemp)
+    console.log(reports[0])
     setSearch(searchTemp);
     setLocation(locationTemp);
     setCategory(categoryTemp);
-    setStatus(statusTemp);
+
+    if(statusTemp.toLocaleLowerCase() === 'for disposal'){
+      setStatus("to_be_disposed");
+    }else{
+      setStatus(statusTemp);
+    }
+    
     setDateFound(dateFoundTemp);
   };
 
@@ -256,6 +267,7 @@ export default function ItemManagement() {
           allLocations={allLocations}
           prefillData={qrPrefillData}
           onUpdated={setReports}
+          setSelectedItem={setSelectedItem}
         />
       )}
 

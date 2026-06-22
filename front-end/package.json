@@ -26,6 +26,7 @@
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.15.1",
+    "react-toastify": "^11.1.0",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

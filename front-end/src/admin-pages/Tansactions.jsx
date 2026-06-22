@@ -21,20 +21,20 @@ export default function Transactions() {
 
     //TEMP VARIABLES FILTER STORAGE
     const [searchTemp, setSearchTemp] = useState("");
-    const [dateLostTemp, setDateLostTemp] = useState("");
+    const [dateClaimedTemp, setDateClaimedTemp] = useState("");
     const [locationTemp, setLocationTemp] = useState("");
     const [categoryTemp, setCategoryTemp] = useState("");
-    const [statusTemp, setStatusTemp] = useState("");
+    const [statusTemp, setStatusTemp] = useState("true");
 
     //LOG LOST REPORT TOGGLE
     const [openLogItem, setOpenLogItem] = useState(false);
 
     //SEARCH AND FILTER VARIABLES 
     const [search, setSearch] = useState("");
-    const [dateLost, setDateLost] = useState("");
+    const [dateClaimed, setDateClaimed] = useState("");
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState("");
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState("true");
 
     //DROPDOWN LIST
     const [categories, setCategories] = useState([]);
@@ -108,13 +108,13 @@ export default function Transactions() {
         setLocation("");
         setCategory("");
         setStatus("");
-        setDateLost("");
+        setDateClaimed("");
 
         setSearchTemp("");
         setLocationTemp("");
         setCategoryTemp("");
-        setStatusTemp("");
-        setDateLostTemp("");
+        setStatusTemp("true");
+        setDateClaimedTemp("");
     }
 
     // HAMDLE APPLY FILTER
@@ -123,7 +123,7 @@ export default function Transactions() {
         setLocation(locationTemp);
         setCategory(categoryTemp);
         setStatus(statusTemp);
-        setDateLost(dateLostTemp);
+        setDateClaimed(dateClaimedTemp);
     }
 
       //CAEGORIES FETCH
@@ -138,50 +138,73 @@ export default function Transactions() {
                         });
                 }, []);
 
-    //  //FILRTER RECORDS
-    //     const filteredRecords = records.filter((records) => {
-    //         const query = search.toLowerCase();
+     //FILRTER RECORDS
+        const filteredRecords = records.filter((records) => {
+            const query = search.toLowerCase();
 
-    //         const locationMatch = Array.isArray(records.location_lost)
-    //         ? records.location_lost.some(location =>
-    //             location.toLowerCase().includes(query)
-    //             )
-    //         : records.location_lost?.toLowerCase().includes(query);
+            const formattedClaimId =
+  `TXN-${String(records.claim_id).padStart(5, "0")}`.toLowerCase();
 
-    //         const matchesSearch =
-    //             !query ||
-    //             records.item_name?.toLowerCase().includes(query) ||
-    //             records.category_name?.toLowerCase().includes(query) ||
-    //             locationMatch ||
-    //             records.reported_by?.toLowerCase().includes(query);
+const paddedClaimId =
+  String(records.claim_id).padStart(5, "0");
 
-    //         const matchesCategory =
-    //             !category ||
-    //             String(records.category_id) === String(category);
+            const matchesSearch =
+                !query ||
+                records.item_name?.toLowerCase().includes(query) ||
+                paddedClaimId.includes(query) ||
+                formattedClaimId.includes(query) ||
+                records.category_name?.toLowerCase().includes(query) ||
+                records.processed_by?.toLowerCase().includes(query);
 
-    //         const matchesLocation =
-    //             !location ||
-    //             String(records.office_id) === String(location);
+            const matchesCategory =
+                !category ||
+                String(records.category_id ) === String(category);
 
-    //         const matchesStatus =
-    //             !status ||
-    //             records.status === status;
+            const matchesLocation =
+                !location ||
+                String(records.office_id) === String(location);
+
+            const matchesStatus =
+            !status ||
+            records.claimant_status === (status === "true");
+
                 
-    //         const reportDate = new Date(records.lost_date)
-    //             .toISOString()
-    //             .split("T")[0];
-    //         const matchesDate =
-    //             !dateLost || reportDate === dateLost;
+            const claimDate = new Date(records.claim_date)
+                .toISOString()
+                .split("T")[0];
+            const matchesDate =
+                !dateClaimed || claimDate === dateClaimed;
 
 
-    //         return (
-    //             matchesSearch &&
-    //             matchesCategory &&
-    //             matchesLocation &&
-    //             matchesDate &&
-    //             matchesStatus
-    //         );
-    // });
+            return (
+                matchesSearch &&
+                matchesCategory &&
+                matchesDate &&
+                matchesStatus
+            );
+    });
+
+    //HANDLE EXPORT CSV
+    const handleExportTransactions = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await fetchWithAuth(
+    `${API_URL}/api/export/transactions/csv`
+  );
+
+  const blob = await response.blob();
+
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "transactions.csv";
+  document.body.appendChild(a);
+  a.click();
+
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 
     return (
@@ -204,6 +227,7 @@ export default function Transactions() {
                     </div>
                     <div className="h-full w-fit ml-40 xl:ml-60 flex items-center  ">
                                             <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} 
+                                            onClick={handleExportTransactions}
                                             />
                 
                                         </div>
@@ -220,7 +244,7 @@ export default function Transactions() {
                         </div>
                      
                         <div className="flex-1">
-                            <AdminDateInput value={dateLostTemp} onChange={setDateLostTemp} />
+                            <AdminDateInput value={dateClaimedTemp} onChange={setDateClaimedTemp} />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
                             <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
@@ -233,7 +257,7 @@ export default function Transactions() {
 
 
                     <TransactionTable
-                    reports={records}
+                    reports={filteredRecords}
                     onUpdated={setRecords}
                 />
 

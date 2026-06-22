@@ -7,6 +7,10 @@ import AdminHourInput from "./AdminHourInput";
 import AdminLocationDropDown from "./AdminLocationDropDown";
 import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import formatDateTime from "../utils/formatDataTimeNew";
+import { toast } from "react-toastify";
+import { Info } from "lucide-react";
+import AdminConfirmDialog from "./AdminConfirmDialog";
 
 
 export default function FoundItemModal({
@@ -17,6 +21,7 @@ export default function FoundItemModal({
     allLocations = [],
     onUpdated,
     prefillData,
+    setSelectedItem,
 }) {
 
     const API_URL = import.meta.env.VITE_API_URL;
@@ -45,6 +50,9 @@ export default function FoundItemModal({
 
     const fileInputRef = useRef(null);
     const prefillAppliedRef = useRef(false);
+
+    const [openListConfirmation, setOpenListConfirmation] = useState(false);
+    const [cancelListConfirmation, setCancelListConfirmation] = useState(false);
 
     useEffect(() => {
         if (open && prefillData && !prefillAppliedRef.current) {
@@ -123,8 +131,36 @@ export default function FoundItemModal({
         }
     };
 
-    const handleClose = () => {
-        setOpen(false);
+
+const handleCancelForm = () => {
+  
+        const userInputs = [
+            selectedFile,
+            itemName,
+            category,
+            description,
+            contents,
+            locationFound,
+            dateFound,
+            timeFound,
+            surrenderedBy,
+            additionalNotes,
+            specificLocation
+        ];
+
+
+        const hasUserProgress = userInputs.some(value => {
+            if (typeof value === 'string') return value.trim() !== '';
+            return value !== null && value !== undefined;
+        });
+
+
+        if (hasUserProgress || isSubmitting) {
+            setCancelListConfirmation(true);
+        } else {
+            resetForm(); 
+            setOpen(false);
+        }
     };
 
     const handleFileChange = async (e) => {
@@ -178,6 +214,7 @@ export default function FoundItemModal({
 
         try {
             setIsSubmitting(true);
+            setOpenListConfirmation(false);
 
             const formData = new FormData();
 
@@ -226,15 +263,32 @@ export default function FoundItemModal({
                 onUpdated?.(reportsData);
             }
 
-            alert("Item Listed Successfully");
+       onUpdated?.(reportsData);
+
+            const createdFoundReport = reportsData.find(
+            report => report.found_report_id === data.report.found_report_id
+            );
+
+            setSelectedItem(createdFoundReport);
+            toast.success(`Item ${itemName} listed successfully!`)
             resetForm();
             setOpen(false);
+            
         } catch (error) {
             console.error(error);
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    const selectedCategory = categories.find(
+  c => String(c.category_id) === String(category)
+);
+
+const selectedCurrentLocation = locations.find(
+  location =>
+    String(location.office_id) === String(currentLocation)
+);
 
     return (
         <>
@@ -247,7 +301,7 @@ export default function FoundItemModal({
                         <p className="text-xl font-semibold text-white">
                             Log New Found Item
                         </p>
-                        <button type="button" onClick={handleClose}>
+                        <button type="button" onClick={handleCancelForm}>
                             <i className="fa-solid fa-xmark text-xl text-white"></i>
                         </button>
                     </div>
@@ -394,7 +448,7 @@ export default function FoundItemModal({
                     <div className="h-18 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
                         <button
                             type="button"
-                            onClick={handleClose}
+                            onClick={handleCancelForm}
                             className="font-medium text-sm text-primary border border-primary p-3 rounded-md"
                         >
                             Cancel
@@ -402,7 +456,7 @@ export default function FoundItemModal({
                         <button
                             type="button"
                             disabled={!isFormValid || isAnalyzing || isSubmitting}
-                            onClick={handleSubmit}
+                            onClick={()=>setOpenListConfirmation(true)}
                             className={`font-medium text-sm text-white border border-primary p-3 rounded-md bg-primary ${
                                 !isFormValid || isAnalyzing || isSubmitting
                                     ? "opacity-50 cursor-not-allowed"
@@ -415,6 +469,74 @@ export default function FoundItemModal({
                 </div>
 
             </dialog>
+            {openListConfirmation &&
+            (
+                
+                <>
+                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                <p className="font-semibold">Review Listing</p>
+                                <button onClick={() => setOpenListConfirmation(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                            </div>
+                            <div className="w-full flex flex-col p-3 gap-2">
+                                 <div className="text-xs xl:text-sm text-justify">
+                                      <p >
+                                        Publishing this listing will make it visible to everyone on <span className="font-semibold">FoundNest.</span> Please review your photo and item details to ensure everything is accurate before listing."
+                                      </p>
+                                    </div>
+                                    <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                    <div className="flex gap-2">
+                                    <button
+                                        className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        onClick={() => {setOpenListConfirmation(false)}}
+                                    >Cancel</button>
+                                    <button
+                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        
+                                        onClick={handleSubmit}
+                                    >Confirm</button>
+                                </div>
+                              
+                            </div>
+                            <div>
+
+                            </div>
+                           
+                         
+                        </div>
+                    </div>
+                </>
+             
+            )
+
+            }
+            {cancelListConfirmation && 
+            (
+                
+              
+              
+              
+                <>
+               
+                      <AdminConfirmDialog
+                        description={"Any information or progress you've entered on this listing form will be permanently lost."}
+                        onConfirm={()=> {
+                                            setCancelListConfirmation(false);
+                                            setOpen(false);
+                                            
+                                        }}
+                        onClose={() => setCancelListConfirmation(false)}
+                    />
+                </>
+            
+            
+            
+            )
+
+            }
         </>
     )
 }

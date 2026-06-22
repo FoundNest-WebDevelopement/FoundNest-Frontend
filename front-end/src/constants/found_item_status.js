@@ -1,5 +1,7 @@
 export const FOUND_REPORT_STATUS = {
-  UNCLAIMED: "Unclaimed",
-  CLAIMED: "Claimed",
-  PENDING: "Pending Claim",
+  UNCLAIMED: "unclaimed",
+  CLAIMED: "claimed",
+  TO_BE_DISPOSED: "for disposal",
+  DISPOSED: "disposed",
+  ARCHIVED: "archived",
 };

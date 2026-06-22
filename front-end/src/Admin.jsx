@@ -7,12 +7,22 @@ import CenterProfile from "./admin-pages/CenterProfile";
 import Feedbacks from "./admin-pages/Feedbacks";
 import Transactions from "./admin-pages/Tansactions";
 import AdminProfile from "./admin-pages/AdminProfile";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 
 function Admin() {
   return (
-
+    <>
+    <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        toastStyle={{
+    width: "100%",
+  }}
+      />
       <Routes>
+        
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="item_management" element={<ItemManagement/>} />
@@ -23,6 +33,7 @@ function Admin() {
           <Route path="admin_profile" element={<AdminProfile/>} />
         </Route>
       </Routes>
+      </>
 
   );
 }
