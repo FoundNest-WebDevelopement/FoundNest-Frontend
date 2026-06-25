@@ -4,6 +4,7 @@ import formatTime from "../utils/formatTime";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { Link2, TriangleAlert} from "lucide-react"
+import { toast } from "react-toastify";
 
 export default function TransactionManagementModal(
     { selectedRecord = [],
@@ -45,7 +46,7 @@ export default function TransactionManagementModal(
 
     const handleRevertTransaction = async () => {
         setIsReverting(true);
-        setOpenRevertDialog(false);
+        
 
   try {
     const response = await fetchWithAuth(
@@ -82,9 +83,11 @@ export default function TransactionManagementModal(
                 record => record.claim_id === selectedRecord.claim_id
             );
 
-            alert("Report marked as resolved.");
     setIsReverting(false);
     setSelectedRecord(updatedRecord);
+    setOpenRevertDialog(false);
+    toast.success(`Successfully marked ${formatTXNId(selectedRecord.claim_id)} as Reverted. `)
+
 
   } catch (err) {
     console.error(err);
@@ -276,18 +279,21 @@ export default function TransactionManagementModal(
                                { selectedRecord.claimant_status === true &&
                                  <div>
                                     <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                    <button className="w-full h-10 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95 disabled:opacity-40 "
+                                    <button className="w-full h-10 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                             onClick={()=>setOpenRevertDialog(true)}
                                             disabled={isReverting || selectedRecord.claimant_status === false}
                                    >{isReverting? "Reverting..." : "Revert Transaction"}</button>
                                 </div>
                                }
+                                     {selectedRecord.claimant_status === false  &&
                                 <div className=" text-[10px] xl:text-xs gap-1">
-                                     <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                        {selectedRecord.claimant_status === false  &&
+                                     
+                                  
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                             <p className="text-[#6B5C42]">This transaction has been reverted and no further action available</p>
-                                        }        
+                                         
                                     </div>
+                                         }  
                         </div>
                     </div>
                 </div>
@@ -334,7 +340,7 @@ export default function TransactionManagementModal(
                                         onClick={() => setOpenRevertDialog(false)}
                                     >Cancel</button>
                                     <button
-                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:cursor-not-allowed"
                                         onClick={handleRevertTransaction}
                                         disabled={isReverting}
                                     >{isReverting ? "Reverting.." : "Confirm Revert"}</button>

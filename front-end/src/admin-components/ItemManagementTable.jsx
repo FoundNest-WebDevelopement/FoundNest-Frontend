@@ -22,7 +22,7 @@ export default function ItemManagementTable({
 
     const userId = localStorage.getItem("user_id");
     const adminId = localStorage.getItem("admin_id");
-   
+
 
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -44,8 +44,8 @@ export default function ItemManagementTable({
     const formatItemId = (id) => {
         return `SI-${String(id).padStart(5, "0")}`;
     };
-    
-   
+
+
 
 
     return (
@@ -106,18 +106,18 @@ export default function ItemManagementTable({
                                     <td className="align-middle text-center">
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-medium 
-                                        ${item.status === "claimed" && "bg-green-100 text-green-700" }
+                                        ${item.status === "claimed" && "bg-green-100 text-green-700"}
                                         ${item.status == "unclaimed" && "bg-gray-200 text-gray-700"}
-                                        ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20" } 
-                                       ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
-                                    ${item.status === 'archived' && "bg-violet-100 text-violet-700"}
+                                        ${item.status === 'to_be_disposed' && "text-[#FFA500] border-[#DDD9CF] bg-[#FFA500]/20"} 
+                                        ${item.status === 'disposed' && "bg-[#DDD1C5] text-[#553D25]"}
+                                        ${item.status === 'archived' && "bg-violet-100 text-violet-700"}
                                         `}
                                         >
-                                        {item.status === 'claimed' && "Claimed"}
+                                            {item.status === 'claimed' && "Claimed"}
                                             {item.status === 'unclaimed' && "Unclaimed"}
                                             {item.status === 'to_be_disposed' && "For Disposal"}
-                                                {item.status === 'disposed' && "Disposed"}
-                                                    {item.status === 'archived' && "Archived"}
+                                            {item.status === 'disposed' && "Disposed"}
+                                            {item.status === 'archived' && "Archived"}
                                         </span>
                                     </td>
 
@@ -128,21 +128,21 @@ export default function ItemManagementTable({
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
-                                            onClick={() => { setSelectedItem(item)}}
+                                            onClick={() => { setSelectedItem(item) }}
                                         >
                                             {(
-                                            item.status === "unclaimed" ||
-                                            item.status === "to_be_disposed" ||
-                                            item.status === "archived"
+                                                item.status === "unclaimed" ||
+                                                item.status === "to_be_disposed" ||
+                                                item.status === "archived"
                                             ) && (
-                                            <Pencil size={18} className="text-primary" />
-                                            )}
-                                           {(
-                                            item.status === "claimed" ||
-                                            item.status === "disposed"
+                                                    <Pencil size={18} className="text-primary" />
+                                                )}
+                                            {(
+                                                item.status === "claimed" ||
+                                                item.status === "disposed"
                                             ) && (
-                                            <Info size={18} className="text-primary" />
-                                            )}
+                                                    <Info size={18} className="text-primary" />
+                                                )}
 
                                         </button>
                                     </td>
@@ -229,17 +229,17 @@ export default function ItemManagementTable({
 
             {selectedItem &&
                 (
-                    <FoundReportItemManagementModal 
-                    selectedItem={selectedItem}
-                    itemInfo={itemInfo}
-                    setSelectedItem={setSelectedItem}
-                    setItemInfo={setItemInfo}
-                    categories={categories}
-                    locations={locations}
-                    allLocations={allLocations}
-                    onUpdated={onUpdated}
-                    userId={userId}
-                    adminId={adminId} />
+                    <FoundReportItemManagementModal
+                        selectedItem={selectedItem}
+                        itemInfo={itemInfo}
+                        setSelectedItem={setSelectedItem}
+                        setItemInfo={setItemInfo}
+                        categories={categories}
+                        locations={locations}
+                        allLocations={allLocations}
+                        onUpdated={onUpdated}
+                        userId={userId}
+                        adminId={adminId} />
                 )
 
             }

@@ -316,7 +316,8 @@ const selectedCurrentLocation = locations.find(
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                                disabled={isSubmitting}
+                                className="relative disabled:opacity-40 w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                             >
                                 {image ? (
                                     <>
@@ -343,6 +344,7 @@ const selectedCurrentLocation = locations.find(
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
+                                disabled={isSubmitting}
                                 className="hidden"
                                 onChange={handleFileChange}
                             />
@@ -357,6 +359,7 @@ const selectedCurrentLocation = locations.find(
                             value={itemName}
                             onChange={setItemName}
                             reqField={true}
+                            disabled={isSubmitting}
                         />
                         <AdminCategoriesDropdown
                             title="Category"
@@ -365,17 +368,20 @@ const selectedCurrentLocation = locations.find(
                             onChange={setCategory}
                             options={categories}
                             reqField={true}
+                            disabled={isSubmitting}
                         />
                         <AdminTextArea
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
+                            disabled={isSubmitting}
                             onChange={setDescription}
                         />
                         <AdminTextField
                             title="Contents"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
+                            disabled={isSubmitting}
                             onChange={setContents}
                         />
                         <AdminAllLocationDropDown
@@ -384,12 +390,14 @@ const selectedCurrentLocation = locations.find(
                             placeholder="Select Found Location"
                             onChange={setLocationFound}
                             options={allLocations}
+                            disabled={isSubmitting}
                             reqField={true}
                         />
                         <AdminTextField
                             title="Specific Location"
                             value={specificLocation}
                             onChange={setSpecificLocation}
+                            disabled={isSubmitting}
                         />
                         <AdminDateInput
                             title="Date Found"
@@ -398,6 +406,7 @@ const selectedCurrentLocation = locations.find(
                             reqField={true}
                             error={dateFound && !dateValid}
                             max={new Date().toISOString().split("T")[0]}
+                            disabled={isSubmitting}
                         />
                         {dateFound && !dateValid && (
                             <p className="text-xs text-red-500 mt-1 ml-1">
@@ -410,7 +419,8 @@ const selectedCurrentLocation = locations.find(
                             onChange={setTimeFound}
                             reqField={true}
                             error={dateValid && timeFound && !timeValid}
-                            disabled={!dateValid}
+                            disabled={!dateValid || isSubmitting}
+                            
                         />
                         {dateFound && !dateValid && (
                             <p className="text-xs text-yellow-500 mt-1 ml-1">
@@ -426,12 +436,14 @@ const selectedCurrentLocation = locations.find(
                             title="Surrendered by (Recommended)"
                             value={surrenderedBy}
                             onChange={setSurrenderedBy}
+                            disabled={isSubmitting}
                         />
                         <AdminTextField
                             title="Additional Notes"
                             placeholder="Any other relevant details.."
                             value={additionalNotes}
                             onChange={setAdditionalNotes}
+                            disabled={isSubmitting}
                         />
                         <AdminLocationDropDown
                             hidden={true}
@@ -442,6 +454,7 @@ const selectedCurrentLocation = locations.find(
                             onChange={setCurrentLocation}
                             options={locations}
                             reqField={true}
+                            disableField={isSubmitting}
                         />
                     </div>
 
@@ -481,8 +494,8 @@ const selectedCurrentLocation = locations.find(
                                 <button onClick={() => setOpenListConfirmation(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
 
                             </div>
-                            <div className="w-full flex flex-col p-3 gap-2">
-                                 <div className="text-xs xl:text-sm text-justify">
+                            <div className="w-full flex flex-col p-4 gap-2">
+                                 <div className="text-sm text-justify">
                                       <p >
                                         Publishing this listing will make it visible to everyone on <span className="font-semibold">FoundNest.</span> Please review your photo and item details to ensure everything is accurate before listing."
                                       </p>
@@ -522,7 +535,7 @@ const selectedCurrentLocation = locations.find(
                 <>
                
                       <AdminConfirmDialog
-                        description={"Any information or progress you've entered on this listing form will be permanently lost."}
+                        description="Any information or progress you've entered on this listing form will be permanently lost."
                         onConfirm={()=> {
                                             setCancelListConfirmation(false);
                                             setOpen(false);
