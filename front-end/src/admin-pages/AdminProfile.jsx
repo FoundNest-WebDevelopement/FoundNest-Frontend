@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, X, Upload } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import AdminButton from "../admin-components/AdminButton";
 
 export default function AdminProfile() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -33,7 +32,6 @@ export default function AdminProfile() {
         setLoading(false);
       }
     };
-
     if (userId) fetchProfile();
   }, [userId]);
 
@@ -79,32 +77,23 @@ export default function AdminProfile() {
     if (!selectedFile) return;
     setUploading(true);
     setUploadError("");
-
     try {
       const formData = new FormData();
       formData.append("profile_image", selectedFile);
-
       const res = await fetchWithAuth(
         `${API_URL}/api/profile/${userId}/picture`,
         { method: "PUT", body: formData }
       );
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Upload failed.");
       }
-
       const data = await res.json();
-
-      // Update local state so UI reflects new image immediately
       setProfile((prev) => ({
         ...prev,
         profile_image_url: data.profile_image_url,
       }));
-
-      // Also update localStorage so the top bar updates
       localStorage.setItem("profile_image_url", data.profile_image_url);
-
       handleCloseModal();
     } catch (err) {
       setUploadError(err.message);
@@ -117,18 +106,15 @@ export default function AdminProfile() {
   const handleRemovePicture = async () => {
     setUploading(true);
     setUploadError("");
-
     try {
       const res = await fetchWithAuth(
         `${API_URL}/api/profile/${userId}/picture`,
         { method: "DELETE" }
       );
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Remove failed.");
       }
-
       setProfile((prev) => ({ ...prev, profile_image_url: null }));
       localStorage.removeItem("profile_image_url");
       handleCloseModal();
@@ -167,131 +153,129 @@ export default function AdminProfile() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col xl:flex-row gap-5">
+      {/* ── Page Wrapper ──────────────────────────────────────────────────── */}
+      <div className="w-full bg-[#F5F5F5] px-5 py-5 xl:px-15 xl:py-10 min-h-[calc(100vh-5rem)]">
+        <div className="flex flex-col xl:flex-row gap-5 h-full min-h-[calc(100vh-10rem)]">
 
-        {/* ── Left Card ─────────────────────────────────────────────────── */}
-        <div className="w-full xl:w-72 bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-6 flex flex-col items-center gap-4">
+          {/* ── Left Card ───────────────────────────────────────────────── */}
+          <div className="w-full xl:w-72 bg-white rounded-2xl shadow-md p-8 flex flex-col items-center gap-5 flex-1 xl:flex-none">
 
-          {/* Avatar */}
-          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#DDD9CF] flex-shrink-0 bg-gray-100 flex items-center justify-center">
-            {profile.profile_image_url ? (
-              <img
-                src={profile.profile_image_url}
-                alt={fullName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <i className="fa-regular fa-circle-user text-gray-300 text-5xl"></i>
-            )}
+            {/* Avatar */}
+            <div className="w-28 h-28 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center border-4 border-gray-200">
+              {profile.profile_image_url ? (
+                <img
+                  src={profile.profile_image_url}
+                  alt={fullName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <i className="fa-regular fa-circle-user text-gray-400 text-6xl"></i>
+              )}
+            </div>
+
+            {/* Name + Badge */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg font-bold text-[#1A1208] text-center">
+                {fullName || "--"}
+              </p>
+              <span className="text-xs px-4 py-1 rounded-full bg-purple-100 text-purple-600 font-medium">
+                Administrator
+              </span>
+            </div>
+
+            {/* Edit Profile Button — full width */}
+            <button
+              onClick={() => setOpenEditImage(true)}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-white rounded-lg py-3 text-sm font-semibold hover:opacity-90 transition active:scale-95 cursor-pointer"
+            >
+              <Pencil size={15} />
+              Edit Profile
+            </button>
+
           </div>
 
-          {/* Name */}
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-base font-bold text-[#1A1208] text-center">
-              {fullName || "--"}
+          {/* ── Right Card ──────────────────────────────────────────────── */}
+          <div className="flex-1 bg-white rounded-2xl shadow-md p-8 flex flex-col gap-6 min-h-full">
+
+            <p className="text-lg font-semibold text-[#1A1208]">
+              Account Information
             </p>
-            {/* Role badge */}
-            <span className="text-xs px-3 py-0.5 rounded-full bg-[#F3E8FF] text-[#7C3AED] font-medium">
-              Administrator
-            </span>
-          </div>
 
-          {/* Edit Profile Button */}
-          <AdminButton
-            icon={Pencil}
-            label="Edit Profile"
-            isSolid={true}
-            isIcon={true}
-            isBorder={true}
-            isShadow={false}
-            onClick={() => setOpenEditImage(true)}
-          />
+            {/* Grid of fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
 
-          {/* full-width style override so button spans the card */}
-          <style>{`.edit-profile-btn { width: 100%; justify-content: center; }`}</style>
+              {/* User ID */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  User ID
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {formatUserId(profile.user_id)}
+                </p>
+              </div>
 
-        </div>
+              {/* Student Number */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Student Number
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {profile.student_number || "--"}
+                </p>
+              </div>
 
-        {/* ── Right Card ────────────────────────────────────────────────── */}
-        <div className="flex-1 bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-6 flex flex-col gap-6">
+              {/* Full Name */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Full Name
+                </p>
+                <p className="text-sm text-[#1A1208]">{fullName || "--"}</p>
+              </div>
 
-          <p className="text-base font-semibold text-[#1A1208]">
-            Account Information
-          </p>
+              {/* BulSU Email */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  BulSU Email
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {profile.email || "--"}
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Department — full width */}
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Department
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {profile.college_name || "--"}
+                </p>
+              </div>
 
-            {/* User ID */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                User ID
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {formatUserId(profile.user_id)}
-              </p>
+              {/* Divider */}
+              <div className="sm:col-span-2 border-t border-gray-100" />
+
+              {/* Date Assigned */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Date Assigned
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {formatDate(profile.date_assigned)}
+                </p>
+              </div>
+
+              {/* Last Login */}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Last Login
+                </p>
+                <p className="text-sm text-[#1A1208]">
+                  {formatLastLogin(profile.last_login)}
+                </p>
+              </div>
+
             </div>
-
-            {/* Student Number */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Student Number
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {profile.student_number || "--"}
-              </p>
-            </div>
-
-            {/* Full Name */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Full Name
-              </p>
-              <p className="text-sm text-[#1A1208]">{fullName || "--"}</p>
-            </div>
-
-            {/* BulSU Email */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                BulSU Email
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {profile.email || "--"}
-              </p>
-            </div>
-
-            {/* Department */}
-            <div className="flex flex-col gap-1 sm:col-span-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Department
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {profile.college_name || "--"}
-              </p>
-            </div>
-
-            {/* Divider */}
-            <div className="sm:col-span-2 border-t border-[#DDD9CF]" />
-
-            {/* Date Assigned */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Date Assigned
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {formatDate(profile.date_assigned)}
-              </p>
-            </div>
-
-            {/* Last Login */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                Last Login
-              </p>
-              <p className="text-sm text-[#1A1208]">
-                {formatLastLogin(profile.last_login)}
-              </p>
-            </div>
-
           </div>
         </div>
       </div>
@@ -299,7 +283,7 @@ export default function AdminProfile() {
       {/* ── Edit Profile Image Modal ───────────────────────────────────────── */}
       {openEditImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl border border-[#DDD9CF] shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-5">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-5">
 
             {/* Modal Header */}
             <div className="flex items-center justify-between">
@@ -316,7 +300,7 @@ export default function AdminProfile() {
 
             {/* Preview */}
             <div className="flex flex-col items-center gap-3">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-[#DDD9CF] bg-gray-100 flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
                 {previewUrl || profile.profile_image_url ? (
                   <img
                     src={previewUrl || profile.profile_image_url}
@@ -324,7 +308,7 @@ export default function AdminProfile() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <i className="fa-regular fa-circle-user text-gray-300 text-5xl"></i>
+                  <i className="fa-regular fa-circle-user text-gray-400 text-5xl"></i>
                 )}
               </div>
 
@@ -359,15 +343,14 @@ export default function AdminProfile() {
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
-              <AdminButton
-                icon={Upload}
-                label={uploading ? "Uploading..." : "Save Photo"}
-                isSolid={true}
-                isIcon={false}
-                isBorder={true}
-                isShadow={false}
+              <button
                 onClick={handleUpload}
-              />
+                disabled={uploading || !selectedFile}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-white rounded-lg py-3 text-sm font-semibold hover:opacity-90 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <Upload size={15} />
+                {uploading ? "Uploading..." : "Save Photo"}
+              </button>
 
               {profile.profile_image_url && (
                 <button

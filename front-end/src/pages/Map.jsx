@@ -4,8 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { apiFetch } from "../utils/api";
 
-const API_URL = "http://localhost:5000/api";
-
+const API_URL = import.meta.env.VITE_API_URL;
 // Hardcoded coordinates since they never change
 const officeCoordinates = {
   "Alvarado Hall": { lat: 14.857737666695048, lng: 120.81587817292802 },

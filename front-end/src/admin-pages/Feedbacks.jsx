@@ -17,6 +17,7 @@ export default function Feedbacks() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
+
     // Search & Filters
     const [searchText, setSearchText] = useState("");
     const [starFilterTemp, setStarFilterTemp] = useState("");
@@ -46,9 +47,6 @@ export default function Feedbacks() {
 
         const matchesStar = !starFilter || String(review.rating) === starFilter;
 
-        // "archived" filter shows only archived items.
-        // Any other filter (or no filter) hides archived items —
-        // that's the whole point of archiving, to keep them out of the way.
         const matchesStatus =
             statusFilter === "archived"
                 ? review.is_archived
@@ -102,10 +100,13 @@ export default function Feedbacks() {
         if (!responseText.trim()) return;
         setSubmitting(true);
         try {
-            const res = await fetchWithAuth(`${API_URL}/api/reviews/${selectedReview.review_id}/respond`, {
-                method: "PATCH",
-                body: JSON.stringify({ response_text: responseText }),
-            });
+            const res = await fetchWithAuth(
+                `${API_URL}/api/reviews/${selectedReview.review_id}/respond`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ response_text: responseText }),
+                }
+            );
             const data = await res.json();
             setReviews((prev) =>
                 prev.map((r) =>
@@ -128,9 +129,10 @@ export default function Feedbacks() {
 
     const handleArchive = async () => {
         try {
-            await fetchWithAuth(`${API_URL}/api/reviews/${selectedReview.review_id}/archive`, {
-                method: "PATCH",
-            });
+            await fetchWithAuth(
+                `${API_URL}/api/reviews/${selectedReview.review_id}/archive`,
+                { method: "PATCH" }
+            );
             setReviews((prev) =>
                 prev.map((r) =>
                     r.review_id === selectedReview.review_id ? { ...r, is_archived: true } : r
@@ -144,9 +146,10 @@ export default function Feedbacks() {
 
     const handleUnarchive = async () => {
         try {
-            await fetchWithAuth(`${API_URL}/api/reviews/${selectedReview.review_id}/unarchive`, {
-                method: "PATCH",
-            });
+            await fetchWithAuth(
+                `${API_URL}/api/reviews/${selectedReview.review_id}/unarchive`,
+                { method: "PATCH" }
+            );
             setReviews((prev) =>
                 prev.map((r) =>
                     r.review_id === selectedReview.review_id ? { ...r, is_archived: false } : r
@@ -183,7 +186,15 @@ export default function Feedbacks() {
         doc.setFontSize(16);
         doc.text(`${officeName} - Feedbacks Report`, 14, 16);
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`, 14, 22);
+        doc.text(
+            `Generated: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })}`,
+            14,
+            22
+        );
 
         const tableRows = visibleReviews.map((review) => [
             `FB-${String(review.review_id).padStart(5, "0")}`,
@@ -312,6 +323,7 @@ export default function Feedbacks() {
                     </div>
                 </div>
 
+                {/* Table */}
                 <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
                     <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
                         <table className="table table-zebra table-sm min-w-200 [&_th]:px-2 [&_td]:px-2 text-center">
@@ -398,6 +410,7 @@ export default function Feedbacks() {
                     </div>
                 </div>
 
+                {/* Pagination */}
                 <div className="flex items-center justify-between bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-b-xl px-4 py-3 text-xs mt-1">
                     <p className="text-[#6B5C42]">
                         Showing {visibleReviews.length === 0 ? 0 : startIndex + 1}
@@ -434,10 +447,11 @@ export default function Feedbacks() {
                 </div>
             </div>
 
-            {/* View Feedback Modal */}
+            {/* View Feedback Side Panel */}
             {selectedReview && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex justify-end">
                     <div className="bg-white w-full max-w-md h-full shadow-xl flex flex-col">
+
                         {/* Header */}
                         <div className="bg-primary px-6 py-4 flex items-center justify-between">
                             <h2 className="text-white font-semibold text-lg">View Feedback</h2>
@@ -451,6 +465,7 @@ export default function Feedbacks() {
 
                         {/* Content */}
                         <div className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto">
+
                             {/* User info */}
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
@@ -471,14 +486,14 @@ export default function Feedbacks() {
                                 {selectedReview.review_text}
                             </p>
 
-                            {/* Date */}
+                            {/* Date submitted */}
                             <p className="text-xs text-gray-400">
                                 Submitted: {formatDateTime(selectedReview.created_at)}
                             </p>
 
                             <hr className="border-gray-200" />
 
-                            {/* Respond section */}
+                            {/* Response section */}
                             {!selectedReview.response_text || isEditingResponse ? (
                                 <>
                                     <p className="font-semibold text-[#4B2D23]">
@@ -510,13 +525,23 @@ export default function Feedbacks() {
                             ) : (
                                 <>
                                     <p className="font-semibold text-[#4B2D23]">Response</p>
-                                    <div className="bg-[#FFF3D6] border-l-4 border-[#FDC502] rounded-md p-4">
+                                    <div className="bg-[#FFF3D6] border-l-4 border-[#FDC502] rounded-md p-4 flex flex-col gap-2">
                                         <p className="text-sm text-[#4B2D23] leading-relaxed">
                                             {selectedReview.response_text}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-3">
-                                            {formatDateTime(selectedReview.response_date)}
-                                        </p>
+                                        {/* Responded by name + date */}
+                                        <div className="flex flex-col gap-0.5 mt-1">
+                                            {selectedReview.responded_by_name?.trim() && (
+                                                <p className="text-xs text-gray-500">
+                                                    Responded by: <span className="font-medium text-[#4B2D23]">{selectedReview.responded_by_name}</span>
+                                                </p>
+                                            )}
+                                            {selectedReview.response_date && (
+                                                <p className="text-xs text-gray-400">
+                                                    {formatDateTime(selectedReview.response_date)}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => setIsEditingResponse(true)}

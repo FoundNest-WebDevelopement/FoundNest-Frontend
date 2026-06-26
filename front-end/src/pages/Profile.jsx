@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import QRItem from "./QRItem";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const EditIcon = () => (
   <svg
     width="14"
@@ -159,7 +161,7 @@ export default function Profile() {
       const user_id = localStorage.getItem("user_id");
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`http://localhost:5000/api/profile/${user_id}`, {
+      const res = await fetch(`${API_URL}/api/profile/${user_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

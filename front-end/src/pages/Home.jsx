@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, ChevronRight, Calendar, MapPin } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const LostItemIcon = () => (
   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
