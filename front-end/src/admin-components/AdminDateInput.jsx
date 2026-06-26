@@ -5,6 +5,7 @@ export default function AdminDateInput({
   error,
   reqField,
   max,
+  disabled,
 }) {
   return (
     <fieldset className="fieldset">
@@ -23,6 +24,7 @@ export default function AdminDateInput({
           type="date"
           className="input bg-white text-sm rounded-md w-full border border-[#DDD9CF]"
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           max={max}
         />

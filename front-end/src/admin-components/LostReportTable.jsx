@@ -4,15 +4,15 @@ import LostReportMangementModal from "./LostReportMangementModal";
 
 export default function LostReportTable(
     {
-         reports,
-    categories = [],
-    locations = [],
-    onUpdated,
-    allLocations = [],
-    selectedItem,
-    setSelectedItem,
+        reports,
+        categories = [],
+        locations = [],
+        onUpdated,
+        allLocations = [],
+        selectedItem,
+        setSelectedItem,
     }
-){
+) {
     //ADMIN CREDENTIALS
     const userId = localStorage.getItem("user_id");
     const adminId = localStorage.getItem("admin_id");
@@ -33,11 +33,11 @@ export default function LostReportTable(
         startIndex + itemsPerPage
     );
 
-     const formatReportId = (id) => {
+    const formatReportId = (id) => {
         return `RPT-${String(id).padStart(5, "0")}`;
     };
 
-    return(
+    return (
         <>
             <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
@@ -75,25 +75,25 @@ export default function LostReportTable(
                                     <td className="w-28 align-middle text-center">{formatReportId(rpt.lost_report_id)}</td>
 
                                     <td className="align-middle text-center  flex justify-center ">
-                                        {rpt.image_url? 
-                                        (
-                                            <>
-                                            <img
-                                            src={rpt.image_url}
-                                            alt={rpt.image_url}
-                                            className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:scale-105 transition"
-                                            onClick={() => setSelectedImage(rpt.image_url)}
-                                        />
-                                            </>
-                                        )
-                                        :
-                                        (
-                                            <>
-                                            <div className="flex text-[9px] text-center w-12 h-12 items-center justify-center text-[#2980B9] font-medium">
-                                                <span >no image</span>
-                                            </div>
-                                            </>
-                                        )
+                                        {rpt.image_url ?
+                                            (
+                                                <>
+                                                    <img
+                                                        src={rpt.image_url}
+                                                        alt={rpt.image_url}
+                                                        className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:scale-105 transition"
+                                                        onClick={() => setSelectedImage(rpt.image_url)}
+                                                    />
+                                                </>
+                                            )
+                                            :
+                                            (
+                                                <>
+                                                    <div className="flex text-[9px] text-center w-12 h-12 items-center justify-center text-[#2980B9] font-medium">
+                                                        <span >no image</span>
+                                                    </div>
+                                                </>
+                                            )
 
                                         }
                                     </td>
@@ -107,30 +107,32 @@ export default function LostReportTable(
                                     <td className="align-middle text-center">
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-medium 
-                                        ${rpt.status === "resolved" && "bg-green-100 text-green-700" }
+                                        ${rpt.status === "resolved" && "bg-green-100 text-green-700"}
                                         ${rpt.status == "open" && "    bg-[#E6F1FB] text-[#2980B9]"}
                                         ${rpt.status == "cancelled" && "bg-gray-200 text-gray-700"}
+                                         ${rpt.status === 'archived' && "bg-violet-100 text-violet-700"}
                                     
                 
                                         `}
                                         >
-                                        {rpt.status === 'resolved' && "Resolved"}
+                                            {rpt.status === 'resolved' && "Resolved"}
                                             {rpt.status === 'open' && "Open"}
-                                              {rpt.status === 'cancelled' && "Cancelled"}
-            
+                                            {rpt.status === 'cancelled' && "Cancelled"}
+                                            {rpt.status === 'archived' && "Archived"}
+
                                         </span>
                                     </td>
 
                                     <td className="align-middle text-center font-medium">{rpt.found_item_id ? <span>SI-00{rpt.found_item_id}</span> : ""}</td>
 
-                                    <td className="align-middle text-center ">{rpt.user_id? rpt.reported_by : rpt.owner_name}</td>
+                                    <td className="align-middle text-center ">{rpt.user_id ? rpt.reported_by : rpt.owner_name}</td>
 
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
-                                            onClick={() => { setSelectedItem(rpt)}}
-                                        > 
-                                            <Pencil size={18} className="text-primary" />                       
+                                            onClick={() => { setSelectedItem(rpt) }}
+                                        >
+                                            <Pencil size={18} className="text-primary" />
                                         </button>
                                     </td>
 
@@ -214,7 +216,7 @@ export default function LostReportTable(
                 </div>
             )}
 
-                {/* Image Modal */}
+            {/* Image Modal */}
             {selectedImage && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
@@ -241,14 +243,14 @@ export default function LostReportTable(
             {selectedItem &&
                 (
                     <LostReportMangementModal
-                    selectedItem={selectedItem}
-                    setSelectedItem={setSelectedItem}
-                    categories={categories}
-                    locations={locations}
-                    allLocations={allLocations}
-                    onUpdated={onUpdated}
-                    userId={userId}
-                    adminId={adminId} />
+                        selectedItem={selectedItem}
+                        setSelectedItem={setSelectedItem}
+                        categories={categories}
+                        locations={locations}
+                        allLocations={allLocations}
+                        onUpdated={onUpdated}
+                        userId={userId}
+                        adminId={adminId} />
                 )
 
             }

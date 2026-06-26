@@ -4,7 +4,8 @@ export default function AdminTextArea({
   value,
   onChange = () => {},
   error,
-  titlePrimary
+  titlePrimary,
+  disabled,
 }) {
   return (
     <fieldset className="fieldset">
@@ -20,6 +21,7 @@ export default function AdminTextArea({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
         />
 
       </div>

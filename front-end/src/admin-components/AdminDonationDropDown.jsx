@@ -1,47 +1,43 @@
-export default function AdminCategoriesDropdown({
+export default function AdminDonationDropDown({
   title,
   placeholder,
   value = "",
   options = [],
   onChange = () => {},
-  reqField,
-  disabled,
+  reqField = false,
+  disabled
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
 
   return (
     <fieldset className="fieldset">
-
       {title && (
-        <legend className={`fieldset-legend text-sm font-medium `}>
+        <legend className="fieldset-legend text-sm font-medium">
           {title}
-          {reqField&&<span className="text-primary">*</span>}
+          {reqField && <span className="text-primary">*</span>}
         </legend>
       )}
 
       <select
-        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
+        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black"
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        required
+        required={reqField}
       >
-
-        <option  value="">
+        <option value="">
           {placeholder}
         </option>
 
         {safeOptions.map((option) => (
           <option
-            key={option.category_id}
-            value={option.category_id}
+            key={option.value}
+            value={option.value}
           >
-            {option.category_name}
+            {option.label}
           </option>
         ))}
-
       </select>
-
     </fieldset>
   );
 }

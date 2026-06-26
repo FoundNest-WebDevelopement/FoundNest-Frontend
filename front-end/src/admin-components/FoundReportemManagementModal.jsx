@@ -11,6 +11,11 @@ import { useNavigate } from "react-router-dom";
 import formatDateTime from "../utils/formatDataTimeNew.js";
 import { toast } from "react-toastify";
 import AdminConfirmDialog from "./AdminConfirmDialog.jsx";
+import {
+  DISPOSAL_METHODS,
+  DISCARD_REASONS,
+} from "../constants/disposal_constants.js";
+import AdminDonationDropDown from "./AdminDonationDropDown.jsx";
 
 
 export default function FoundReportItemManagementModal({
@@ -23,19 +28,18 @@ export default function FoundReportItemManagementModal({
   onUpdated,
   allLocations = [],
 }) {
-
   const API_URL = import.meta.env.VITE_API_URL;
-    const [linkModal, setLinkModal] = useState(false);
-    const [selectedReport, setSelectedReport] = useState(null);
-    const [imageSelected, setImageSelected] = useState(false);
-    const [openArchivedDialog, setOpenArchivedDialog] = useState(false);
-    const [openClaimNavigateDialog, setOpenClaimNavigateDialog] = useState(false);
-    const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
-    const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
-    const [openCancelUpdate, setOpenCancelUpdate] = useState(false);
-    const [openConfirmRelease, setOpenConfirmRelease] = useState(false);
-    const [openCancelRelease, setOpenCancelRelease] = useState(false);
-    const [originalEditForm, setOriginalEditForm] = useState(null);
+  const [linkModal, setLinkModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [imageSelected, setImageSelected] = useState(false);
+  const [openArchivedDialog, setOpenArchivedDialog] = useState(false);
+  const [openClaimNavigateDialog, setOpenClaimNavigateDialog] = useState(false);
+  const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [openCancelUpdate, setOpenCancelUpdate] = useState(false);
+  const [openConfirmRelease, setOpenConfirmRelease] = useState(false);
+  const [openCancelRelease, setOpenCancelRelease] = useState(false);
+  const [originalEditForm, setOriginalEditForm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const adminId = localStorage.getItem("admin_id");
   const userId = localStorage.getItem("user_id");
@@ -63,9 +67,9 @@ export default function FoundReportItemManagementModal({
   const isValidPhone = /^09\d{9}$/.test(claimantNumber);
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimantEmail);
 
-     const formatTXNId = (id) => {
-        return `TXN-${String(id).padStart(5, "0")}`;
-    };
+  const formatTXNId = (id) => {
+    return `TXN-${String(id).padStart(5, "0")}`;
+  };
 
   const fileInputRef = useRef(null);
   const resetClaimForm = () => {
@@ -113,14 +117,14 @@ export default function FoundReportItemManagementModal({
   };
 
   const hasClaimFormChanges =
-  fullName.trim() ||
-  claimantEmail.trim() ||
-  claimantNumber.trim() ||
-  verificationDetails.trim() ||
-  selectedFile ||
-  linkReport;
+    fullName.trim() ||
+    claimantEmail.trim() ||
+    claimantNumber.trim() ||
+    verificationDetails.trim() ||
+    selectedFile ||
+    linkReport;
 
-   const [claimId, setClaimId] = useState(null);
+  const [claimId, setClaimId] = useState(null);
   const [isReleasing, setIsReleasing] = useState(false);
   const handleItemRelease = async () => {
     setIsReleasing(true);
@@ -181,7 +185,7 @@ export default function FoundReportItemManagementModal({
         },
       );
 
-      
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -191,7 +195,7 @@ export default function FoundReportItemManagementModal({
 
       setClaimId(data.claim.claim_id);
 
-      if(data.claim.claim_id){
+      if (data.claim.claim_id) {
         setOpenClaimNavigateDialog(true);
       }
       // Refresh table
@@ -206,12 +210,12 @@ export default function FoundReportItemManagementModal({
       }
 
       const updatedSelected = reportsData.find(
-          (report) => report.found_report_id === selectedItem.found_report_id,
-        );
+        (report) => report.found_report_id === selectedItem.found_report_id,
+      );
 
-        if (updatedSelected) {
-          setSelectedItem(updatedSelected);
-        }
+      if (updatedSelected) {
+        setSelectedItem(updatedSelected);
+      }
 
       // Reset form
       resetClaimForm();
@@ -248,6 +252,10 @@ export default function FoundReportItemManagementModal({
     setEditTab(false);
     setOpenUpdateStatus(false);
   };
+
+
+
+  
 
   //OPEN EDIT VARIABLES
   const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
@@ -323,42 +331,42 @@ export default function FoundReportItemManagementModal({
 
   //chanhe checker in edit 
   const hasEditChanges =
-  originalEditForm &&
-  (
-    JSON.stringify(editForm) !== JSON.stringify(originalEditForm) ||
-    editImageFile !== null
-  );
-  
+    originalEditForm &&
+    (
+      JSON.stringify(editForm) !== JSON.stringify(originalEditForm) ||
+      editImageFile !== null
+    );
+
   // item info button
-const startEditing = () => {
-  if (!selectedItem) return;
+  const startEditing = () => {
+    if (!selectedItem) return;
 
-  const foundDate = selectedItem.found_date
-    ? new Date(selectedItem.found_date)
-    : null;
+    const foundDate = selectedItem.found_date
+      ? new Date(selectedItem.found_date)
+      : null;
 
-  const formData = {
-    item_name: selectedItem.item_name || "",
-    category_id: String(selectedItem.category_id || ""),
-    location_found: selectedItem.location_found || "",
-    specific_location: selectedItem.specific_location || "",
-    found_date: foundDate ? foundDate.toISOString().split("T")[0] : "",
-    found_time: foundDate ? foundDate.toTimeString().slice(0, 5) : "",
-    description: selectedItem.description || "",
-    contents: selectedItem.contents || "",
-    reported_by: selectedItem.reported_by || "",
-    additional_notes: selectedItem.additional_notes || "",
-    office_id: String(selectedItem.office_id || ""),
+    const formData = {
+      item_name: selectedItem.item_name || "",
+      category_id: String(selectedItem.category_id || ""),
+      location_found: selectedItem.location_found || "",
+      specific_location: selectedItem.specific_location || "",
+      found_date: foundDate ? foundDate.toISOString().split("T")[0] : "",
+      found_time: foundDate ? foundDate.toTimeString().slice(0, 5) : "",
+      description: selectedItem.description || "",
+      contents: selectedItem.contents || "",
+      reported_by: selectedItem.reported_by || "",
+      additional_notes: selectedItem.additional_notes || "",
+      office_id: String(selectedItem.office_id || ""),
+    };
+
+    setEditForm(formData);
+    setOriginalEditForm(formData);
+
+    setEditImageFile(null);
+    setEditImagePreview(selectedItem.image_url || null);
+    setIsEditing(true);
+    setOpenUpdateStatus(false);
   };
-
-  setEditForm(formData);
-  setOriginalEditForm(formData);
-
-  setEditImageFile(null);
-  setEditImagePreview(selectedItem.image_url || null);
-  setIsEditing(true);
-  setOpenUpdateStatus(false);
-};
 
   const handleEditChange = (field, value) => {
     setEditForm((current) => ({
@@ -517,7 +525,7 @@ const startEditing = () => {
       }
 
       toast.success(`Succesfully updated ${formatItemId(selectedItem.item_id)}`)
-      
+
 
       setEditImageFile(null);
       setEditImagePreview(null);
@@ -584,6 +592,58 @@ const startEditing = () => {
   const [donationDate, setDonationDate] = useState("");
   const [notes, setNotes] = useState("");
   const [isDisposing, setIsDisposing] = useState(false);
+
+  const [disposalMethod, setDisposalMethod] = useState("");
+  const [disposalProof, setDisposalProof] = useState(null);
+  const [selectedProofFile, setSelectedProofFile] = useState(null);
+
+
+
+  const [reasonForDiscarding, setReasonForDiscarding] = useState("");
+
+  const resetDisposalForm = () => {
+    setItemWhereabouts("");
+    setDonationDate("");
+    setNotes("");
+
+    setReasonForDiscarding("");
+
+    setDisposalProof(null);
+    setSelectedProofFile(null);
+
+    if (fileInputRefDisposalProof.current) {
+      fileInputRefDisposalProof.current.value = "";
+    }
+  };
+
+  const handleDisposalMethodChange = (value) => {
+    if (value !== disposalMethod) {
+      resetDisposalForm();
+    }
+
+    setDisposalMethod(value);
+  };
+
+  const fileInputRefDisposalProof = useRef(null);
+
+  const handleDisposalProofFileChange = async (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const officeId = localStorage.getItem("office_location");
+
+    setSelectedProofFile(file);
+    setDisposalProof(URL.createObjectURL(file));
+  };
+
+
+    const hasDisposalFormChanges =
+  itemWhereabouts.trim() ||
+  donationDate ||
+  notes.trim() ||
+  reasonForDiscarding ||
+  selectedProofFile;
 
   // Print QR Code
   const [isPrintingQR, setIsPrintingQR] = useState(false);
@@ -654,8 +714,17 @@ const startEditing = () => {
     }
   };
 
-  const handleCancelDisposed = async () => {
-    (setClaimTab(false), setEditTab(true), setDisposedTab(false));
+  const [openCancelDisposed, setOpenCancelDisposed] = useState(false);
+  const [openConfirmDesiposed, setOpenConfirmDesiposed] = useState(false);
+
+  const handleCancelDisposed = () => {
+    setDisposalMethod("");
+    resetDisposalForm();
+    setClaimTab(false);
+    setEditTab(true);
+    setDisposedTab(false);
+    setOpenCancelDisposed(false);
+    
   };
 
   const isValidDisposalDate = (dateStr) => {
@@ -674,61 +743,140 @@ const startEditing = () => {
   };
   const disposalDateValid = isValidDisposalDate(donationDate);
 
-  const isDisposalValid =
-    itemWhereabouts?.trim() && donationDate && disposalDateValid;
 
-  const handleDisposedItem = async () => {
-    setIsDisposing(true);
-    try {
-      if (!itemWhereabouts?.trim()) {
-        throw new Error("Disposal location is required.");
-      }
-      if (!donationDate) {
-        throw new Error("Disposal date is required.");
-      }
-      const response = await fetchWithAuth(`${API_URL}/api/disposed-item`, {
+const isDisposalValid =
+  disposalMethod === "DONATED"
+    ? (
+        itemWhereabouts?.trim() &&
+        donationDate &&
+        disposalDateValid &&
+        selectedProofFile
+      )
+    : disposalMethod === "DISPOSED_AS_WASTE"
+    ? (
+        reasonForDiscarding &&
+        donationDate &&
+        disposalDateValid &&
+        selectedProofFile
+      )
+    : false;
+
+const handleDisposedItem = async () => {
+  setIsDisposing(true);
+  setOpenConfirmDesiposed(false);
+
+  try {
+    const formData = new FormData();
+
+    formData.append(
+      "found_report_id",
+      selectedItem.found_report_id
+    );
+
+    formData.append(
+      "item_id",
+      selectedItem.item_id
+    );
+
+    formData.append(
+      "office_name",
+      selectedItem.office_name
+    );
+
+    formData.append(
+      "disposed_by_admin_id",
+      adminId
+    );
+
+    formData.append(
+      "disposal_method",
+      disposalMethod
+    );
+
+    formData.append(
+      "additional_notes",
+      notes
+    );
+
+    formData.append(
+      "disposal_date",
+      donationDate
+    );
+
+    if (selectedProofFile) {
+      formData.append(
+        "proof_img",
+        selectedProofFile
+      );
+    }
+
+    if (disposalMethod === "DONATED") {
+      formData.append(
+        "disposal_whereabouts",
+        itemWhereabouts
+      );
+    }
+
+
+
+    if (disposalMethod === "DISPOSED_AS_WASTE") {
+      formData.append(
+        "discard_reason",
+        reasonForDiscarding
+      );
+    }
+
+    const response = await fetchWithAuth(
+      `${API_URL}/api/disposed-item`,
+      {
         method: "POST",
-        body: JSON.stringify({
-          found_report_id: selectedItem.found_report_id,
-          item_id: selectedItem.item_id,
-          office_name: selectedItem.office_name,
-          disposed_by_admin_id: adminId,
-          disposal_whereabouts: itemWhereabouts,
-          additional_notes: notes,
-          disposal_date: donationDate,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to dispose item.");
-        setIsDisposing(false);
+        body: formData,
       }
-      // Refresh table
-      const reportsResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`,
+    );
+
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to dispose item."
+      );
+    }
+
+    // Refresh table
+    const reportsResponse = await fetchWithAuth(
+      `${API_URL}/api/found-reports`
+    );
+
+    const reportsData = await reportsResponse.json();
+
+    if (Array.isArray(reportsData)) {
+      onUpdated?.(reportsData);
+    }
+
+    const updatedSelected = reportsData.find(
+        (report) => report.found_report_id === selectedItem.found_report_id,
       );
 
-      const reportsData = await reportsResponse.json();
-      if (Array.isArray(reportsData)) {
-        onUpdated?.(reportsData);
+      if (updatedSelected) {
+        setSelectedItem(updatedSelected);
       }
 
-      // reset form
-      setItemWhereabouts("");
-      setDonationDate("");
-      setNotes("");
-      setDisposedTab(false);
-      setEditTab(true);
-      // close modal
-      setSelectedItem(null);
-      setIsDisposing(false);
+    resetDisposalForm();
+    setDisposalMethod("");
 
-      alert("Item disposed successfully.");
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    }
-  };
+    setDisposedTab(false);
+    setEditTab(true);
+  
+
+    toast.success("Item disposed successfully.");
+  } catch (error) {
+    console.error(error);
+    toast.error(error.message);
+  } finally {
+    setIsDisposing(false);
+  }
+};
 
   //archive states
   const [isArchiving, setIsArchiving] = useState(false);
@@ -738,90 +886,90 @@ const startEditing = () => {
   //Archive Item
   const handleArchiveReport = async (foundReportId) => {
     setIsArchiving(true);
-  try {
-    const response = await fetchWithAuth(
-      `${API_URL}/api/found-reports/${foundReportId}/archive`,
-      {
-        method: "PUT",
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/api/found-reports/${foundReportId}/archive`,
+        {
+          method: "PUT",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setIsArchiving(false);
+        throw new Error(data.error || "Failed to archive report");
       }
-    );
 
-    const data = await response.json();
+      const refreshResponse = await fetchWithAuth(
+        `${API_URL}/api/found-reports`
+      );
 
-    if (!response.ok) {
+      const reports = await refreshResponse.json();
+
+      console.log(reports);
+
+      if (Array.isArray(reports)) {
+        onUpdated?.(reports);
+      }
+      const updatedReport = reports.find(
+        report => report.found_report_id === selectedItem.found_report_id
+      );
+
+      setSelectedItem(updatedReport);
+      setOpenArchivedDialog(false);
+      toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Archived.`)
       setIsArchiving(false);
-      throw new Error(data.error || "Failed to archive report");
+    } catch (error) {
+      setIsArchiving(false);
+      setOpenArchivedDialog(false);
+      console.error(error);
+      alert(error.message);
     }
+  };
 
-    const refreshResponse = await fetchWithAuth(
-      `${API_URL}/api/found-reports`
-    );
-
-    const reports = await refreshResponse.json();
-
-    console.log(reports);
-
-    if (Array.isArray(reports)) {
-      onUpdated?.(reports);
-    }
-     const updatedReport = reports.find(
-          report => report.found_report_id === selectedItem.found_report_id
+  const handleRestoreReport = async (foundReportId) => {
+    try {
+      setIsRestoring(true);
+      const response = await fetchWithAuth(
+        `${API_URL}/api/found-reports/${foundReportId}/restore`,
+        {
+          method: "PUT",
+        }
       );
 
-    setSelectedItem(updatedReport);
-    setOpenArchivedDialog(false);
-    toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Archived.`)
-    setIsArchiving(false);
-  } catch (error) {
-    setIsArchiving(false);
-     setOpenArchivedDialog(false);
-    console.error(error);
-    alert(error.message);
-  }
-};
+      const data = await response.json();
 
-const handleRestoreReport = async (foundReportId) => {
-  try {
-    setIsRestoring(true);
-    const response = await fetchWithAuth(
-      `${API_URL}/api/found-reports/${foundReportId}/restore`,
-      {
-        method: "PUT",
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to restore report");
       }
-    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to restore report");
-    }
-
-    const refreshResponse = await fetchWithAuth(
-      `${API_URL}/api/found-reports`
-    );
-
-    const reports = await refreshResponse.json();
-
-    if (Array.isArray(reports)) {
-      onUpdated?.(reports);
-    }
-    const updatedReport = reports.find(
-          report => report.found_report_id === selectedItem.found_report_id
+      const refreshResponse = await fetchWithAuth(
+        `${API_URL}/api/found-reports`
       );
 
-    setSelectedItem(updatedReport);
-    setOpenRestoreDialog(false);
-    setIsRestoring(false);
-     toast.success(`Restored ${formatItemId(selectedItem.item_id)} Succesfully.`)
+      const reports = await refreshResponse.json();
 
-  } catch (error) {
-    setOpenRestoreDialog(false);
-    setIsRestoring(false);
-    toast.success(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
-    console.error(error);
-    alert(error.message);
-  }
-};
+      if (Array.isArray(reports)) {
+        onUpdated?.(reports);
+      }
+      const updatedReport = reports.find(
+        report => report.found_report_id === selectedItem.found_report_id
+      );
+
+      setSelectedItem(updatedReport);
+      setOpenRestoreDialog(false);
+      setIsRestoring(false);
+      toast.success(`Restored ${formatItemId(selectedItem.item_id)} Succesfully.`)
+
+    } catch (error) {
+      setOpenRestoreDialog(false);
+      setIsRestoring(false);
+      toast.success(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
+      console.error(error);
+      alert(error.message);
+    }
+  };
 
   return (
     <>
@@ -938,8 +1086,9 @@ const handleRestoreReport = async (foundReportId) => {
                         <>
                           <button
                             type="button"
+                            disabled={isSaving}
                             onClick={() => editImageInputRef.current?.click()}
-                            className="w-full h-full flex flex-col items-center justify-center gap-2 cursor-pointer"
+                            className="w-full h-full disabled:opacity-40 flex flex-col items-center justify-center gap-2 cursor-pointer"
                           >
                             <img
                               src={editImagePreview || selectedItem.image_url}
@@ -986,6 +1135,7 @@ const handleRestoreReport = async (foundReportId) => {
                         {isEditing ? (
                           <select
                             className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                            disabled={isSaving}
                             value={editForm.category_id}
                             onChange={(e) =>
                               handleEditChange("category_id", e.target.value)
@@ -1019,6 +1169,7 @@ const handleRestoreReport = async (foundReportId) => {
                         {isEditing ? (
                           <input
                             className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
+                            disabled={isSaving}
                             value={editForm.item_name}
                             onChange={(e) =>
                               handleEditChange("item_name", e.target.value)
@@ -1039,6 +1190,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <select
                             className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                             value={editForm.location_found}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange("location_found", e.target.value)
                             }
@@ -1072,6 +1224,7 @@ const handleRestoreReport = async (foundReportId) => {
                               className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
                               value={editForm.found_date}
                               max={getTodayDateString()}
+                              disabled={isSaving}
                               onChange={(e) =>
                                 handleEditDateChange(e.target.value)
                               }
@@ -1080,7 +1233,7 @@ const handleRestoreReport = async (foundReportId) => {
                               type="time"
                               className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
                               value={editForm.found_time}
-                              disabled={!editDateValid}
+                              disabled={!editDateValid || isSaving}
                               onChange={(e) =>
                                 handleEditChange("found_time", e.target.value)
                               }
@@ -1124,6 +1277,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <input
                             className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                             value={editForm.specific_location}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange(
                                 "specific_location",
@@ -1145,6 +1299,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <textarea
                             className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
                             value={editForm.description}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange("description", e.target.value)
                             }
@@ -1163,6 +1318,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <input
                             className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                             value={editForm.contents}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange("contents", e.target.value)
                             }
@@ -1185,9 +1341,9 @@ const handleRestoreReport = async (foundReportId) => {
                       <div className="flex flex-col text-xs mt-5 flex-1">
                         <p className="text-[#6B5C42]">DATE LOGGED</p>
                         <p className="text-black">
-                         {
-                          formatDateTime(selectedItem.date_reported)
-                         }
+                          {
+                            formatDateTime(selectedItem.date_reported)
+                          }
                         </p>
                       </div>
                     </div>
@@ -1198,6 +1354,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <input
                             className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                             value={editForm.reported_by}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange("reported_by", e.target.value)
                             }
@@ -1216,6 +1373,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <textarea
                             className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
                             value={editForm.additional_notes}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange(
                                 "additional_notes",
@@ -1238,6 +1396,7 @@ const handleRestoreReport = async (foundReportId) => {
                           <select
                             className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                             value={editForm.office_id}
+                            disabled={isSaving}
                             onChange={(e) =>
                               handleEditChange("office_id", e.target.value)
                             }
@@ -1257,37 +1416,55 @@ const handleRestoreReport = async (foundReportId) => {
                         )}
                       </div>
                     </div>
-                     {selectedItem.status === 'archived' && 
-                (
-                  <>
-                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                  <button
+                     {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
+                                 (<>
+                                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
+                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                                         <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
+                                         <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.date_archived)}</span><span></span></p>
+                                    </div>
+                                       
+                                 </div>
+                                 </>)
+                                     
+                                 }
+                    {selectedItem.status === 'archived' &&
+                      (
+                        <>
+                          <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                          <button
                             type="button"
                             className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
-                                                                     active:scale-95 bg-primary text-white w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
-                            onClick={()=>{setOpenRestoreDialog(true)}}                    
-                                                                     >
-                           <i className="fa-solid fa-arrow-rotate-left"></i> Restore Listing                                                   
-                   </button>
-                   <div className=" text-[10px] xl:text-xs gap-1">
-                                            <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from the public feed</p>
-                                    </div>
-                  </>
-                )
+                               enabled:active:scale-95 bg-primary text-white w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
+                            onClick={() => { setOpenRestoreDialog(true) }}
+                            disabled={isRestoring}
+                          >
+                            {isRestoring? "Restoring..." : (
+                              <>
+                                <i className="fa-solid fa-arrow-rotate-left"></i> Restore Listing
+                              </>
+                            )}
+                          </button>
+                          <div className=" text-[10px] xl:text-xs gap-1">
+                            <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from the public feed</p>
+                          </div>
+                        </>
+                      )
 
-                }
+                    }
                     <div className="h-fit text-[9px] xl:text-xs  font-medium flex gap-2 xl:gap-3 mt-2 ">
                       {isEditing ? (
                         <>
                           <button
                             type="button"
                             className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1"
-                            onClick={()=>{
-                                if (hasEditChanges) {
-                        setOpenCancelUpdate(true);
-                      } else {
-                        handleCancelEdit();
-                      }
+                            onClick={() => {
+                              if (hasEditChanges) {
+                                setOpenCancelUpdate(true);
+                              } else {
+                                handleCancelEdit();
+                              }
                             }}
                           >
                             Cance
@@ -1302,8 +1479,8 @@ const handleRestoreReport = async (foundReportId) => {
                             }
                             className="h-full border-primary border px-5 py-3 rounded-md bg-primary text-white flex-1 disabled:opacity-50 "
                             onClick={
-                            
-                                ()=> setOpenUpdateDialog(true)
+
+                              () => setOpenUpdateDialog(true)
                             }
                           >
                             {isSaving
@@ -1315,32 +1492,34 @@ const handleRestoreReport = async (foundReportId) => {
                         </>
                       ) : (
                         <>
-                        {selectedItem.status !== 'archived' &&
+                          {selectedItem.status !== 'archived' &&
 
                             <button
-                          type="button"
-                          className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40"
-                          onClick={
-                            startEditing
-                          
+                              type="button"
+                              className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform duration-100
+                               enabled:active:scale-95 disabled:cursor-not-allowed"
+                              onClick={
+                                startEditing
+
+                              }
+                              disabled={
+                                selectedItem.status === "claimed" ||
+                                selectedItem.status === "disposed" || 
+                                isArchiving
+                              }
+                            >
+                              Edit Item Details
+                            </button>
                           }
-                          disabled={
-                            selectedItem.status === "claimed" ||
-                            selectedItem.status === "disposed"
-                          }
-                        >
-                          Edit Item Details
-                        </button>
-                        }
                         </>
                       )}
-                      {!isEditing &&  (
+                      {!isEditing && (
                         <div className="relative ">
                           {openUpdateStatus && (
                             <div className="absolute bottom-11 h-fit w-45 bg-white border -translate-x-14 xl:-translate-x-5 border-[#DDD9CF] rounded-md">
                               <button
                                 className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                onClick={()=>{
+                                onClick={() => {
                                   startClaiming();
                                   setOpenUpdateStatus(false);
                                 }}
@@ -1350,7 +1529,7 @@ const handleRestoreReport = async (foundReportId) => {
                               {selectedItem.status === "to_be_disposed" && (
                                 <button
                                   className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                  onClick={()=>{
+                                  onClick={() => {
                                     startDisposing();
                                     setOpenUpdateStatus(false);
                                   }}
@@ -1360,7 +1539,7 @@ const handleRestoreReport = async (foundReportId) => {
                               )}
                               <button
                                 className="text-xs p-2 border-b border-[#DDD9CF] w-full text-primary"
-                                onClick={()=> {
+                                onClick={() => {
                                   setOpenArchivedDialog(true);
                                   setOpenUpdateStatus(false);
                                 }}
@@ -1371,13 +1550,15 @@ const handleRestoreReport = async (foundReportId) => {
                           )}
                           {!isEditing && selectedItem.status !== "archived" && (
                             <button
-                              className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 disabled:opacity-40"
+                              className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 disabled:opacity-40
+                              cursor-pointer transition-transform duration-100 enabled:active:scale-95 disabled:cursor-not-allowed"
                               onClick={() => {
                                 setOpenUpdateStatus(!openUpdateStatus);
                               }}
                               disabled={
                                 selectedItem.status === "claimed" ||
-                                selectedItem.status === "disposed"
+                                selectedItem.status === "disposed" || 
+                                isArchiving
                               }
                             >
                               Update Status{" "}
@@ -1465,7 +1646,7 @@ const handleRestoreReport = async (foundReportId) => {
                     )}
                   </>
                 )}
-               
+
                 <div className="h-5"></div>
               </div>
             </>
@@ -1487,6 +1668,7 @@ const handleRestoreReport = async (foundReportId) => {
                   reqField={true}
                   placeholder="Full name of claimant"
                   value={fullName}
+                  disabled={isReleasing}
                   onChange={setFullName}
                 />
                 <div className="w-full mt-3 flex flex-col gap-2">
@@ -1520,6 +1702,7 @@ const handleRestoreReport = async (foundReportId) => {
                       className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
                       placeholder="e.g. 09XXXXXXXXX"
                       value={claimantNumber}
+                      disabled={isReleasing}
                       onChange={(e) => setClaimantNumber(e.target.value)}
                     />
                   ) : (
@@ -1528,6 +1711,7 @@ const handleRestoreReport = async (foundReportId) => {
                       className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
                       placeholder="e.g. juan@gmail.com"
                       value={claimantEmail}
+                      disabled={isReleasing}
                       onChange={(e) => setClaimantEmail(e.target.value)}
                     />
                   )}
@@ -1558,7 +1742,8 @@ const handleRestoreReport = async (foundReportId) => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                    disabled={isReleasing}
+                    className="relative w-full h-30 disabled:opacity-40 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                   >
                     {claimantImage ? (
                       <>
@@ -1585,6 +1770,7 @@ const handleRestoreReport = async (foundReportId) => {
                     type="file"
                     accept="image/*"
                     className="hidden"
+                    disabled={isReleasing}
                     onChange={handleClaimantFileChange}
                   />
                   <div className="mt-3">
@@ -1602,6 +1788,7 @@ const handleRestoreReport = async (foundReportId) => {
                       rows={3}
                       placeholder="Example: Claimant identified contents inside the wallet and presented a valid school ID."
                       value={verificationDetails}
+                      disabled={isReleasing}
                       onChange={(e) => setVerificationDetails(e.target.value)}
                     />
                   </div>
@@ -1626,7 +1813,7 @@ const handleRestoreReport = async (foundReportId) => {
                               type="button"
                               className="w-full text-sm flex p-2  border-b border-b-[#DDD9CF] hover:bg-gray-100"
                               onMouseDown={() => {
-                                
+
                                 // setLinkReport(result);
                                 setSelectedReport(result);
                                 console.log(result);
@@ -1646,9 +1833,9 @@ const handleRestoreReport = async (foundReportId) => {
                         </div>
                       </div>
                     )}
-                    
+
                     {linkReport && (
-                      
+
                       <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
                         <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
                           <p className="flex-1 overflow-x-auto min-w-0 truncate">
@@ -1677,6 +1864,7 @@ const handleRestoreReport = async (foundReportId) => {
                         type="text"
                         placeholder="Search"
                         className="input input-bordered flex-1"
+                        disabled={isReleasing}
                         onFocus={() => setShowSearchResults(true)}
                         onBlur={() => {
                           setTimeout(() => {
@@ -1693,13 +1881,13 @@ const handleRestoreReport = async (foundReportId) => {
                   <button
                     className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
                     onClick={() => {
-                          if (hasClaimFormChanges) {
-                              setOpenCancelRelease(true);
-                            } else {
-                              setClaimTab(false);
-                              setEditTab(true);
-                            }
-                         }}
+                      if (hasClaimFormChanges) {
+                        setOpenCancelRelease(true);
+                      } else {
+                        setClaimTab(false);
+                        setEditTab(true);
+                      }
+                    }}
                   >
                     Cancel
                   </button>
@@ -1713,7 +1901,7 @@ const handleRestoreReport = async (foundReportId) => {
                     }
                     onClick={
                       // handleItemRelease
-                      ()=> setOpenConfirmRelease(true)
+                      () => setOpenConfirmRelease(true)
                     }
                     className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 `}
                   >
@@ -1735,7 +1923,7 @@ const handleRestoreReport = async (foundReportId) => {
                   Mark as Disposed
                 </button>
               </div>
-              <div className="h-full w-full p-5 pt-15 flex flex-col">
+              <div className="flex-1 w-full p-5 pt-15 flex flex-col">
                 <div className="flex flex-col gap-2 mb-5">
                   <p className="text-md font-medium">Confirm Disposal</p>
                   <p className="text-xs text-justify">
@@ -1743,345 +1931,536 @@ const handleRestoreReport = async (foundReportId) => {
                     donation details before confirming.
                   </p>
                 </div>
-                <AdminTextField
-                  title="Disposed To/Location"
-                  reqField={true}
-                  value={itemWhereabouts}
-                  onChange={setItemWhereabouts}
+                <AdminDonationDropDown
+                  title="Disposal Method"
+                  disabled={isDisposing}
+                  placeholder="Select Disposal Method"
+                  value={disposalMethod}
+                  onChange={handleDisposalMethodChange}
+                  options={DISPOSAL_METHODS}
+                  reqField
                 />
-                <AdminDateInput
-                  title="Date of Donation"
-                  reqField={true}
-                  value={donationDate}
-                  onChange={setDonationDate}
-                />
-                {donationDate && !disposalDateValid && (
-                  <p className="text-xs text-primary">
-                    Disposal date cannot be in the future.
-                  </p>
-                )}
-                <AdminTextArea
-                  title="Additional Notes"
-                  reqField={true}
-                  value={notes}
-                  onChange={setNotes}
-                />
+                {disposalMethod == 'DONATED' &&
+                  (
+                    <>
+                      <AdminTextField
+                        title="Beneficiary/Location"
+                        reqField={true}
+                        disabled={isDisposing}
+                        value={itemWhereabouts}
+                        onChange={setItemWhereabouts}
+                      />
+                      <AdminDateInput
+                        title="Date of Donation"
+                        reqField={true}
+                        value={donationDate}
+                         disabled={isDisposing}
+                        onChange={setDonationDate}
+                      />
+                                            {donationDate && !disposalDateValid && (
+                        <p className="text-xs text-primary">
+                          Disposal date cannot be in the future.
+                        </p>
+                      )}
+                      <p className="text-sm font-medium mt-2">
+                        Proof of Donation Photo Upload{" "}
+                        <span className="text-primary">*</span>
+                      </p>
+                      <p className="text-xs text-[#6B5C42]">
+                        Take or upload a photo of the signed acknowledgement form or
+                        the actual turnover of the item to the beneficiary.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={isDisposing}
+                        onClick={() => fileInputRefDisposalProof.current?.click()}
+                        className="relative disabled:opacity-40 w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                      >
+                        {disposalProof ? (
+                          <>
+                            <img
+                              src={disposalProof}
+                              alt="Selected found item"
+                              className="h-full w-full object-contain"
+                            />
+                            <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                              Click image to replace photo.
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
+                            <p className="text-[#6B5C42] text-xs">
+                              Click to upload photo.
+                            </p>
+                          </>
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRefDisposalProof}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleDisposalProofFileChange}
+                      />
+                      <AdminTextArea
+                        title="Additional Notes"
+                        reqField={true}
+                        disabled={isDisposing}
+                        value={notes}
+                        onChange={setNotes}
+                      />
+                       <hr className="border-(--color-tertiary) my-4 opacity-30" />
                 <div className="w-full h-10  flex gap-2 text-xs mt-auto">
                   <button
                     className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                    onClick={handleCancelDisposed}
+                    onClick={() => {
+                        if (hasDisposalFormChanges) {
+                          setOpenCancelDisposed(true);
+                        } else {
+                          handleCancelDisposed();
+                        }
+                      }}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     disabled={!isDisposalValid || isDisposing}
-                    onClick={handleDisposedItem}
-                    className={`flex-1 h-full bg-[#DDD1C5]  font-medium text-[#553D25] rounded-md disabled:opacity-40`}
+                    onClick={()=>setOpenConfirmDesiposed(true)}
+                    className={`flex-1 h-full bg-primary  font-medium text-white rounded-md disabled:opacity-40`}
                   >
-                    {isDisposing ? "Disposing..." : "Confirm Dispossal"}
+                    {isDisposing ? "Disposing..." : "Confirm Disposal"}
                   </button>
                 </div>
+                    </>
+                  )
+
+                }
+                {disposalMethod == 'DISPOSED_AS_WASTE' &&
+                  (
+                    <>
+                      <AdminDonationDropDown
+                        title="Reason for Discarding"
+                        reqField={true}
+                        value={reasonForDiscarding}
+                        onChange={setReasonForDiscarding}
+                        options={DISCARD_REASONS}
+                        placeholder={"Select a reason"}
+                      />
+                      <AdminDateInput
+                        title="Date of Donation"
+                        reqField={true}
+                        value={donationDate}
+                        onChange={setDonationDate}
+                      />
+                       {donationDate && !disposalDateValid && (
+                        <p className="text-xs text-primary">
+                          Disposal date cannot be in the future.
+                        </p>
+                      )}
+                      <p className="text-sm font-medium mt-2">
+                        Proof of Donation Photo Upload{" "}
+                        <span className="text-primary">*</span>
+                      </p>
+                      <p className="text-xs text-[#6B5C42]">
+                        Take or upload a photo of the signed acknowledgement form or
+                        the actual turnover of the item to the beneficiary.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRefDisposalProof.current?.click()}
+                        className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                      >
+                        {disposalProof ? (
+                          <>
+                            <img
+                              src={disposalProof}
+                              alt="Selected found item"
+                              className="h-full w-full object-contain"
+                            />
+                            <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
+                              Click image to replace photo.
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
+                            <p className="text-[#6B5C42] text-xs">
+                              Click to upload photo.
+                            </p>
+                          </>
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRefDisposalProof}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleDisposalProofFileChange}
+                      />
+
+
+                     
+                      <AdminTextArea
+                        title="Additional Notes"
+                        reqField={true}
+                        value={notes}
+                        onChange={setNotes}
+                      />
+                       <hr className="border-(--color-tertiary) my-4 opacity-30" />
+                <div className="w-full h-10  flex gap-2 text-xs mt-auto">
+                  <button
+                    className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                    onClick={() => {
+                      if (hasDisposalFormChanges) {
+                        setOpenCancelDisposed(true);
+                      } else {
+                        handleCancelDisposed();
+                      }
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!isDisposalValid || isDisposing}
+                    onClick={()=>setOpenConfirmDesiposed(true)}
+                    className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40`}
+                  >
+                    {isDisposing ? "Disposing..." : "Confirm Disposal"}
+                  </button>
+                </div>
+                    </>
+                  )
+
+                }
+               
               </div>
             </>
           )}
         </div>
       </div>
 
-            {linkModal && selectedReport &&
-             (
-                <>
-                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+      {linkModal && selectedReport &&
+        (
+          <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                                <p className="font-semibold">Link Report</p>
-                                <button onClick={() => setLinkModal(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                  <p className="font-semibold">Link Report</p>
+                  <button onClick={() => setLinkModal(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
 
-                            </div>
-                            <div className="w-full flex flex-col p-3 gap-2">
-                              <div className="w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
-                                  <img
-                                    src={selectedReport.image_url}
-                                    alt={selectedReport.item_name}
-                                    className="w-full h-full object-contain"
-                                  />
-                                </div>
-                                  <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] p-3 xl:p-5 ">
-                                    <div className="flex flex-col  text-xs xl:text-sm gap-2">
-                                        <p className="text-sm xl:text-lg font-semibold text-[#6B5C42]">{formatReportId(selectedReport.lost_report_id)}</p>
-                                         <p className="text-[#6B5C42]">Item Name: <span className="text-black">{selectedReport.item_name}</span></p>
-                                         <p className="text-[#6B5C42]">Reported by: <span className="text-black">{selectedReport.owner_name || selectedReport.reported_by}</span></p>
-                                         <p className="text-[#6B5C42]">Date Lost: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
-                                    </div>
-                                    
-                                       
-                                 </div>
-                                 <div className="text-xs xl:text-sm text-justify">
-                                      <p >
-                                        Linking this report will connect this case to the found item and update the status to ‘<span className="font-semibold">Resolved</span>’. Please verify that the details and item match before proceeding.
-                                      </p>
-                                    </div>
-                                    <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                                    <div className="flex gap-2">
-                                    <button
-                                        className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={() => {setLinkModal(false); setSelectedReport(null)}}
-                                    >No</button>
-                                    <button
-                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={()=>{setLinkReport(selectedReport);
-                                          setLinkModal(false);
-                                          setSelectedReport(null);
-                                        }}
-                                        disabled={isLoading}
-                                    >{isLoading ? "Lingking.." : "Confirm Link"}</button>
-                                </div>
-                              
-                            </div>
-                            <div>
-
-                            </div>
-                           
-                         
-                        </div>
+                </div>
+                <div className="w-full flex flex-col p-3 gap-2">
+                  <div className="w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                    <img
+                      src={selectedReport.image_url}
+                      alt={selectedReport.item_name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] p-3 xl:p-5 ">
+                    <div className="flex flex-col  text-xs xl:text-sm gap-2">
+                      <p className="text-sm xl:text-lg font-semibold text-[#6B5C42]">{formatReportId(selectedReport.lost_report_id)}</p>
+                      <p className="text-[#6B5C42]">Item Name: <span className="text-black">{selectedReport.item_name}</span></p>
+                      <p className="text-[#6B5C42]">Reported by: <span className="text-black">{selectedReport.owner_name || selectedReport.reported_by}</span></p>
+                      <p className="text-[#6B5C42]">Date Lost: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
                     </div>
-                </>
-             )
-            
-            }
 
-            {imageSelected &&
-             (
-                <>
-                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                                <p className="font-semibold">Link Report</p>
-                                <button onClick={() => setImageSelected(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                  </div>
+                  <div className="text-xs xl:text-sm text-justify">
+                    <p >
+                      Linking this report will connect this case to the found item and update the status to ‘<span className="font-semibold">Resolved</span>’. Please verify that the details and item match before proceeding.
+                    </p>
+                  </div>
+                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                  <div className="flex gap-2">
+                    <button
+                      className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => { setLinkModal(false); setSelectedReport(null) }}
+                    >No</button>
+                    <button
+                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => {
+                        setLinkReport(selectedReport);
+                        setLinkModal(false);
+                        setSelectedReport(null);
+                      }}
+                      disabled={isLoading}
+                    >{isLoading ? "Lingking.." : "Confirm Link"}</button>
+                  </div>
 
-                            </div>
-                            <div className="w-full flex flex-col p-3 gap-2">
-                              <div className="w-full h-80 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
-                                  <img
-                                    src={selectedReport.image_url}
-                                    alt={selectedReport.item_name}
-                                    className="w-full h-full object-contain"
-                                  />
-                                </div>
-                              
-                            </div>
-                           
-                         
-                        </div>
-                    </div>
-                </>
-             )
-            
-            }
-            {openArchivedDialog &&
-            (
-              
-                <>
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+                </div>
+                <div>
 
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                                <p className="font-semibold">Archived Item</p>
-                                <button onClick={() => setOpenArchivedDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                </div>
 
-                            </div>
-                            <div className="flex flex-col flex-1 p-3 gap-3">
-                                <div className="w-full flex flex-col justify-center items-center">
-                                    <Archive size={40} className="text-[#7F8C8D]"/>
-                                    <p className="text-md font-medium">Archive Item?</p>
-                                </div>
-                          
-                                <div className="text-sm text-justify">
-                                    <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
-                                </div>
-                                <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
-                                    <p>Archiving this listing will be recorded in the system under your administrator account.</p>
-                                </div>
-                                <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                                <div className="flex gap-2">
-                                    <button
-                                        className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={() => setOpenArchivedDialog(false)}
-                                    >Cancel</button>
-                                    <button
-                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={()=> handleArchiveReport(selectedItem.found_report_id)}
-                                        disabled={isArchiving}
-                                    >
-                                      {isArchiving ? "Archving.." : "Confirm Archived"}
-      
-                                      </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            
-            )
 
-            }
-            {openRestoreDialog && 
-            (
-              
-              
-                <>
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                                <p className="font-semibold">Restore Listing</p>
-                                <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-
-                            </div>
-                            <div className="flex flex-col flex-1 p-3 gap-3">
-                                <div className="w-full flex flex-col justify-center items-center">
-                                    <ArchiveRestore size={40} className="text-[#0288D1]"/>
-                                    <p className="text-md font-medium">Restore Listing?</p>
-                                </div>
-                          
-                                <div className="text-sm text-justify">
-                                    <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
-                                </div>
-        
-                                <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                                <div className="flex gap-2">
-                                    <button
-                                        className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={() => setOpenRestoreDialog(false)}
-                                    >Cancel</button>
-                                    <button
-                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={()=> handleRestoreReport(selectedItem.found_report_id)}
-                                        disabled={isRestoring}
-                                    >
-                                      {isRestoring ? "Restoring.." : "Confirm Restore"}
-      
-                                      </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            
-            
-            )
-
-            }
-            {openUpdateDialog && 
-            (
-              
-              
-              
-                <>
-               <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-    <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
-        
-        {/* Header */}
-        <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-            <p className="font-semibold">Confirm Update</p>
-            <button onClick={() => setOpenUpdateDialog(false)}>
-                <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
-            </button>
-        </div>
-        
-        <div className="flex flex-col flex-1 p-3 gap-3">
-            {/* Icon & Title */}
-            <div className="w-full flex flex-col justify-center items-center mt-2">
-                <Info size={40} className="text-[#4A5568]"/>
-                <p className="text-md font-medium mt-2">Update Item?</p>
+              </div>
             </div>
-      
-            {/* Update Message */}
-            <div className="text-sm text-center px-2 text-gray-700">
-                <p>Are you sure you want to save these changes on Item <span className="font-semibold text-black">{formatItemId(selectedItem.item_id)}</span>?.</p>
-            </div>
+          </>
+        )
 
-            <hr className="border-(--color-tertiary) my-2 opacity-30" />
-            
-            {/* Buttons */}
-            <div className="flex gap-2">
-                <button
-                    className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                    onClick={() => setOpenUpdateDialog(false)}
-                >
-                    Keep Editing
-                </button>
-                <button
-                    className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                    onClick={handleSaveEdit} 
-                >
-                    {isLoading ? "Updating..." : "Update Item"}
-                </button>
+      }
+
+      {imageSelected &&
+        (
+          <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                  <p className="font-semibold">Link Report</p>
+                  <button onClick={() => setImageSelected(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                </div>
+                <div className="w-full flex flex-col p-3 gap-2">
+                  <div className="w-full h-80 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                    <img
+                      src={selectedReport.image_url}
+                      alt={selectedReport.item_name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                </div>
+
+
+              </div>
             </div>
-        </div>
-    </div>
-</div>
-                </>
+          </>
+        )
+
+      }
+      {openArchivedDialog &&
+        (
+
+          <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                  <p className="font-semibold">Archived Item</p>
+                  <button onClick={() => setOpenArchivedDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                </div>
+                <div className="flex flex-col flex-1 p-3 gap-3">
+                  <div className="w-full flex flex-col justify-center items-center">
+                    <Archive size={40} className="text-[#7F8C8D]" />
+                    <p className="text-md font-medium">Archive Item?</p>
+                  </div>
+
+                  <div className="text-sm text-justify">
+                    <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
+                  </div>
+                  <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
+                    <p>Archiving this listing will be recorded in the system under your administrator account.</p>
+                  </div>
+                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                  <div className="flex gap-2">
+                    <button
+                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => setOpenArchivedDialog(false)}
+                    >Cancel</button>
+                    <button
+                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => handleArchiveReport(selectedItem.found_report_id)}
+                      disabled={isArchiving}
+                    >
+                      {isArchiving ? "Archving.." : "Confirm Archived"}
+
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+
+        )
+
+      }
+      {openRestoreDialog &&
+        (
+
+
+          <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+
+              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                  <p className="font-semibold">Restore Listing</p>
+                  <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+
+                </div>
+                <div className="flex flex-col flex-1 p-3 gap-3">
+                  <div className="w-full flex flex-col justify-center items-center">
+                    <ArchiveRestore size={40} className="text-[#0288D1]" />
+                    <p className="text-md font-medium">Restore Listing?</p>
+                  </div>
+
+                  <div className="text-sm text-justify">
+                    <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
+                  </div>
+
+                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                  <div className="flex gap-2">
+                    <button
+                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => setOpenRestoreDialog(false)}
+                    >Cancel</button>
+                    <button
+                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => handleRestoreReport(selectedItem.found_report_id)}
+                      disabled={isRestoring}
+                    >
+                      {isRestoring ? "Restoring.." : "Confirm Restore"}
+
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+
+
+        )
+
+      }
+      {openUpdateDialog &&
+        (
+
+
+
+          <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+              <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
+
+                {/* Header */}
+                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                  <p className="font-semibold">Confirm Update</p>
+                  <button onClick={() => setOpenUpdateDialog(false)}>
+                    <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
+                  </button>
+                </div>
+
+                <div className="flex flex-col flex-1 p-3 gap-3">
+                  {/* Icon & Title */}
+                  <div className="w-full flex flex-col justify-center items-center mt-2">
+                    <Info size={40} className="text-[#4A5568]" />
+                    <p className="text-md font-medium mt-2">Update Item?</p>
+                  </div>
+
+                  {/* Update Message */}
+                  <div className="text-sm text-center px-2 text-gray-700">
+                    <p>Are you sure you want to save these changes on Item <span className="font-semibold text-black">{formatItemId(selectedItem.item_id)}</span>?.</p>
+                  </div>
+
+                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
+
+                  {/* Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={() => setOpenUpdateDialog(false)}
+                    >
+                      Keep Editing
+                    </button>
+                    <button
+                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                      onClick={handleSaveEdit}
+                    >
+                      {isLoading ? "Updating..." : "Update Item"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      }
+      {openCancelUpdate &&
+        <AdminConfirmDialog
+          description={"Any edits you’ve made to this item will be lost. The listing will keep its original details."}
+          onClose={() => setOpenCancelUpdate(false)}
+          onConfirm={handleCancelEdit}
+        />
+      }
+      {openConfirmRelease &&
+        <AdminConfirmDialog
+          title="Confirm Release"
+          description={`Confirm release for ${formatItemId(selectedItem.item_id)}`}
+          cancelText="Cancel"
+          confirmText="Confirm Release"
+          onClose={() => setOpenConfirmRelease(false)}
+          onConfirm={handleItemRelease}
+        />
+      }
+      {openCancelRelease &&
+        <AdminConfirmDialog
+          description={`Cancel the release of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
+          onClose={() => {
+            setOpenCancelRelease(false)
+          }
+          }
+          onConfirm={() => {
+            setClaimTab(false);
+            setEditTab(true);
+            resetClaimForm();
+            setOpenCancelRelease(false)
+          }}
+        />
+      }
+
+      {openClaimNavigateDialog &&
+        <AdminConfirmDialog
+          description={`Item ${formatItemId(selectedItem.item_id)} successfully released to ${fullName}.`}
+          onClose={() => {
+            setOpenClaimNavigateDialog(false)
+          }
+          }
+          onConfirm={() => {
+            navigate(
+              `/admin/transactions?claimId=${claimId}`
             )
-            }
-             {openCancelUpdate &&
-                <AdminConfirmDialog
-                     description={"Any edits you’ve made to this item will be lost. The listing will keep its original details."}
-                  onClose={()=>setOpenCancelUpdate(false)}
-                  onConfirm={handleCancelEdit}
-                  />
-            }
-            { openConfirmRelease &&
-              <AdminConfirmDialog
-                title="Confirm Release"
-                description={`Confirm release for ${formatItemId(selectedItem.item_id)}`}
-                cancelText="Cancel"
-                confirmText="Confirm Release"
-                onClose={()=>setOpenConfirmRelease(false)}
-                onConfirm={handleItemRelease}
-                />
-            }
-            { openCancelRelease &&
-              <AdminConfirmDialog
-                description={`Cancel the release of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
-                onClose={()=>{
-                  setOpenCancelRelease(false)
-                }  
-                }
-                onConfirm={()=>{
-                    setClaimTab(false);
-                    setEditTab(true);
-                    resetClaimForm();
-                    setOpenCancelRelease(false)
-                }}
-                />
-            }
+          }}
+          Icon={CircleCheck}
+          iconColor="text-[#22C55E]"
+          cancelText="Close"
+          confirmText="View Transaction"
+          message={`Transaction ${formatTXNId(claimId)} has been created.`}
+          title="Item Released"
 
-            { openClaimNavigateDialog &&
-              <AdminConfirmDialog
-                description={`Item ${formatItemId(selectedItem.item_id)} successfully released to ${fullName}.`}
-                onClose={()=>{
-                  setOpenClaimNavigateDialog(false)
-                }  
-                }
-                onConfirm={()=>{
-                    navigate(
-                            `/admin/transactions?claimId=${claimId}`
-                        )
-                }}
-                Icon={CircleCheck}
-                iconColor="text-[#22C55E]"
-                cancelText="Close"
-                confirmText="View Transaction"
-                message={`Transaction ${formatTXNId(claimId)} has been created.`}
-                title="Item Released"
-                
-                />
-            }
-           
-           
+        />
+      }
+       {openCancelDisposed &&
+         <AdminConfirmDialog
+          description={`Cancel the DIsposal of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
+          onClose={() => {
+            setOpenCancelDisposed(false)
+          }
+          }
+          onConfirm={
+            handleCancelDisposed}
+        />
+      }
+      {openConfirmDesiposed &&
+         <AdminConfirmDialog
+          description={`Are you sure you want to permanently dispose of this item ${formatItemId(selectedItem.item_id)}? This action cannot be undone and will officially close its record.`}
+          onClose={() => {
+            setOpenConfirmDesiposed(false)
+          }
+          }
+          onConfirm={
+            handleDisposedItem}
+          confirmText="Confirm Disposal"
+          cancelText="Cancel"
+        />
+      }
+
+
     </>
   );
 }

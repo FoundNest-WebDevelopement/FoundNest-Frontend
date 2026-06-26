@@ -5,6 +5,7 @@ export default function AdminLocationDropDown({
   options = [],
   hidden,
   disabled,
+  disableField,
   reqField,
   onChange = () => {}
 }) {
@@ -23,6 +24,7 @@ export default function AdminLocationDropDown({
       <select
         className="select bg-white rounded-md text- w-full border border-[#DDD9CF] text-black" 
         value={value}
+        disabled={disableField}
         onChange={(e) =>{ onChange(e.target.value)}}
         required
       >

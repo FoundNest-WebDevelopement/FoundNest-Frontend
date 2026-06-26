@@ -4,6 +4,7 @@ export default function AdminAllLocationDropDown({title,
   options = [],
   onChange = () => {},
   reqField,
+  disabled,
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
 
@@ -21,6 +22,7 @@ export default function AdminAllLocationDropDown({title,
         className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
         value={value}
         onChange={(e) =>{ onChange(e.target.value)}}
+        disabled={disabled}
         required
       >
 
