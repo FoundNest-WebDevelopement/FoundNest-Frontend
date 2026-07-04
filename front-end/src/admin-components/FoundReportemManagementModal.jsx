@@ -53,6 +53,7 @@ export default function FoundReportItemManagementModal({
   const [claimTab, setClaimTab] = useState(false);
   const [disposedTab, setDisposedTab] = useState(false);
   const [editTab, setEditTab] = useState(true);
+  const [isPrintingQR, setIsPrintingQR] = useState(false);
 
   //claim tab variables
 
@@ -651,73 +652,75 @@ export default function FoundReportItemManagementModal({
   selectedProofFile;
 
   // Print QR Code
-  const [isPrintingQR, setIsPrintingQR] = useState(false);
-  const handlePrintQRCode = async () => {
-    if (!selectedItem?.qr_data) return;
-    setIsPrintingQR(true);
-    try {
-      const qrImageUrl = await QRCodeLib.toDataURL(selectedItem.qr_data, {
-        width: 300,
-        margin: 2,
-      });
+const handlePrintQRCode = async () => {
+  setIsPrintingQR(true);
+  try {
+    // Generate QR from the found report's item ID (not owner's pre-registered QR)
+    const qrData = formatItemId(selectedItem.item_id);
+    const qrImageUrl = await QRCodeLib.toDataURL(qrData, {
+      width: 300,
+      margin: 2,
+    });
 
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Print QR Code - ${selectedItem.item_name}</title>
-                        <style>
-                            body {
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                height: 100vh;
-                                margin: 0;
-                                font-family: Arial, sans-serif;
-                            }
-                            .card {
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                gap: 8px;
-                                padding: 24px;
-                                border: 1px solid #DDD9CF;
-                                border-radius: 16px;
-                            }
-                            .item-name {
-                                font-weight: bold;
-                                font-size: 18px;
-                                color: #4B2D23;
-                            }
-                            .brand {
-                                font-weight: bold;
-                                font-size: 12px;
-                                color: #990000;
-                                margin-top: 8px;
-                            }
-                            img {
-                                width: 220px;
-                                height: 220px;
-                            }
-                        </style>
-                    </head>
-                    <body onload="window.print()">
-                        <div class="card">
-                            <p class="item-name">${selectedItem.item_name}</p>
-                            <img src="${qrImageUrl}" alt="QR Code" />
-                            <p class="brand">FoundNest</p>
-                        </div>
-                    </body>
-                </html>
-            `);
-      printWindow.document.close();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsPrintingQR(false);
-    }
-  };
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print QR Code - ${selectedItem.item_name}</title>
+          <style>
+            body {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              font-family: Arial, sans-serif;
+            }
+            .card {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+              padding: 24px;
+              border: 1px solid #DDD9CF;
+              border-radius: 16px;
+            }
+            .item-id {
+              font-size: 13px;
+              color: #6B5C42;
+            }
+            .item-name {
+              font-weight: bold;
+              font-size: 18px;
+              color: #4B2D23;
+            }
+            .brand {
+              font-weight: bold;
+              font-size: 12px;
+              color: #990000;
+              margin-top: 8px;
+            }
+            img { width: 220px; height: 220px; }
+          </style>
+        </head>
+        <body onload="window.print()">
+          <div class="card">
+            <p class="item-id">${qrData}</p>
+            <p class="item-name">${selectedItem.item_name}</p>
+            <img src="${qrImageUrl}" alt="QR Code" />
+            <p class="brand">FoundNest</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setIsPrintingQR(false);
+  }
+};
 
   const [openCancelDisposed, setOpenCancelDisposed] = useState(false);
   const [openConfirmDesiposed, setOpenConfirmDesiposed] = useState(false);
@@ -1601,21 +1604,20 @@ const handleDisposedItem = async () => {
                     <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
                       {!isEditing && selectedItem.status !== 'archived' && (
                         <div className="w-full flex flex-col gap-1">
-                          <button
-                            type="button"
-                            onClick={handlePrintQRCode}
-                            className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
-                                                                     active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
-                            disabled={
-                              selectedItem.status === "claimed" ||
-                              selectedItem.status === "disposed" ||
-                              !selectedItem.qr_code_id ||
-                              isPrintingQR
-                            }
-                          >
-                            <QrCode size="20" />
-                            <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
-                          </button>
+                       <button
+  type="button"
+  onClick={handlePrintQRCode}
+  className={`flex gap-3 p-2 rounded-md items-center cursor-pointer transition-transform duration-100
+    active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
+  disabled={
+    selectedItem.status === "claimed" ||
+    selectedItem.status === "disposed" ||
+    isPrintingQR
+  }
+>
+  <QrCode size="20" />
+  <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
+</button>
                           {!selectedItem.qr_code_id && (
                             <p className="text-[#6B5C42] text-[10px] text-center">
                               This item was not pre-registered with a QR code by

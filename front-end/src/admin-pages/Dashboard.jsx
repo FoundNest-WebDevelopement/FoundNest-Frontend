@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { ClipboardList, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL;
