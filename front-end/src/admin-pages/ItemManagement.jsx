@@ -1,4 +1,4 @@
-import { Download, QrCode, Plus } from "lucide-react";
+import { Download, QrCode, Plus, ScanLine } from "lucide-react";
 import AdminButton from "../admin-components/AdminButton";
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown";
 import { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import AdminDateInput from "../admin-components/AdminDateInput";
 import ItemManagementTable from "../admin-components/ItemManagementTable";
 import FoundItemModal from "../admin-components/FoundItemModal";
 import QRScanModal from "../admin-components/QRScanModal";
+import QRItemFinderModal from "../admin-components/QRItemFinderModal";
 import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useSearchParams } from "react-router-dom";
@@ -18,6 +19,7 @@ export default function ItemManagement() {
 
   const [openLogItem, setOpenLogItem] = useState(false);
   const [openQRScan, setOpenQRScan] = useState(false);
+  const [openQRFinder, setOpenQRFinder] = useState(false);
   const [qrPrefillData, setQrPrefillData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [reports, setReports] = useState([]);
@@ -82,15 +84,12 @@ export default function ItemManagement() {
       report.location_found?.toLowerCase().includes(query) ||
       report.reported_by?.toLowerCase().includes(query);
 
-      
-
     const matchesCategory =
       !category || String(report.category_id) === String(category);
 
     const matchesLocation =
       !location || String(report.office_id) === String(location);
 
-    // const matchesStatus = !status || report.status === status;
     const matchesStatus = !status || report.status === status.toLocaleLowerCase();
 
     const reportDate = new Date(report.found_date).toISOString().split("T")[0];
@@ -165,25 +164,35 @@ export default function ItemManagement() {
 
   // HANDLE APPLY FILTER
   const handleApplyFilters = () => {
-    console.log(statusTemp)
-    console.log(reports[0])
     setSearch(searchTemp);
     setLocation(locationTemp);
     setCategory(categoryTemp);
 
-    if(statusTemp.toLocaleLowerCase() === 'for disposal'){
+    if (statusTemp.toLocaleLowerCase() === 'for disposal') {
       setStatus("to_be_disposed");
-    }else{
+    } else {
       setStatus(statusTemp);
     }
-    
+
     setDateFound(dateFoundTemp);
   };
 
-  // HANDLE QR SCAN USE DATA
+  // HANDLE QR SCAN USE DATA (for log via QR)
   const handleQRUseData = (data) => {
     setQrPrefillData(data);
     setOpenLogItem(true);
+  };
+
+  // HANDLE QR ITEM FINDER — opens modal for scanned item
+  const handleQRItemFound = (itemId) => {
+    const report = reports.find(
+      (r) => String(r.item_id) === String(itemId)
+    );
+    if (report) {
+      setSelectedItem(report);
+    } else {
+      alert(`Item SI-${String(itemId).padStart(5, "0")} not found in the system.`);
+    }
   };
 
   // EXPORT CSV
@@ -215,6 +224,7 @@ export default function ItemManagement() {
           </div>
           <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
             <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={downloadCSV} />
+            <AdminButton icon={ScanLine} label="Find via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRFinder(true)} />
             <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
             <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenLogItem(true)} />
           </div>
@@ -271,12 +281,21 @@ export default function ItemManagement() {
         />
       )}
 
-      {/* QR Scan Modal */}
+      {/* QR Scan Modal (Log via QR) */}
       {openQRScan && (
         <QRScanModal
           open={openQRScan}
           setOpen={setOpenQRScan}
           onUseData={handleQRUseData}
+        />
+      )}
+
+      {/* QR Item Finder Modal (Find via QR) */}
+      {openQRFinder && (
+        <QRItemFinderModal
+          open={openQRFinder}
+          setOpen={setOpenQRFinder}
+          onItemFound={handleQRItemFound}
         />
       )}
     </>

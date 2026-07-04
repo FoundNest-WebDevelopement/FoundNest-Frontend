@@ -1,6 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
+import logowhite from "../assets/logowhite.png";
+import bsulogo from "../assets/bsulogo.png";
+import bsu from "../assets/bsu.jpg";
 import { useState, useEffect } from "react";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -41,14 +46,13 @@ function Login() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password,}),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (res.ok) {
-        // Save token and user data
         localStorage.setItem("token", data.accessToken);
         localStorage.setItem("user_id", data.user.user_id);
         localStorage.setItem("role", data.user.user_role);
@@ -59,24 +63,22 @@ function Login() {
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("course_section", data.user.course_section || "");
 
-        // Remember Me
         if (rememberMe) {
           localStorage.setItem("remembered_email", email);
         } else {
           localStorage.removeItem("remembered_email");
         }
 
-        // Role based redirect
         if (data.user.user_role === "super_admin") {
           navigate("/superadmin/");
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
           localStorage.setItem("office_name", data.user.office_name || "");
-          navigate("/admin"); 
+          navigate("/admin");
         } else {
           navigate("/home");
-        } 
+        }
       } else {
         setError(data.message || "Invalid email or password. Please try again.");
       }
@@ -87,8 +89,233 @@ function Login() {
     }
   };
 
-  return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden">
+  // ── DESKTOP LAYOUT (md and above) ────────────────────────────────────────
+const DesktopLogin = (
+  <div
+    className="hidden md:flex h-screen w-screen items-center justify-center"
+    style={{
+      position: "relative",
+      overflow: "hidden",
+    }}
+  >
+
+    {/* Background Image */}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage: `url(${bsu})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        zIndex: 0,
+      }}
+    />
+
+    {/* Red Transparent Overlay */}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "radial-gradient(circle at 85% 10%, rgba(255,91,91,.30) 0%, rgba(225,27,27,.45) 28%, rgba(179,0,0,.60) 65%, rgba(146,0,0,.75) 100%)",
+        zIndex: 1,
+      }}
+    />
+
+    <div
+      className="bg-white rounded-2xl shadow-2xl overflow-hidden flex"
+      style={{
+        width: "980px",
+        height: "560px",
+        boxShadow: "0 15px 45px rgba(0,0,0,.20)",
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
+
+      {/* Left — Form Side */}
+      <div
+        className="bg-white flex flex-col justify-center"
+        style={{
+          width: "54%",
+          paddingLeft: "58px",
+          paddingRight: "58px",
+        }}
+      >
+
+        {/* BulSU Logo + WELCOME */}
+        <div className="flex items-center gap-2 mb-7 -ml-4">
+          <img
+            src={bsulogo}
+            alt="BulSU Logo"
+            className="w-25 h-25 object-contain"
+          />
+
+          <div>
+            <p
+              className="uppercase tracking-wider"
+              style={{
+                color: "#777",
+                fontSize: "16px",
+                fontWeight: 500,
+              }}
+            >
+              Welcome
+            </p>
+
+            <h1
+              style={{
+                fontSize: "26px",
+                fontWeight: 600,
+                color: "#161616",
+                lineHeight: "1.15",
+              }}
+            >
+              Log in to your account
+            </h1>
+          </div>
+        </div>
+
+        {/* Email */}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError("");
+          }}
+          className="w-full border border-[#d8d8d8] bg-white outline-none"
+          style={{
+            height: "52px",
+            padding: "0 15px",
+            fontSize: "15px",
+            marginBottom: "18px",
+          }}
+        />
+
+        {/* Password */}
+        <div className="relative mb-5">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError("");
+            }}
+            className="w-full border border-[#d8d8d8] bg-white outline-none"
+            style={{
+              height: "52px",
+              paddingLeft: "15px",
+              paddingRight: "45px",
+              fontSize: "15px",
+            }}
+          />
+
+          <button
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2"
+          >
+            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+          </button>
+        </div>
+
+        {/* Remember Me + Forgot Password */}
+        <div className="flex items-center justify-between mb-6">
+          <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              style={{
+                width: "14px",
+                height: "14px",
+                accentColor: "#990000",
+                cursor: "pointer",
+              }}
+            />
+            Remember me
+          </label>
+
+          <button
+            onClick={() => navigate("/forgot-password")}
+            className="text-[#990000] text-sm font-medium hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
+
+        {/* Login Button */}
+        <button
+          onClick={handleLogin}
+          disabled={loading || !isLoginValid}
+          className="w-full text-sm font-semibold transition-all active:scale-95"
+          style={{
+            height: "48px",
+            backgroundColor: isLoginValid
+              ? "#990000"
+              : "rgba(153,0,0,.30)",
+            color: "white",
+            cursor: isLoginValid ? "pointer" : "default",
+            boxShadow: "0 4px 10px rgba(0,0,0,.18)",
+          }}
+        >
+          {loading ? "Logging in..." : "Log In"}
+        </button>
+
+        {/* Error */}
+        {error && (
+          <p className="text-xs text-red-500 text-center mt-4">
+            {error}
+          </p>
+        )}
+      </div>
+
+      {/* Right — Brand Card */}
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{
+          width: "48%",
+          margin: "14px",
+          borderRadius: "12px",
+          background:
+            "radial-gradient(circle at 85% 10%, #ff5b5b 0%, #e11b1b 28%, #b30000 65%, #920000 100%)",
+          paddingTop: "55px",
+          paddingBottom: "45px",
+          paddingLeft: "40px",
+          paddingRight: "40px",
+        }}
+      >
+
+        <div className="flex flex-col items-center">
+          <img
+            src={logowhite}
+            alt="FoundNest"
+            className="w-52 h-52 object-contain"
+          />
+
+          <p className="text-white text-[25px] font-bold mt-2">
+            FoundNest
+          </p>
+        </div>
+
+        <p className="text-white text-sm text-center leading-6 opacity-90">
+          A Lost &amp; Found Management System
+          <br />
+          for Bulacan State University.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+);
+
+  // ── MOBILE LAYOUT (original) ─────────────────────────────────────────────
+  const MobileLogin = (
+    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <button
           onClick={() => navigate("/")}
@@ -134,7 +361,7 @@ function Login() {
             />
             Remember me
           </label>
-          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text text-xs">
+          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs">
             Forgot password?
           </button>
         </div>
@@ -166,6 +393,13 @@ function Login() {
         )}
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {DesktopLogin}
+      {MobileLogin}
+    </>
   );
 }
 

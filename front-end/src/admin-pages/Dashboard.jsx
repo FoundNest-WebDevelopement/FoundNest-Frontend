@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { ClipboardList, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -61,13 +61,6 @@ export default function Dashboard() {
             bg: "bg-green-50",
         },
         {
-            label: "Pending Claims",
-            value: stats?.pending_claims ?? "--",
-            sub: "Awaiting Verification",
-            icon: <Clock size={28} className="text-blue-400" />,
-            bg: "bg-blue-50",
-        },
-        {
             label: "Unclaimed Items (>30 days)",
             value: stats?.unclaimed_30_days ?? "--",
             sub: "To be donated",
@@ -85,7 +78,7 @@ export default function Dashboard() {
             </p>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {statCards.map((card, i) => (
                     <div key={i} className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5 flex flex-col gap-3">
                         <p className="text-sm text-gray-500">{card.label}</p>
