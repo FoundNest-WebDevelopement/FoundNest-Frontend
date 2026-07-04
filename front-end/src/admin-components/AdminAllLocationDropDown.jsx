@@ -5,6 +5,7 @@ export default function AdminAllLocationDropDown({title,
   onChange = () => {},
   reqField,
   disabled,
+  hidePlaceholder = true,
 }) {
   const safeOptions = Array.isArray(options) ? options : [];
 
@@ -26,7 +27,10 @@ export default function AdminAllLocationDropDown({title,
         required
       >
 
-        <option hidden disabled value="">
+        <option 
+        hidden={hidePlaceholder}
+        disabled={hidePlaceholder} 
+        value="">
           {placeholder}
         </option>
 

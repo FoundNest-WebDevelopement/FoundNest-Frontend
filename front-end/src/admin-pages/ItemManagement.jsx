@@ -10,7 +10,7 @@ import FoundItemModal from "../admin-components/FoundItemModal";
 import QRScanModal from "../admin-components/QRScanModal";
 import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -25,6 +25,7 @@ export default function ItemManagement() {
 
   // Redirect states
   const [searchParams] = useSearchParams();
+  const useLoc     = useLocation();
   const [selectedItem, setSelectedItem] = useState(null);
   const navigatedItemId = searchParams.get("itemId");
 
@@ -126,7 +127,7 @@ export default function ItemManagement() {
       (r) => String(r.item_id) === String(navigatedItemId)
     );
     if (report) setSelectedItem(report);
-  }, [navigatedItemId, reports]);
+  }, [navigatedItemId, reports, useLoc.key]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/offices`)
@@ -264,7 +265,7 @@ export default function ItemManagement() {
           }}
           categories={categories}
           locations={locations}
-          allLocations={allLocations}
+          allLocations={allLocations} 
           prefillData={qrPrefillData}
           onUpdated={setReports}
           setSelectedItem={setSelectedItem}

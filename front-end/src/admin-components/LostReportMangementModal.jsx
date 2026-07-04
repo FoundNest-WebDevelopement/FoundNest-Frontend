@@ -27,11 +27,15 @@ export default function LostReportMangementModal(
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
 
+    const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
+    const officeIdNotification = localStorage.getItem("office_location");
+
     //mark as resovle toggle variable
     const [resolved, setResolved] = useState(false);
 
     const [openArchiveDialog, setOpenArchiveDialog] = useState(false);
     const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
+   
 
     //Close and reset Modal
     const handleCloseModal = () => {
@@ -89,6 +93,9 @@ export default function LostReportMangementModal(
                 `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/resolve`,
                 {
                     method: "PATCH",
+                    body: JSON.stringify({
+                    admin_full_name: adminFullName,
+                    }),   
                 }
             );
 
@@ -137,6 +144,12 @@ export default function LostReportMangementModal(
             `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/archive`,
             {
                 method: "PUT",
+                body: JSON.stringify({
+                office_id: officeIdNotification,
+                admin_full_name: adminFullName,
+                }),  
+                
+
             }
         );
 
@@ -191,6 +204,10 @@ const handleRestoreReport = async () => {
             `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/restore`,
             {
                 method: "PUT",
+                body: JSON.stringify({
+                office_id: officeIdNotification,
+                admin_full_name: adminFullName,
+                }), 
             }
         );
 
@@ -629,6 +646,8 @@ const handleRestoreReport = async () => {
         )
 
       }
+
+     
         </>
     )
 }

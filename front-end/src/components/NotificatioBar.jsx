@@ -19,12 +19,14 @@ export default function NotificationBar() {
       .then((res) => res.json())
       .then((data) => {
         setUnreadCount(data.unreadCount);
+        console.log(data.unreadCount)
       })
       .catch(console.error);
   };
 
   // Run First
   fetchUnreadCount();
+  
 
   // RUN EVRY 10secs
   const interval = setInterval(fetchUnreadCount, 2000);

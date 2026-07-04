@@ -14,6 +14,11 @@ import NotificationBar from "./components/NotificatioBar";
 import FoundItemDetails from "./pages/FoundItemDetails";
 import NotificationDetails from "./pages/NotificationDetails";
 import Admin from "./Admin";
+import AdminRoute from "./components/AdminRoute";
+import UserRoute from "./components/UserRoute";
+import SuperAdmin from "./SuperAdmin";
+import SuperAdminRoute from "./components/SuperAdminRoute";
+
 
 // hide the dock and notif from landingpage, log, reg page
 function Layout() {
@@ -22,12 +27,18 @@ function Layout() {
   ["/", "/login", "/register", "/forgot-password"].includes(
     location.pathname
   ) ||
-  location.pathname.startsWith("/admin");
+  location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/super_admin");
   return (
     <>
       {!hideNav && <NotificationBar />}
       <Routes>
+        {/* Public */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+         <Route element={<UserRoute/>}>
         <Route path="/home" element={<Home />} />
         <Route path="/map" element={<Map />} /> 
         <Route path="/report" element={<Report />} />
@@ -36,10 +47,17 @@ function Layout() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<Notification />} />
         <Route path="/notifications/:id" element={<NotificationDetails />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        </Route>
+        
         {/* Admin Route */}
-        <Route path="/admin/*" element={<Admin/>} />
+         <Route element={<AdminRoute />}>
+          <Route path="/admin/*" element={<Admin />} />
+        </Route>
+
+        {/* Super Admin Route */}
+         <Route element={<SuperAdminRoute />}>
+          <Route path="/super_admin/*" element={<SuperAdmin />} />
+        </Route>
       </Routes>
       {!hideNav && <Dock />}
     </>

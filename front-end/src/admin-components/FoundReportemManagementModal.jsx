@@ -29,6 +29,10 @@ export default function FoundReportItemManagementModal({
   allLocations = [],
 }) {
   const API_URL = import.meta.env.VITE_API_URL;
+
+  const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
+  const officeIdNotification = localStorage.getItem("office_location");
+
   const [linkModal, setLinkModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [imageSelected, setImageSelected] = useState(false);
@@ -167,6 +171,7 @@ export default function FoundReportItemManagementModal({
 
       // Admin Processing Claim
       formData.append("processed_by_admin_id", adminId);
+      formData.append("admin_full_name", adminFullName);
       formData.append("user_id", userId);
 
       // Optional linked report
@@ -803,6 +808,15 @@ const handleDisposedItem = async () => {
       donationDate
     );
 
+    formData.append(
+      "office_id",
+      officeIdNotification
+    );
+    formData.append(
+      "admin_full_name",
+      adminFullName
+    );
+
     if (selectedProofFile) {
       formData.append(
         "proof_img",
@@ -891,6 +905,13 @@ const handleDisposedItem = async () => {
         `${API_URL}/api/found-reports/${foundReportId}/archive`,
         {
           method: "PUT",
+           headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        office_id: officeIdNotification,
+        admin_full_name: adminFullName,
+      }),
         }
       );
 
@@ -935,6 +956,13 @@ const handleDisposedItem = async () => {
         `${API_URL}/api/found-reports/${foundReportId}/restore`,
         {
           method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            office_id: officeIdNotification,
+            admin_full_name: adminFullName,
+          }),
         }
       );
 
@@ -965,7 +993,7 @@ const handleDisposedItem = async () => {
     } catch (error) {
       setOpenRestoreDialog(false);
       setIsRestoring(false);
-      toast.success(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
+      toast.error(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
       console.error(error);
       alert(error.message);
     }

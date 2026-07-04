@@ -22,6 +22,9 @@ export default function TransactionManagementModal(
 
     const API_URL = import.meta.env.VITE_API_URL;
     const [isReverting, setIsReverting] = useState(false);
+
+    const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
+  const officeIdNotification = localStorage.getItem("office_location");
   
 
     //Close and reset Modal
@@ -55,6 +58,8 @@ export default function TransactionManagementModal(
         method: "PATCH",
         body: JSON.stringify({
           claimant_status: false,
+          office_id: officeIdNotification,
+          admin_full_name: adminFullName,
         }),
       }
     );

@@ -1,6 +1,6 @@
 import { Info } from "lucide-react";
 
-export default function AdminConfirmDialog({
+export default function ConfirmDialog({
   title = "Discard Changes?",
   description,
   confirmText = "Discard",
@@ -10,7 +10,7 @@ export default function AdminConfirmDialog({
   Icon = Info,
   iconColor = "text-[#4A5568]" ,
   message,
-  disabled
+  disabled,
   
 }) {
   return (
@@ -52,8 +52,8 @@ export default function AdminConfirmDialog({
 
             <button
               type="button"
-              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95
-              disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40
+              disabled:cursor-not-allowed"
               disabled={disabled}
               onClick={onConfirm}
             >

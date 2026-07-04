@@ -14,6 +14,9 @@ const navigate = useNavigate();
 const [report,setReport] = useState();
 const [touchStart, setTouchStart] = useState(0);
 
+const [claimSteps, setClaimSteps] = useState([]);
+const [isLoadingSteps, setIsLoadingSteps] = useState(false);
+
 const handleTouchStart = (e) => {
   setTouchStart(e.touches[0].clientY);
 };
@@ -41,9 +44,40 @@ const [howToClaim,setHowToClaim] = useState(false);
             });
     }, [])
 
+    const fetchClaimSteps = async () => {
+        try {
+            setIsLoadingSteps(true);
+            const response = await fetchWithAuth(`${API_URL}/api/policies`);
+            const data = await response.json();
+ 
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to fetch claim process.");
+            }
+ 
+            const claimPolicy = data.find(
+                (policy) => policy.policy_name === "Item Claim Process"
+            );
+ 
+            if (claimPolicy) {
+                const parsedSteps = JSON.parse(claimPolicy.policy_value);
+                setClaimSteps(parsedSteps);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsLoadingSteps(false);
+        }
+    };
+ 
+    useEffect(() => {
+        fetchClaimSteps();
+    }, []);
+
     const handleReturn = () => {
         navigate(`/find`)
     }
+
+
 
     return(
         <>
@@ -94,12 +128,12 @@ const [howToClaim,setHowToClaim] = useState(false);
                     )
 
                 }
-                {howToClaim &&
+                   {howToClaim &&
                 (<>
                     <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-10 transition-transform
 duration-100">
                                          
-                                    <div className="bg-white w-full max-w-md p-4 rounded-t-4xl flex flex-col gap-2  pb-22"
+                                    <div className="bg-white w-full max-w-full p-4 rounded-t-4xl flex flex-col gap-2  pb-22"
                                          onTouchStart={handleTouchStart}
                                             onTouchEnd={handleTouchEnd}>
                                                   <hr className="border-(--color-tertiary) border-3 rounded-full mx-22 my-2 opacity-30" />       
@@ -107,25 +141,27 @@ duration-100">
                                             <p >How to Claim?</p>
                                         </div>
                                       <div className="text-xs w-full flex flex-col gap-2">
-                                          <div className="flex flex-col gap-2">
-                                            <p className="font-semibold">Step 1: Bring Proof</p>
-                                            <p>Please bring your BulSU Student ID/COR/or any form of identification and be ready to provide proof of ownership (e.g., describing a unique detail on an item, showing a photo of you while holding the item, or unlocking the item for devices).</p>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <p className="font-semibold">Step 2: Visit the Office</p>
-                                            <p>Proceed to the FoundNest Office listed on the item details.</p>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <p className="font-semibold">Step 3: Final Photo</p>
-                                            <p>Our staff will take a quick photo of the turnover for our security records and to finalize the process.</p>
-                                        </div>
+                                          {isLoadingSteps && (
+                                              <p className="text-center py-4">Loading steps...</p>
+                                          )}
+ 
+                                          {!isLoadingSteps && claimSteps.map((step, index) => (
+                                              <div key={index} className="flex flex-col gap-2">
+                                                  <p className="font-semibold">Step {index + 1}: {step.title}</p>
+                                                  <p>{step.description}</p>
+                                              </div>
+                                          ))}
+ 
+                                          {!isLoadingSteps && claimSteps.length === 0 && (
+                                              <p className="text-center py-4">No claim instructions available.</p>
+                                          )}
                                       </div>
                             
                                  
                                     </div>
                                   </div>
                 </>)
-
+ 
                 }
 
               </div>

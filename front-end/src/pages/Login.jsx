@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
 import { useState, useEffect } from "react";
 
@@ -25,6 +25,22 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+
+   const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (token) {
+      switch (role) {
+        case "super_admin":
+          return <Navigate to="/super_admin" replace />;
+        case "admin":
+          return <Navigate to="/admin" replace />;
+        default:
+          return <Navigate to="/home" replace />;
+      }
+    }
+
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("remembered_email");
@@ -68,7 +84,10 @@ function Login() {
 
         // Role based redirect
         if (data.user.user_role === "super_admin") {
-          navigate("/superadmin/");
+          localStorage.setItem("super_admin_id", data.user.super_admin_id);
+          localStorage.setItem("office_location", data.user.office_location);
+          localStorage.setItem("office_name", data.user.office_name || "");
+          navigate("/super_admin");
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);

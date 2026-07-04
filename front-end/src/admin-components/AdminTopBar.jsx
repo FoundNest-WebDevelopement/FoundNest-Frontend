@@ -1,10 +1,116 @@
 import icon from "../assets/lfms_icon.png"
 import { NavLink } from "react-router-dom";
-import { Bell } from "lucide-react";
-import { useState } from "react";
+import { Bell} from "lucide-react";
+import { useEffect, useState } from "react";
+import AdminNotificationDropdown from "./AdminNotificationDropdown";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
-export default function AdminTopBar({tabName}) {
+
+export default function AdminTopBar({ tabName }) {
+    const API_URL = import.meta.env.VITE_API_URL;
     const fullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const userId = localStorage.getItem("user_id"); 
+    
+
+    useEffect(() => {
+    if (!userId) return;
+
+    const loadNotifications = async () => {
+        await fetchNotifications();
+    };
+
+    loadNotifications();
+
+    const interval = setInterval(loadNotifications, 10000);
+
+    return () => clearInterval(interval);
+
+}, [userId]);
+
+const fetchNotifications = async () => {
+    try {
+        const params = new URLSearchParams();
+
+        if (userId) params.append("userId", userId);
+
+        const [response, count] = await Promise.all([
+            fetchWithAuth(`${API_URL}/api/notifications/admin?${params.toString()}`),
+            getAdminUnreadNotificationCount(),
+        ]);
+
+        const data = await response.json();
+
+        setNotifications(data);
+        setUnreadCount(count);
+
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+
+const getAdminUnreadNotificationCount = async () => {
+    try {
+        const response = await fetchWithAuth(
+            `${API_URL}/api/notifications/admin/unread/${userId}`
+        );
+
+        const data = await response.json();
+
+        return data.unreadCount;
+
+    } catch (err) {
+        console.error(err);
+        return 0;
+    }
+};
+
+const markAdminNotificationAsRead = async (notificationId) => {
+    try {
+        const response = await fetchWithAuth(
+            `${API_URL}/api/notifications/admin/${notificationId}/read/${userId}`,
+            {
+                method: "POST",
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to mark notification as read");
+        }
+
+        await fetchNotifications();
+
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+const markAllAdminNotificationsAsRead = async () => {
+    try {
+        const response = await fetchWithAuth(
+            `${API_URL}/api/notifications/admin/read-all/${userId}`,
+            {
+                method: "POST",
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to mark all notifications as read");
+        }
+
+        await fetchNotifications();
+
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+
+
     return (
         <>
             <div className="h-full w-full bg-white flex">
@@ -24,23 +130,52 @@ export default function AdminTopBar({tabName}) {
                     <div className="font-semibold text-xl">
                         <p>{tabName}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <NavLink
-                            to="/notifications"
-                            className={({ isActive }) =>
-                                isActive
-                                    ? "text-(--color-primary)"
-                                    : "text-(--color-primary)"
-                            }
-                        >
+                    <div className="flex items-center gap-2 ">
+                        <div className="relative group flex items-center justify-center">
+                            <button
+                                className={`text-primary outline-none relative
+                                `}
+                                onClick={() => { setIsNotifOpen(!isNotifOpen) }}
+                            >
 
-                            {({ isActive }) =>
-                                isActive ? (
-                                    <Bell className="size-6 fill-current" />
-                                ) :
-                                    <Bell className="size-6" />
-                            }
-                        </NavLink>
+                                {isNotifOpen ? (
+                                    <Bell className="size-6 fill-current" strokeWidth={2.5} />
+                                ) : (
+                                    <Bell className="size-6" strokeWidth={2} />
+                                )}
+
+                                {unreadCount > 0 &&
+                                (
+                                    <div className="absolute -top-2 left-3 p-0.5 px-1 bg-(--color-quaternary) rounded-full">
+                                    <p className="text-black text-[9px] font-semibold">{unreadCount}</p>
+                                </div>
+                                )
+
+                                }
+                            </button>
+                              {isNotifOpen && (
+                                    <AdminNotificationDropdown
+                                        notifications={notifications}
+                                        setIsNotifOpen={setIsNotifOpen}
+                                        markAllAsRead={markAllAdminNotificationsAsRead}
+                                        markAdminNotificationAsRead={markAdminNotificationAsRead}
+                                        notifCount={unreadCount}
+                                    />
+                                )}
+                            {/* <div
+                                className={`absolute right-0 top-full h-fit w-120 origin-right transition-transform duration-300 z-50 
+                                            flex flex-col rounded-lg border border-[#DDD9CF]  bg-[#FFFFFF] mt-2 overflow-hidden
+                                    ${isNotifOpen ? "scale-x-100" : "scale-x-0"
+                                    }`}
+                            >
+                                <div className="w-full h-fit rounded-t-lg flex justify-between items-center p-4">
+                                    <p className="text-primary font-semibold text-xl">Notifications</p>
+                                    <button className="text-primary underline text-">Mark all as read</button>
+                                </div>
+                    
+                            </div> */}
+
+                        </div>
                         <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
                             <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
                             <p className="text-sm text-[#1A1208]">{fullName}</p>

@@ -7,7 +7,7 @@ import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import TransactionTable from "../admin-components/TransactionTable"
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 
 
 
@@ -17,6 +17,7 @@ export default function Transactions() {
     
     //SEARCH PARAMS
     const [searchParams] = useSearchParams();
+    const useLoc     = useLocation();
     const navigatedClaimId = searchParams.get("claimId");
 
     const statuses = [
@@ -89,7 +90,7 @@ export default function Transactions() {
         if (selectedTransaction ) {
             setSelectedRecord(selectedTransaction );
         }
-    }, [navigatedClaimId, records]);
+    }, [navigatedClaimId, records, useLoc.key]);
     //OFFICES FETCH
     useEffect(() => {
         fetch(`${API_URL}/api/offices`)

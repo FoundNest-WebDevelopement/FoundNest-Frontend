@@ -8,6 +8,8 @@ import AdminLocationDropDown from "./AdminLocationDropDown";
 import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { Phone } from "lucide-react";
+import AdminConfirmDialog from "./AdminConfirmDialog";
+import { toast } from "react-toastify";
 
 export default function LostReportModal(
     {
@@ -19,10 +21,15 @@ export default function LostReportModal(
         offices = [],
         gates = [],
         onUpdated,
+        setSelectedItem,
     }
 ) {
     //API URL
     const API_URL = import.meta.env.VITE_API_URL;
+
+    const [openConfirmReportDialog, setOpenConfirmReportDialog] = useState(false);
+    const [openCancelReportDialog, setOpenCancelReportDialog] = useState(false);
+
     //MODAL CONST
     const adminID = localStorage.getItem("admin_id")
     const userId = localStorage.getItem("user_id")
@@ -53,6 +60,8 @@ export default function LostReportModal(
     const [showGates, setShowGates] = useState(false);
 
     const [cantRemember, setCantRemember] = useState(false);
+
+
 
 
     //HANDLE LOCATION CHANGE
@@ -151,6 +160,9 @@ export default function LostReportModal(
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
         email
     );
+  const oneIdentetifier = 
+        (email && isValidEmail) ||
+        (contactNumber && isValidPhone);
 
     //FORM VALIDATOR CHECKER
     const isFormValid =
@@ -161,7 +173,10 @@ export default function LostReportModal(
         timeLost &&
         dateValid &&
         ownerName &&
+       oneIdentetifier &&
         timeValid;
+
+  
 
     //FORM REFRESHER
     const resetForm = () => {
@@ -182,6 +197,26 @@ export default function LostReportModal(
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+    };
+
+
+    const hasUnsavedChanges =
+    selectedFile !== null ||
+    itemName.trim() !== "" ||
+    category !== "" ||
+    description.trim() !== "" ||
+    contents.trim() !== "" ||
+    locationLost.length > 0 ||
+    specificLocation.trim() !== "" ||
+    dateLost !== "" ||
+    timeLost !== "" ||
+    ownerName.trim() !== "" ||
+    email.trim() !== "" ||
+    contactNumber.trim() !== "";
+
+    //format rpt  id
+    const formatReportId = (id) => {
+        return `RPT-${String(id).padStart(5, "0")}`;
     };
 
     //FILE CHANGE HANDLER
@@ -246,6 +281,7 @@ export default function LostReportModal(
 
         try {
             setIsSubmitting(true);
+            setOpenConfirmReportDialog(false);
 
             const formData = new FormData();
             formData.append("image", selectedFile);
@@ -256,13 +292,13 @@ export default function LostReportModal(
             formData.append("description", description);
             formData.append("contents", contents);
             const locationValue =
-            locationLost.length === 1
-                ? locationLost[0]
-                : JSON.stringify(locationLost);
-                formData.append(
-                    "location_lost",
-                    locationValue
-                );
+                locationLost.length === 1
+                    ? locationLost[0]
+                    : JSON.stringify(locationLost);
+            formData.append(
+                "location_lost",
+                locationValue
+            );
 
             formData.append("specific_location", specificLocation);
             formData.append("lost_date", `${dateLost} ${timeLost}`);
@@ -291,9 +327,15 @@ export default function LostReportModal(
             if (Array.isArray(reportsData)) {
                 onUpdated?.(reportsData);
             }
+            const createdReport = reportsData.find(
+            report => report.lost_report_id === data.report.lost_report_id
+            );
+
+            setSelectedItem(createdReport);
 
 
-            alert("Reported Created Succesfully")
+           
+            toast.success(`Report ${formatReportId(data.report.lost_report_id)} submitted successfully`)
             resetForm();
             setOpen(false);
         } catch (error) {
@@ -316,7 +358,13 @@ export default function LostReportModal(
                             Add New Report
                         </p>
 
-                        <button type="button" onClick={handleClose}>
+                        <button type="button" onClick={()=>{
+                             if (hasUnsavedChanges) {
+                                                setOpenCancelReportDialog(true);
+                                            } else {
+                                                handleClose();
+                                            }
+                        }}>
                             <i className="fa-solid fa-xmark text-xl text-white"></i>
                         </button>
 
@@ -334,7 +382,8 @@ export default function LostReportModal(
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                                disabled={isSubmitting}
+                                className="relative w-full disabled:cursor-not-allowed h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                             >
                                 {image ? (
                                     <>
@@ -360,6 +409,7 @@ export default function LostReportModal(
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
+                                disabled={isSubmitting}
                                 onChange={handleFileChange}
                             />
                             {isAnalyzing && (
@@ -375,6 +425,7 @@ export default function LostReportModal(
                             value={itemName}
                             onChange={setItemName}
                             reqField={true}
+                            disabled={isSubmitting}
                         />
 
                         <AdminCategoriesDropdown
@@ -384,6 +435,7 @@ export default function LostReportModal(
                             onChange={setCategory}
                             options={categories}
                             reqField={true}
+                            disabled={isSubmitting}
 
                         />
 
@@ -392,6 +444,7 @@ export default function LostReportModal(
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
                             onChange={setDescription}
+                            disabled={isSubmitting}
 
 
                         />
@@ -401,6 +454,7 @@ export default function LostReportModal(
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
                             onChange={setContents}
+                            disabled={isSubmitting}
 
                         />
                         <div className="dropdown w-full">
@@ -409,7 +463,8 @@ export default function LostReportModal(
                             <p className="text-sm font-medium mt-2">Location Lost <span className="text-primary">*</span></p>
                             <button
                                 type="button"
-                                className={`p-2.5 px-3 justify-between mt-2 flex border border-[#DDD9CF] bg-white rounded-md text-sm w-full text-center
+                                disabled={isSubmitting}
+                                className={`p-2.5 px-3 justify-between mt-2 flex border border-[#DDD9CF] bg-white rounded-md text-sm w-full text-center disabled:cursor-not-allowed
                                                     ${showDropdown && "border-black"}        
                                             `}
                                 onClick={() =>
@@ -575,6 +630,7 @@ export default function LostReportModal(
                             title="Specific Location"
                             value={specificLocation}
                             onChange={setSpecificLocation}
+                            disabled={isSubmitting}
 
                         />
 
@@ -582,6 +638,7 @@ export default function LostReportModal(
                             title="Date Lost"
                             value={dateLost}
                             onChange={handleDateChange}
+                            disabled={isSubmitting}
                             reqField={true}
                             error={dateLost && !dateValid}
                             max={new Date().toISOString().split("T")[0]}
@@ -598,7 +655,7 @@ export default function LostReportModal(
                             onChange={setTimeLost}
                             reqField={true}
                             error={dateValid && timeLost && !timeValid}
-                            disabled={!dateValid}
+                            disabled={!dateValid || isSubmitting}
                         />
                         {dateLost && !dateValid && (
                             <p className="text-xs text-yellow-500 mt-1 ml-1">
@@ -615,12 +672,14 @@ export default function LostReportModal(
                             value={ownerName}
                             onChange={setOwnerName}
                             reqField={true}
+                            disabled={isSubmitting}
                         />
                         <AdminTextField
                             title="Email"
                             placeholder="Juan@gmail.com"
                             value={email}
                             onChange={setEmail}
+                            disabled={isSubmitting}
                         />
                         {!isValidEmail && email &&
                             <span className="text-xs text-primary">Please enter a valid Email</span>
@@ -632,6 +691,7 @@ export default function LostReportModal(
                             placeholder="09XXXXXXXXX"
                             value={contactNumber}
                             onChange={setContactNumber}
+                            disabled={isSubmitting}
                         />
                         {!isValidPhone && contactNumber &&
                             <span className="text-xs text-primary">Please enter a valid phone number</span>
@@ -641,6 +701,7 @@ export default function LostReportModal(
                             title="Logged By"
                             value={AdminFullName}
                             disabled={true}
+                            disabled={isSubmitting}
 
                         />
 
@@ -650,7 +711,11 @@ export default function LostReportModal(
                     <div className="h-18 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
                         <button
                             type="button"
-                            onClick={handleClose}
+                            onClick={() => { if (hasUnsavedChanges) {
+                                                setOpenCancelReportDialog(true);
+                                            } else {
+                                                handleClose();
+                                            }}}
                             className="font-medium text-sm text-primary border border-primary p-3 rounded-md"
                         >
                             Cancel
@@ -663,8 +728,8 @@ export default function LostReportModal(
                                 isSubmitting ||
                                 (email.trim() !== "" && !isValidEmail) ||
                                 (contactNumber.trim() !== "" && !isValidPhone)
-                                }
-                            onClick={handleSubmit}
+                            }
+                            onClick={() => setOpenConfirmReportDialog(true)}
                             className={`font-medium text-sm text-white border border-primary p-3 rounded-md bg-primary disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             {isSubmitting ? "Adding..." : "Add Report"}
@@ -674,6 +739,37 @@ export default function LostReportModal(
                 </div>
 
             </dialog>
+
+            {openConfirmReportDialog &&
+                (
+                    <AdminConfirmDialog
+                        title="Review Report"
+                        description={`Publishing this report will make it visible to everyone on FoundNest. Please review your photo, item, 
+                and owner details to ensure everything is accurate before submitting the report."`}
+                        cancelText="Cancel"
+                        confirmText="Confirm"
+                        onClose={() => setOpenConfirmReportDialog(false)}
+                        onConfirm={handleSubmit}
+                    />
+                )
+
+            }
+
+            {openCancelReportDialog &&
+                (
+                    <AdminConfirmDialog
+                        title="Review Report"
+                        description={`Any information or progress you've entered on this report form will be permanently lost.`}
+                        cancelText="Keep Editing"
+                        confirmText="Discard"
+                        onClose={()=>setOpenCancelReportDialog(false)}
+                        onConfirm={handleClose}
+                    />
+                )
+
+            }
+
+
         </>
     )
 }
