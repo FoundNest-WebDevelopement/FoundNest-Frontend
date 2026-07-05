@@ -5,7 +5,7 @@ import bsulogo from "../assets/bsulogo.png";
 import bsu from "../assets/bsu.jpg";
 import { useState, useEffect } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "https://foundnest-backend.onrender.com";
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
