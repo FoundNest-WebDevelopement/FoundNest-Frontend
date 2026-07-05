@@ -58,7 +58,7 @@ function Login() {
   const isLoginValid = email.trim() !== "" && password.trim() !== "";
 
   const handleLogin = async () => {
-    console.log("API_URL:", API_URL);
+  
     if (!isLoginValid) return;
     setError("");
     setLoading(true);
