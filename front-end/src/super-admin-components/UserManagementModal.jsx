@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import formatDate from "../utils/formatDate";
 import Button from "../global-components/Button";
 import ConfirmDialog from "../global-components/ConfirmDialog";
-import { TriangleAlert, Lock, LockKeyholeOpen } from "lucide-react"
+import { TriangleAlert, Lock, LockKeyholeOpen, Download } from "lucide-react"
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import TextArea from "../global-components/TextArea";
@@ -35,9 +35,13 @@ export default function UserManagementModal(
     const [openRevokePrivillege, setOpenRevokePrivillege] = useState(false);
     const [openLockAccount, setOpenLockAccount] = useState(false);
     const [openActivateAccount, setOpenActivateAccount] = useState(false);
+    const [openExportActivity, setOpenExportActivity] = useState(false);
 
     //Account Setting states
     const [lockingReason, setLockingReason] = useState("");
+
+    //Export state
+    const [isExporting, setIsExporting] = useState(false);
 
     const formatUsrId = (id) => {
         return `USR-${String(id).padStart(5, "0")}`;
@@ -148,7 +152,7 @@ export default function UserManagementModal(
     const fetchUserActionLogs = async (userId) => {
         try {
             setIsLoadingLogs(true);
-            const response = await fetchWithAuth(`${API_URL}/api/action-logs`);
+            const response = await fetchWithAuth(`${API_URL}/api/action-logs/user/${userId}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -162,6 +166,37 @@ export default function UserManagementModal(
             toast.error(error.message);
         } finally {
             setIsLoadingLogs(false);
+        }
+    };
+
+    const handleExportActivity = async () => {
+        try {
+            setIsExporting(true);
+            setOpenExportActivity(false);
+
+            const response = await fetchWithAuth(
+                `${API_URL}/api/export/action-logs/csv?userId=${selectedUser.user_id}`
+            );
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.message || "Failed to export activity logs.");
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `activity_${formatUsrId(selectedUser.user_id)}_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            toast.success(`Activity log for ${formatUsrId(selectedUser.user_id)} exported successfully.`);
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message);
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -399,39 +434,46 @@ export default function UserManagementModal(
                         }
                         {activeTab === 'ACTIVITY' &&
                             (
-                                <>
-                                    {activeTab === 'ACTIVITY' &&
-                                        (
-                                            <div className="flex flex-col gap-3">
-                                                {isLoadingLogs && (
-                                                    <p className="text-xs text-[#6B5C42]">Loading activity...</p>
-                                                )}
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            disabled={isExporting || actionLogs.length === 0}
+                                            onClick={() => setOpenExportActivity(true)}
+                                            className="flex items-center gap-2 border border-primary text-primary px-3 py-1.5 rounded-md text-xs font-medium
+                                                transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            <Download size={14} />
+                                            {isExporting ? "Exporting..." : "Export Activity"}
+                                        </button>
+                                    </div>
 
-                                                {!isLoadingLogs && actionLogs.length === 0 && (
-                                                    <p className="text-xs text-[#6B5C42]">No activity found.</p>
-                                                )}
+                                    {isLoadingLogs && (
+                                        <p className="text-xs text-[#6B5C42]">Loading activity...</p>
+                                    )}
 
-                                                {!isLoadingLogs && actionLogs.map((log) => (
-                                                    <div
-                                                        key={log.action_log_id}
-                                                        className="w-full p-4 rounded-r-lg bg-[#FAFAFA] border-l-4 border-l-(--color-quaternary) flex flex-col gap-2
-                                                        shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
-                                                    >
-                                                        <p className="font-semibold text-sm xl:text-lg">
-                                                            {formatActionType(log.action_type)}
-                                                        </p>
-                                                        {log.description && (
-                                                            <p className="text-xs text-[#6B5C42]">{log.description}</p>
-                                                        )}
-                                                        <p className="text-xs text-[#6B5C42]">
-                                                            {formatDateTime(log.created_at)}
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )
-                                    }
-                                </>
+                                    {!isLoadingLogs && actionLogs.length === 0 && (
+                                        <p className="text-xs text-[#6B5C42]">No activity found.</p>
+                                    )}
+
+                                    {!isLoadingLogs && actionLogs.map((log) => (
+                                        <div
+                                            key={log.action_log_id}
+                                            className="w-full p-4 rounded-r-lg bg-[#FAFAFA] border-l-4 border-l-(--color-quaternary) flex flex-col gap-2
+                                            shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+                                        >
+                                            <p className="font-semibold text-sm xl:text-lg">
+                                                {formatActionType(log.action_type)}
+                                            </p>
+                                            {log.description && (
+                                                <p className="text-xs text-[#6B5C42]">{log.description}</p>
+                                            )}
+                                            <p className="text-xs text-[#6B5C42]">
+                                                {formatDateTime(log.created_at)}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
                             )
                         }
                     </div>
@@ -558,6 +600,23 @@ export default function UserManagementModal(
                     disabled={isActivating}
                 />
 
+            }
+            {openExportActivity &&
+                <ConfirmDialog
+                    title="Export Activity Log"
+                    Icon={Download}
+                    iconColor="text-primary"
+                    description={
+                        <>
+                            Export the activity log for <span className="font-bold">{fullName}</span> ({formatUsrId(selectedUser.user_id)}) as a CSV file?
+                        </>
+                    }
+                    confirmText={isExporting ? "Exporting..." : "Export"}
+                    cancelText="Cancel"
+                    onClose={() => setOpenExportActivity(false)}
+                    onConfirm={handleExportActivity}
+                    disabled={isExporting}
+                />
             }
         </>
     )

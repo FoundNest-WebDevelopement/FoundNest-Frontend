@@ -28,7 +28,7 @@ export default function SuperAdminGlobalConfiguration() {
     const [openAddCategory, setOpenAddCategory] = useState(false);
 
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
     const [categorySearch, setCategorySearch] = useState("");
 
@@ -114,11 +114,11 @@ export default function SuperAdminGlobalConfiguration() {
     }
     }, [activeTab]);
 
-    const filteredPolicies = policies.filter((policy) =>
+    const filteredPolicies = policies?.filter((policy) =>
         policy.title.toLowerCase().includes(search.toLowerCase())
     );
 
-    const filteredCategories = categories.filter((category) => {
+    const filteredCategories = categories?.filter((category) => {
     const query = categorySearch.toLowerCase();
 
     const formattedCategoryId =
