@@ -4,6 +4,7 @@ import Button from "../global-components/Button";
 import UserManagmentTable from "../super-admin-components/UserMangementTable";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import WebLoading from "../global-components/WebLoading";
 
 
 
@@ -30,13 +31,16 @@ export default function SuperAdminUserMangement() {
 
     const [users, setUsers] = useState([]);
 
+    const [isLoading, setIsLoading] = useState(false);
+
 
      useEffect(() => {
+        setIsLoading(true);
         fetchWithAuth(`${API_URL}/api/users`)
             .then((res) => res.json())
             .then((data) => {
                 setUsers(data);
-                console.log(data);
+                setIsLoading(false);
             })
             .catch((err) => {
                 console.error(err);
@@ -120,7 +124,11 @@ const paddedUserId =
         <>
             <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3 ">
 
-                <div className="flex h-10 w-full ">
+                {!isLoading ? 
+
+                    (
+                        <>
+                        <div className="flex h-10 w-full ">
                     <div className="xl:w-80 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                         <input
                             type="text"
@@ -165,6 +173,19 @@ const paddedUserId =
                     />
 
                 </div>
+                        </>
+                    )
+                    :
+                    (
+                        <>
+                            <WebLoading
+                              
+                            />
+                            
+                        </>
+                    )
+
+                }
             </div>
            {/* {openExportActivity &&
                            <ConfirmDialog

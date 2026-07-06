@@ -4,6 +4,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatActionType } from "../utils/formatActionType";
+import WebLoading from "../global-components/WebLoading";
 
 // Maps DB enum values to filter pill labels shown in the UI.
 // NOTE: a few of these (deactivate variants, unlock) don't have their own
@@ -61,6 +62,7 @@ export default function SuperAdminActionLogs() {
 
     const [logs, setLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLogs, setIsLogs] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
     const [search, setSearch] = useState("");
@@ -77,7 +79,8 @@ export default function SuperAdminActionLogs() {
     const [expandedLogId, setExpandedLogId] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 7;
+    const [tableHeight, setTableHeight] = useState("");
+        const [itemsPerPage, setItemsPerPage] = useState();
 
     const formatLogId = (id) => `LOG-${String(id).padStart(5, "0")}`;
     const formatRecordId = (entityType, entityId) => {
@@ -89,6 +92,7 @@ export default function SuperAdminActionLogs() {
     const fetchLogs = async () => {
         try {
             setIsLoading(true);
+            setIsLogs(true);
             const response = await fetchWithAuth(`${API_URL}/api/action-logs/user/${superAdminUserId}`);
             const data = await response.json();
 
@@ -97,6 +101,7 @@ export default function SuperAdminActionLogs() {
             }
 
             setLogs(data);
+            setIsLogs(false);
         } catch (error) {
             console.error(error);
             toast.error(error.message);
@@ -197,10 +202,34 @@ export default function SuperAdminActionLogs() {
 }
 };
 
+useEffect(() => {
+    const updateTableSize = () => {
+        const height = window.innerHeight;
+
+        if (height > 732) {
+            setTableHeight("min-h-160");
+            setItemsPerPage(10);
+        } else {
+            setTableHeight("min-h-115");
+            setItemsPerPage(7);
+        }
+    };
+
+    updateTableSize();
+
+    window.addEventListener("resize", updateTableSize);
+
+    return () => {
+        window.removeEventListener("resize", updateTableSize);
+    };
+}, []);
+
     return (
         <div className="w-full flex flex-col gap-4 bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7">
-       
-            <div className="flex items-center gap-3">
+            {!isLogs? 
+                (
+                    <>
+                    <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-white border border-[#DDD9CF] rounded-lg px-3 py-2 flex-1 shadow-[0_2px_4px_0px_rgba(0,0,0,0.1)]">
                     <Search size={16} className="text-[#9A8F7C]" />
                     <input
@@ -322,7 +351,7 @@ export default function SuperAdminActionLogs() {
             )}
 
             {/* Table */}
-            <div className="h-fit min-h-120 w-full max-w-full min-w-0 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col">
+            <div className={`h-fit ${tableHeight} w-full max-w-full min-w-0 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col`}>
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm rounded-t-xl">
                     <table className="table table-zebra table-sm   min-w-full [&_th]:px-2 [&_td]:px-2 text-left">
                         <thead className="bg-primary text-white text-center">
@@ -482,6 +511,16 @@ export default function SuperAdminActionLogs() {
                     </button>
                 </div>
             </div>
+                    </>
+                ) 
+                :
+                (
+                    <>
+                      <WebLoading/>
+                    </>
+                )
+            }
+            
         </div>
     );
 }

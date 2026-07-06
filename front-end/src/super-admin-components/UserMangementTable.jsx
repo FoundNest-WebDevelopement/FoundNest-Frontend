@@ -1,5 +1,5 @@
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import UserManagementModal from "./UserManagementModal";
 
 export default function UserManagmentTable (
@@ -12,7 +12,8 @@ export default function UserManagmentTable (
 ) {
 
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 7;
+    const [tableHeight, setTableHeight] = useState("");
+    const [itemsPerPage, setItemsPerPage] = useState();
     const safeUsers = Array.isArray(users) ? users : [];
     const totalPages = Math.max(1, Math.ceil(safeUsers.length / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -22,13 +23,37 @@ export default function UserManagmentTable (
         startIndex + itemsPerPage
     );
 
+
+    
+useEffect(() => {
+    const updateTableSize = () => {
+        const height = window.innerHeight;
+
+        if (height > 732) {
+            setTableHeight("min-h-160");
+            setItemsPerPage(10);
+        } else {
+            setTableHeight("min-h-115");
+            setItemsPerPage(7);
+        }
+    };
+
+    updateTableSize();
+
+    window.addEventListener("resize", updateTableSize);
+
+    return () => {
+        window.removeEventListener("resize", updateTableSize);
+    };
+}, []);
+
     const formatUsrId = (id) => {
     return `USR-${String(id).padStart(5, "0")}`;
   };
     
     return (
         <>
-            <div className="h-fit w-full max-w-full min-w-0 min-h-115 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
+            <div className={`h-fit w-full max-w-full min-w-0 ${tableHeight} rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden`}>
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
 
                     <table className="table table-zebra table-sm min-w-295 [&_th]:px-2 [&_td]:px-2 text-center">
