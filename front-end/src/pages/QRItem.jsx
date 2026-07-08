@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5Qrcode } from "html5-qrcode";
-import { apiFetch } from "../utils/api";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Icons
 const RegisterIcon = () => (
@@ -116,7 +118,7 @@ export default function QRItem({ onBack }) {
   const fetchUserItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/qr-items/${user_id}`);
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${user_id}`);
       const data = await res.json();
       if (res.ok) {
         const mapped = data.map((item) => ({
@@ -176,7 +178,7 @@ export default function QRItem({ onBack }) {
       setQrCodeUrl(url);
       setGeneratedItemName(form.itemName || "Item");
 
-      const res = await apiFetch("/qr-items/register", {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/register`, {
         method: "POST",
         body: JSON.stringify({
           user_id,
@@ -210,7 +212,7 @@ export default function QRItem({ onBack }) {
 
   const handleDeleteConfirm = async () => {
     try {
-      const res = await apiFetch(`/qr-items/${deleteTargetId}`, {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${deleteTargetId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -225,7 +227,7 @@ export default function QRItem({ onBack }) {
 
   const handleEditSave = async () => {
     try {
-      const res = await apiFetch(`/qr-items/${editTargetId}`, {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${editTargetId}`, {
         method: "PUT",
         body: JSON.stringify({
           item_name: editForm.itemName,
@@ -343,7 +345,6 @@ export default function QRItem({ onBack }) {
         />
         <div className="px-5 py-5 flex flex-col gap-4">
 
-          {/* Owner Name */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
             <input
@@ -355,7 +356,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Student Number */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number*</p>
             <input
@@ -367,7 +367,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Course and Section */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section*</p>
             <input
@@ -379,7 +378,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Contact Number */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
             <input
@@ -391,7 +389,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Item Description / Image Upload */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Description</p>
             <div className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 border border-dashed border-gray-300 relative">
@@ -426,7 +423,6 @@ export default function QRItem({ onBack }) {
             </div>
           </div>
 
-          {/* Item Name */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
             <input
@@ -438,7 +434,6 @@ export default function QRItem({ onBack }) {
             />
           </div>
 
-          {/* Category */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Category*</p>
             <div className="bg-white rounded-lg px-4 py-3">
@@ -455,7 +450,6 @@ export default function QRItem({ onBack }) {
             </div>
           </div>
 
-          {/* Register Button */}
           <button
             onClick={handleRegister}
             disabled={!isFormValid || loading}
@@ -470,7 +464,6 @@ export default function QRItem({ onBack }) {
           </button>
         </div>
 
-        {/* Discard Modal */}
         {showDiscardModal && (
           <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
             <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
@@ -630,7 +623,6 @@ export default function QRItem({ onBack }) {
           )}
         </div>
 
-        {/* Delete Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/50">
             <div className="bg-white rounded-t-2xl overflow-hidden w-full">

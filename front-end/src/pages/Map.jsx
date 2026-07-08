@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { apiFetch } from "../utils/api";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 // Hardcoded coordinates since they never change
@@ -112,7 +112,7 @@ export default function Map() {
   const handlePostReview = async () => {
     if (rating === 0 || reviewText.trim() === "") return;
     try {
-      const res = await apiFetch(`/offices/${selectedOffice.office_id}/reviews`, {
+      const res = await fetchWithAuth(`${API_URL}/api/offices/${selectedOffice.office_id}/reviews`, {
         method: "POST",
         body: JSON.stringify({ user_id, rating, review_text: reviewText }),
       });

@@ -28,6 +28,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.15.1",
     "react-toastify": "^11.1.0",
+    "recharts": "^3.9.2",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
