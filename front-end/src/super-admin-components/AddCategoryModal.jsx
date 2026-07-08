@@ -48,10 +48,10 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
  
             const data = await response.json();
 
-            console.log(data)
+            
 
             if(!response.ok){
-                throw new Error (data.message || "Failed to Add Category")
+                throw new Error (data.error || "Failed to Add Category")
             }
 
             const categoriesResponse = await fetchWithAuth(

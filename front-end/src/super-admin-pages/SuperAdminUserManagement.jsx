@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Button from "../global-components/Button";
 import UserManagmentTable from "../super-admin-components/UserMangementTable";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast } from "react-toastify";
+import WebLoading from "../global-components/WebLoading";
 
 
 
@@ -23,22 +25,29 @@ export default function SuperAdminUserMangement() {
 
     const [selectedUser, setSelecterUser] = useState(null);
 
+    const [openExportActivity, setPpenExportActivity] = useState(false);
+
+     const [isExporting, setIsExporting] = useState(null);
+
     const [users, setUsers] = useState([]);
+
+    const [isLoading, setIsLoading] = useState(false);
 
 
      useEffect(() => {
+        setIsLoading(true);
         fetchWithAuth(`${API_URL}/api/users`)
             .then((res) => res.json())
             .then((data) => {
                 setUsers(data);
-                console.log(data);
+                setIsLoading(false);
             })
             .catch((err) => {
                 console.error(err);
             });
     }, []);
 
-     const filteredUsers= users.filter((users) => {
+     const filteredUsers= users?.filter((users) => {
             const query = search.toLowerCase();
 
             const formattedUserId =
@@ -83,13 +92,43 @@ const paddedUserId =
             );
     });
 
+    const handleExportCSV = async () => {
+    try {
+        setIsExporting(true);
+        const response = await fetchWithAuth(`${API_URL}/api/export/users`);
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || "Failed to export users.");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `USERS - ${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success("User exported successfully.");
+    } catch (error) {
+        console.error(error);
+        toast.error(error.message);
+    }finally{
+        setIsExporting(false);
+    }
+};
+
     
 
     return (
         <>
-            <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
+            <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3 ">
 
-                <div className="flex h-10 w-full ">
+                {!isLoading ? 
+
+                    (
+                        <>
+                        <div className="flex h-10 w-full ">
                     <div className="xl:w-80 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                         <input
                             type="text"
@@ -117,9 +156,9 @@ const paddedUserId =
                             ))}
                             
                     </div>
-                    <div className="h-full w-fit  flex items-center gap-1 xl:gap-5">
-                        <Button icon={Download} label="Export Users" isBorder={true} isShadow={true} isIcon={true} 
-                            // onClick={handleExportCSV}
+                    <div className="h-full w-fit  flex items-center gap-1 xl:gap-5 shrink-0">
+                        <Button icon={Download} label={isExporting? "Exporting..." : "Export Users"} isBorder={true} isShadow={true} isIcon={true}  disabled={isExporting}
+                            onClick={handleExportCSV}
                              />
                     </div>
                 </div>
@@ -134,26 +173,37 @@ const paddedUserId =
                     />
 
                 </div>
-            </div>
-            {/* {openLogItem &&
-                (
-                    <>
-                        <LostReportModal
-                            open={openLogItem}
-                            setOpen={setOpenLogItem}
-                            categories={categories}
-                            locations={locations}
-                            allLocations={allLocations}
-                            sharedSpaces={sharedSpaces}
-                            gates={gates}
-                            setOpen={setOpenLogItem}
-                            onUpdated={setReports}
-                            setSelectedItem={setSelectedItem}
-                        />
-                    </>
-                )
+                        </>
+                    )
+                    :
+                    (
+                        <>
+                            <WebLoading
+                              
+                            />
+                            
+                        </>
+                    )
 
-            } */}
+                }
+            </div>
+           {/* {openExportActivity &&
+                           <ConfirmDialog
+                               title="Export Activity Log"
+                               Icon={Download}
+                               iconColor="text-primary"
+                               description={
+                                   <>
+                                       Export the activity log for <span className="font-bold">{fullName}</span> ({formatUsrId(selectedUser.user_id)}) as a CSV file?
+                                   </>
+                               }
+                               confirmText={isExporting ? "Exporting..." : "Export"}
+                               cancelText="Cancel"
+                               onClose={() => setOpenExportActivity(false)}
+                               onConfirm={handleExportActivity}
+                               disabled={isExporting}
+                           />
+                       } */}
         </>
     );
 }

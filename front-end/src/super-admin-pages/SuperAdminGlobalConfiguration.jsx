@@ -10,6 +10,7 @@ import CategoryTable from "../super-admin-components/CategoryTable";
 
 import Button from "../global-components/Button"
 import AddCategoryModal from "../super-admin-components/AddCategoryModal";
+import WebLoading from "../global-components/WebLoading";
 
 import LocationTable from "../super-admin-components/LocationTable";
 import AddLocationModal from "../super-admin-components/AddLocationModal";
@@ -30,13 +31,16 @@ export default function SuperAdminGlobalConfiguration() {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [activeTab, setActiveTab] = useState(TABS[0].value);
+
+    const [isLoading, setIsLoading] = useState(false);
+
     const [search, setSearch] = useState("");
     const [editingPolicy, setEditingPolicy] = useState(null);
 
     const [openAddCategory, setOpenAddCategory] = useState(false);
 
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
     const [categorySearch, setCategorySearch] = useState("");
 
@@ -185,11 +189,12 @@ export default function SuperAdminGlobalConfiguration() {
         }
     }, [activeTab]);
 
-    const filteredPolicies = policies.filter((policy) =>
+    const filteredPolicies = policies?.filter((policy) =>
+
         policy.title.toLowerCase().includes(search.toLowerCase())
     );
 
-    const filteredCategories = categories.filter((category) => {
+    const filteredCategories = categories?.filter((category) => {
     const query = categorySearch.toLowerCase();
 
     const formattedCategoryId =
@@ -281,7 +286,11 @@ export default function SuperAdminGlobalConfiguration() {
             {/* POLICIES TAB */}
             {activeTab === "POLICIES" && (
                 <>
-                    <div className="flex items-center justify-between gap-4">
+                  {!isLoading? 
+
+                    (
+                        <>
+                              <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                             <Search size={16} className="text-[#9A8F7C]" />
                             <input
@@ -307,7 +316,9 @@ export default function SuperAdminGlobalConfiguration() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {isLoadingPolicies && (
                             <p className="text-sm text-[#6B5C42] col-span-2 text-center py-10">
-                                Loading policies...
+                                <WebLoading
+                                    marginBottom="mb-90"
+                                />
                             </p>
                         )}
 
@@ -322,6 +333,16 @@ export default function SuperAdminGlobalConfiguration() {
                             </p>
                         )}
                     </div>
+                        </>
+                    )
+                    :
+                    (
+                        <>
+                           
+                        </>
+                    )
+
+                  }
                 </>
             )}
 
@@ -399,9 +420,9 @@ export default function SuperAdminGlobalConfiguration() {
                     </div>
 
                     {isLoadingCategories && (
-                        <p className="text-sm text-[#6B5C42] text-center py-10">
-                            Loading categories...
-                        </p>
+                         <WebLoading
+                                    marginBottom="mb-90"
+                                />
                     )}
 
                     {!isLoadingCategories && filteredCategories.length === 0 && (
