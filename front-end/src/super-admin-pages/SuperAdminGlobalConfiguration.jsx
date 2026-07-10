@@ -12,6 +12,14 @@ import Button from "../global-components/Button"
 import AddCategoryModal from "../super-admin-components/AddCategoryModal";
 import WebLoading from "../global-components/WebLoading";
 
+import LocationTable from "../super-admin-components/LocationTable";
+import AddLocationModal from "../super-admin-components/AddLocationModal";
+
+import CenterCard from "../super-admin-components/CenterCard";
+import AddCenterModal from "../super-admin-components/AddCenterModal";
+import EditCenterModal from "../super-admin-components/EditCenterModal";
+import ViewAdminsModal from "../super-admin-components/ViewAdminsModal";
+
 const TABS = [
     { label: "Policies", value: "POLICIES" },
     { label: "Locations", value: "LOCATIONS" },
@@ -38,6 +46,19 @@ export default function SuperAdminGlobalConfiguration() {
 
     const [policies, setPolicies] = useState([]);
     const [isLoadingPolicies, setIsLoadingPolicies] = useState(false);
+
+    const [locations, setLocations] = useState([]);
+    const [selectedLocation, setSelectedLocation] = useState(null);
+    const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+    const [locationSearch, setLocationSearch] = useState("");
+    const [openAddLocation, setOpenAddLocation] = useState(false);
+
+    const [centers, setCenters] = useState([]);
+    const [selectedCenter, setSelectedCenter] = useState(null);
+    const [viewingAdminsCenter, setViewingAdminsCenter] = useState(null);
+    const [isLoadingCenters, setIsLoadingCenters] = useState(false);
+    const [centerSearch, setCenterSearch] = useState("");
+    const [openAddCenter, setOpenAddCenter] = useState(false);
 
 
     const mapPolicy = (row) => {
@@ -107,6 +128,44 @@ export default function SuperAdminGlobalConfiguration() {
         }
     }
 
+    const fetchLocations = async () => {
+        try {
+            setIsLoadingLocations(true);
+            const response = await fetchWithAuth(`${API_URL}/api/locations/private`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to fetch locations.");
+            }
+
+            setLocations(data);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+        } finally {
+            setIsLoadingLocations(false);
+        }
+    };
+
+    const fetchCenters = async () => {
+        try {
+            setIsLoadingCenters(true);
+            const response = await fetchWithAuth(`${API_URL}/api/offices-private/list`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to fetch centers.");
+            }
+
+            setCenters(data);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+        } finally {
+            setIsLoadingCenters(false);
+        }
+    };
+
     useEffect(() => {
         fetchPolicies();
     }, []);
@@ -118,7 +177,20 @@ export default function SuperAdminGlobalConfiguration() {
     }
     }, [activeTab]);
 
+    useEffect(() => {
+        if (activeTab === "LOCATIONS" && locations.length === 0) {
+            fetchLocations();
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "CENTERS" && centers.length === 0) {
+            fetchCenters();
+        }
+    }, [activeTab]);
+
     const filteredPolicies = policies?.filter((policy) =>
+
         policy.title.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -136,6 +208,14 @@ export default function SuperAdminGlobalConfiguration() {
         paddedCategoryId.includes(query)
     );
 });
+
+    const filteredLocations = locations.filter((loc) =>
+        loc.location_name?.toLowerCase().includes(locationSearch.toLowerCase())
+    );
+
+    const filteredCenters = centers.filter((center) =>
+        center.office_name?.toLowerCase().includes(centerSearch.toLowerCase())
+    );
 
     const handleEditPolicy = (policy) => {
         setEditingPolicy(policy);
@@ -268,7 +348,50 @@ export default function SuperAdminGlobalConfiguration() {
 
          
             {activeTab === "LOCATIONS" && (
-                <p className="text-sm text-[#6B5C42]">Locations tab coming soon.</p>
+                <>
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                            <Search size={16} className="text-[#9A8F7C]" />
+                            <input
+                                type="text"
+                                placeholder="Search locations..."
+                                value={locationSearch}
+                                onChange={(e) => setLocationSearch(e.target.value)}
+                                className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
+                            />
+                        </div>
+
+                        <Button
+                            icon={Plus}
+                            isIcon={true}
+                            isShadow={true}
+                            isSolid={true}
+                            label={"Add Location"}
+                            onClick={() => setOpenAddLocation(true)}
+                        />
+                    </div>
+
+                    {isLoadingLocations && (
+                        <p className="text-sm text-[#6B5C42] text-center py-10">
+                            Loading locations...
+                        </p>
+                    )}
+
+                    {!isLoadingLocations && filteredLocations.length === 0 && (
+                        <p className="text-sm text-[#6B5C42] text-center py-10">
+                            No locations found.
+                        </p>
+                    )}
+
+                    {!isLoadingLocations && filteredLocations.length > 0 && (
+                        <LocationTable
+                            locations={filteredLocations}
+                            onUpdated={setLocations}
+                            selectedLocation={selectedLocation}
+                            setSelectedLocation={setSelectedLocation}
+                        />
+                    )}
+                </>
             )}
 
         
@@ -322,7 +445,54 @@ export default function SuperAdminGlobalConfiguration() {
 
           
             {activeTab === "CENTERS" && (
-                <p className="text-sm text-[#6B5C42]">Centers tab coming soon.</p>
+                <>
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                            <Search size={16} className="text-[#9A8F7C]" />
+                            <input
+                                type="text"
+                                placeholder="Search centers..."
+                                value={centerSearch}
+                                onChange={(e) => setCenterSearch(e.target.value)}
+                                className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
+                            />
+                        </div>
+
+                        <Button
+                            icon={Plus}
+                            isIcon={true}
+                            isShadow={true}
+                            isSolid={true}
+                            label={"Add Center"}
+                            onClick={() => setOpenAddCenter(true)}
+                        />
+                    </div>
+
+                    {isLoadingCenters && (
+                        <p className="text-sm text-[#6B5C42] text-center py-10">
+                            Loading centers...
+                        </p>
+                    )}
+
+                    {!isLoadingCenters && filteredCenters.length === 0 && (
+                        <p className="text-sm text-[#6B5C42] text-center py-10">
+                            No centers found.
+                        </p>
+                    )}
+
+                    {!isLoadingCenters && filteredCenters.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {filteredCenters.map((center) => (
+                                <CenterCard
+                                    key={center.office_id}
+                                    center={center}
+                                    onEdit={setSelectedCenter}
+                                    onViewAdmins={setViewingAdminsCenter}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
 
             {editingPolicy && (
@@ -341,6 +511,35 @@ export default function SuperAdminGlobalConfiguration() {
                 
                 />
             }
+
+            {openAddLocation && (
+                <AddLocationModal
+                    onClose={() => setOpenAddLocation(false)}
+                    onUpdated={setLocations}
+                />
+            )}
+
+            {openAddCenter && (
+                <AddCenterModal
+                    onClose={() => setOpenAddCenter(false)}
+                    onUpdated={setCenters}
+                />
+            )}
+
+            {selectedCenter && (
+                <EditCenterModal
+                    center={selectedCenter}
+                    onClose={() => setSelectedCenter(null)}
+                    onUpdated={setCenters}
+                />
+            )}
+
+            {viewingAdminsCenter && (
+                <ViewAdminsModal
+                    center={viewingAdminsCenter}
+                    onClose={() => setViewingAdminsCenter(null)}
+                />
+            )}
         </div>
     );
 }

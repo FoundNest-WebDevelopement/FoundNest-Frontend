@@ -280,7 +280,7 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving, !hasChanges}
+                            disabled={isSaving || !hasChanges}
                             onClick={()=>setOpenConfirmDialog(true)}
                         >
                             {isSaving ? "Saving..." : "Save Changes"}
