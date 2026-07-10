@@ -12,6 +12,7 @@ import LostReportModal from "../admin-components/LostReportModal"
 import { useNavigate } from "react-router-dom";
 import { useSearchParams, useLocation } from "react-router-dom";
 import AdminAllLocationDropDown from "../admin-components/AdminAllLocationDropDown"
+import WebLoading from "../global-components/WebLoading"
 
 
 
@@ -42,6 +43,8 @@ export default function ReportManagement() {
 
     //LOG LOST REPORT TOGGLE
     const [openLogItem, setOpenLogItem] = useState(false);
+
+    const [isLoadingReports, setIsLoadingReports] = useState(false);
 
 
     //SEARCH AND FILTER VARIABLES 
@@ -105,10 +108,12 @@ export default function ReportManagement() {
     useEffect(() => {
 
         //LOST REPORT FETCH
+        setIsLoadingReports(true)
         fetchWithAuth(`${API_URL}/api/lost-reports`)
             .then((res) => res.json())
             .then((data) => {
                 setReports(data);
+                setIsLoadingReports(false)
             })
             .catch((err) => {
                 console.error(err);
@@ -291,7 +296,9 @@ export default function ReportManagement() {
         <>
             <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
 
-                <div className="flex h-10 w-full ">
+              {!isLoadingReports? (
+                <>
+                  <div className="flex h-10 w-full ">
                     <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                         <input
                             type="text"
@@ -342,6 +349,16 @@ export default function ReportManagement() {
                     />
 
                 </div>
+                </>
+              )
+              :
+              (
+                <>
+                    <WebLoading/>
+                </>
+              )
+
+              }
             </div>
             {openLogItem &&
                 (

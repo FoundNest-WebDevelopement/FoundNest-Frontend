@@ -15,7 +15,7 @@ export default function UserRoute() {
       return <Navigate to="/admin" replace />;
 
     case "super_admin":
-      return <Navigate to="/super-admin" replace />;
+      return <Navigate to="/super_admin" replace />;
 
     default:
       return <Navigate to="/login" replace />;

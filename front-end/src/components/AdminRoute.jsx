@@ -9,7 +9,7 @@ export default function AdminRoute() {
 
   if (role !== "admin") {
     return role === "super_admin"
-      ? <Navigate to="/super-admin" replace />
+      ? <Navigate to="/super_admin" replace />
       : <Navigate to="/home" replace />;
   }
 

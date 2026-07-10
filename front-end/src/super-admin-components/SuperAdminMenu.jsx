@@ -3,16 +3,22 @@ import { LayoutDashboard, Users, Settings, FileText, Scroll, UserRoundCog } from
 import { NavLink, useNavigate } from "react-router-dom"
 import { LogOut } from "lucide-react"
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useState } from "react";
+import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
 
 export default function SuperAdminMenu({onChange}){
 
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const [openConfirmLogout, setOpenConfirmLogout] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
 
 
  const handleLogout = async () => {
   try {
+    setIsLoggingOut(true)
     const refreshToken =
       localStorage.getItem("refreshToken");
 
@@ -34,6 +40,7 @@ export default function SuperAdminMenu({onChange}){
         localStorage.setItem("remembered_email", rememberedEmail);
     }
     navigate("/login");
+    setIsLoggingOut(false)
 }
 };
 
@@ -79,7 +86,7 @@ export default function SuperAdminMenu({onChange}){
   </div>
 
   <button
-  onClick={handleLogout}
+  onClick={()=>setOpenConfirmLogout(true)}
   className="
     mt-auto h-12 text-white bg-[#5C0000]
     flex gap-5 items-center
@@ -91,7 +98,20 @@ export default function SuperAdminMenu({onChange}){
   <span className="text-sm">Logout</span>
 </button>
 </nav>
+ {openConfirmLogout &&
+       <AdminConfirmDialog
+         title="Logout"
+         description={"Are you sure you want to log out?"}
+         cancelText="Cancel"
+         disabled = {isLoggingOut}
+         confirmText={isLoggingOut? "Logging out..." : "Logout"}
+         onClose={()=>setOpenConfirmLogout(false)}
+         onConfirm={handleLogout}
+       />
+       }
 
         </>
+
+      
     )
 }
