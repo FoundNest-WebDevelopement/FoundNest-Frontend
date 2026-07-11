@@ -18,11 +18,14 @@ import Toast from "../components/Toast";
 import InfoIcon from "../assets/info_icon.png"
 import toast from "react-hot-toast";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useNavigate, useParams } from "react-router-dom";
 
 export default function Report() {
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const [userID, setUserID] = localStorage.getItem("user_id");
+  const userID = localStorage.getItem("user_id");
+
+  const navigate = useNavigate();
 
   //locations
   const [gates, setGates] = useState([]);
@@ -36,6 +39,8 @@ export default function Report() {
   const [openGates, setOpenGates] = useState(false);
   const [openOthers, setOpenOthers] = useState(false);
   const [dsiableOtherLcoations, setdDisableOtherLcoations] = useState(false);
+
+  const { id } = useParams();
 
   const getDropdownLabel = () => {
     if (totalLocations === 0) return "Select Locations";
@@ -105,10 +110,14 @@ export default function Report() {
   const [timeLost, setTimeLost] = useState("");
   const [locationLost, setLocationLost] = useState("");
   const [specificlocation, setSpecificLocation] = useState("");
+  const [rawLocations, setRawLocations] = useState([]);
+
+  const [lostReport, setLostReport] = useState();
 
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
 
   const [isCancel, setIsCancel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,9 +170,13 @@ export default function Report() {
     setIsCancel(false);
   }
   const handleDiscard = () => {
-    setIsCancel(false);
+    if(id){
+      navigate(`/profile/report-history/${userID}`);
+    }else{
+      setIsCancel(false);
     setNextPage(true);
     setSubmitted(true);
+    }
 
     toast.custom((e) => (
       <Toast icon={InfoIcon} message="Edit has been cancelled." />
@@ -183,7 +196,6 @@ export default function Report() {
     try {
       setIsUpdating(true);
       const formData = new FormData();
-
       formData.append("image", selectedFile);
       formData.append("item_name", itemName);
       formData.append("description", description);
@@ -219,17 +231,10 @@ export default function Report() {
 
       const data = await response.json();
 
-      console.log(data);
-
       if (!response.ok) {
         throw new Error(data.error || "Something went wrong");
         setIsUpdating(false);
       }
-
-      console.log(data);
-
-
-
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -287,30 +292,13 @@ export default function Report() {
         }
       );
 
-
       const data = await response.json();
-
-      console.log(data);
 
       if (!response.ok) {
         throw new Error(data.error || "Something went wrong");
         setIsSubmitting(false);
       }
 
-      console.log(data);
-
-      // alert("Lost report submitted!");
-
-
-      // setItemName("");
-      // setDescription("");
-      // setContents("");
-      // setCategoryID("");
-      // setLocation("");
-      // setDateLost("");
-      // setTimeLost("");
-      // setSelectedFile(null);
-      // setImage(null);
       setSubmitted(true);
 
       if (fileInputRef.current) {
@@ -323,7 +311,7 @@ export default function Report() {
 
         setCreatedReportID(data.report.lost_report_id);
         setCreatedItemID(data.item.item_id);
-        console.log("CREATED REPORT ID: " + data.report.lost_report_id);
+  
       }
 
     } catch (err) {
@@ -386,6 +374,111 @@ export default function Report() {
     }
   };
 
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+
+const fetchLostReport = async (id) => {
+  try {
+    setIsLoadingReport(true);
+    const response = await fetchWithAuth(`${API_URL}/api/lost-reports/${id}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "cannot fetch lost report");
+    }
+    setLostReport(data);
+
+  
+
+  
+    setItemName(data.item_name || "");
+    setDescription(data.description || "");
+    setContents(data.contents || "");
+    setCategoryID(String(data.category_id || ""));
+    setSpecificLocation(data.specific_location || "");
+
+    if (data.image_url) {
+      setImage(data.image_url); // shows existing photo; only overwritten if user picks a new one
+    }
+
+    
+    if (data.lost_date) {
+      const [datePart, timePart] = data.lost_date.split(/[T ]/);
+      setDateLost(datePart || "");
+      setTimeLost(timePart?.slice(0, 5) || ""); // trims seconds if present, e.g. "14:30:00" -> "14:30"
+  
+    }
+
+    
+
+
+    if (data.location_lost) {
+  let parsedLocations;
+
+  try {
+    parsedLocations = JSON.parse(data.location_lost);
+  } catch (e) {
+    parsedLocations = [data.location_lost];
+  }
+
+  if (Array.isArray(parsedLocations)) {
+    if (parsedLocations.includes("Can't Remember")) {
+      setCantRemember(true);
+      setdDisableOtherLcoations(true);
+    } else {
+      setRawLocations(parsedLocations);
+    }
+  }
+}
+
+    setIsEdit(true);
+  } catch (error) {
+    console.log(error.message);
+  } finally {
+    setIsLoadingReport(false);
+  }
+};
+
+
+useEffect(() => {
+  if (id) {
+    fetchLostReport(id);
+    setCreatedReportID(id); 
+  }
+}, [id]);
+
+
+
+  useEffect(() => {
+    if (rawLocations.length > 0 && locations.length > 0) {
+      setSelectedCollegeBuilding(
+        rawLocations.filter((loc) =>
+          locations.some((l) => l.office_name?.trim().toLowerCase() === loc.trim().toLowerCase())
+        )
+      );
+    }
+  }, [rawLocations, locations]);
+
+ 
+  useEffect(() => {
+    if (rawLocations.length > 0 && sharedSpaces.length > 0) {
+      setSelectedSharedSpaces(
+        rawLocations.filter((loc) =>
+          sharedSpaces.some((s) => s.shared_space_name?.trim().toLowerCase() === loc.trim().toLowerCase())
+        )
+      );
+    }
+  }, [rawLocations, sharedSpaces]);
+
+ 
+  useEffect(() => {
+    if (rawLocations.length > 0 && gates.length > 0) {
+      setSelectedGates(
+        rawLocations.filter((loc) =>
+          gates.some((g) => g.gate_name?.trim().toLowerCase() === loc.trim().toLowerCase())
+        )
+      );
+    }
+  }, [rawLocations, gates]);
+
 
 
   const dateValid = isValidPastOrToday(dateLost);
@@ -403,7 +496,7 @@ export default function Report() {
     fetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
+   
         setCategories(data);
       })
       .catch((err) => {
@@ -452,7 +545,7 @@ export default function Report() {
   return (
     <>
       <div className={`${submitted ? "hidden" : ""}`} >
-        <PageLabel label="Lost Item Report Form" />
+        <PageLabel label= {id? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
       </div>
       <div className={`${submitted ? "bg-(--color-primary) flex flex-col items-center justify-center" : "bg-(--color-secondary)"}  min-h-screen px-4`}>
 
@@ -462,9 +555,9 @@ export default function Report() {
             <PageLabel2 label="Item Description" />
             <HorizontalBreak />
             <div className="bg-white w-full h-fit p-2 rounded-xl mt-4 mb-2 flex items-center justify-center flex-col">
-              {image ? (
+              {(image && image !== "REMOVE")  ? (
                 <img
-                  src={image}
+                  src={image === "REMOVE"? ""  : image}
                   alt="Uploaded"
                   onClick={() => { setShowImageOptions(true) }}
                   className="w-full max-h-50 object-contain rounded-xl cursor-pointer hover:opacity-80 transition"
@@ -506,7 +599,7 @@ export default function Report() {
                 className="hidden"
                 onChange={handleChange}
               />
-              {!image && (
+              {(!image  || image === "REMOVE") && (
                 <>
                   <p className="text-sm text-(--color-tertiary) opacity-70 font-medium mt-2">
                     Upload Item Photo (Optional)
@@ -516,6 +609,8 @@ export default function Report() {
                   </p>
                 </>
               )}
+
+             
             </div>
             <DropDown title="Categories*" placeholder="Select Category" value={categoryID} options={categories} onChange={setCategoryID} />
             <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} />
@@ -578,8 +673,7 @@ export default function Report() {
               {dateValid && timeLost && !timeValid && (
                 <p className="text-xs text-red-500 mt-1 ml-1">Time cannot be in the future.</p>
               )}
-               {/* <TextField title="Location Lost" value={locationLost} onChange={setLocationLost} error={false} /> */}
-               {/* LOCATIONS FILTER DROPDOWN */}
+       
             <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
             <div className="relative w-full mt-2">
               <button
@@ -786,13 +880,13 @@ export default function Report() {
                   {isEdit ?
                     (
                       <>
-                        <ButtonPositive label="Confirm" enable={timeValid} onClick={handleUpdate} />
+                        <ButtonPositive label="Confirm" enable={timeValid} onClick={()=>setShowSubmitConfirmation(true)} />
                       </>
                     )
                     :
                     (
                       <>
-                        <ButtonPositive label="Submit" enable={timeValid} onClick={handleSubmit} />
+                        <ButtonPositive label="Submit" enable={timeValid && totalLocations > 0} onClick={()=>setShowSubmitConfirmation(true)} />
                       </>
                     )
                   }
@@ -906,6 +1000,15 @@ export default function Report() {
                 setShowImageOptions(false);
                 galleryInputRef.current?.click();
               }} />
+              {image && image !== "REMOVE" &&
+              <ButtonPositive label="Remove Photo" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                setImage("REMOVE");
+                setSelectedFile("REMOVE");
+                
+              }} />
+
+              }
               <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
 
 
@@ -914,8 +1017,51 @@ export default function Report() {
           </div>
         )}
 
+        {showImageOptions && (
+          <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
+            <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
+              <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                cameraInputRef.current?.click();
+              }} />
+              <ButtonPositive label="Choose from Gallery" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                galleryInputRef.current?.click();
+              }} />
+              {image && image !== "REMOVE" &&
+              <ButtonPositive label="Remove Photo" enable={showImageOptions} onClick={() => {
+                setShowImageOptions(false);
+                setImage("REMOVE");
+                setSelectedFile("REMOVE");
+                
+              }} />
+
+              }
+              <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
+
+
+
+            </div>
+          </div>
+        )}
+
+        {showSubmitConfirmation &&
+          <AlertDialog 
+          message="Please review the information for accuracy before to submission."
+          b1Label={"Cancel"}
+          b2Label={"Submit"}
+          b1OnClick={()=>setShowSubmitConfirmation(false)}
+          b2OnClick={isEdit? handleUpdate : handleSubmit}
+        />
+
+        }
+
 
       </div>
+      {isLoadingReport && 
+        <Loading/>
+
+      }
     </>
   );
 }

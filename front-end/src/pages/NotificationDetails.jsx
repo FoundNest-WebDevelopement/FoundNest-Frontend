@@ -5,6 +5,7 @@ import PageLabelWithReturn from "../components/PageLabelWithReturn";
 import messageIconSolid from "../assets/message_icon_solid.png"
 import formatDateTime from "../utils/formatDateTime.js";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import  { Calendar,  MapPin} from "lucide-react"
 
 export default function NotificationDetails(){
 
@@ -37,6 +38,10 @@ useEffect(() => {
   fetchNotifications();
 }, [id, API_URL]);
 
+const formatItemId = (id) => {
+        return `SI-${String(id).padStart(5, "0")}`;
+    };
+
 const handleReturn = ()=> {
     navigate(`/notifications`);
 }
@@ -57,7 +62,7 @@ const handleReturn = ()=> {
                                                 <hr className="border-(--color-tertiary) mt-1 opacity-30" />
                                             </div>
                                             <div className="px-4 flex flex-col w-full items-center gap-3 py-5">
-                                                <div className="w-50 h-55 border border-[#4B2D23]/40 rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col ">
+                                                <div className="w-50 h-fit border border-[#4B2D23]/40 rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col ">
                                                     <div className="h-30 bg-[#AE7365]/50 flex items-center justify-center rounded-t-xl relative">
                                                         <img src={notification.found_item_image} alt="item" className="w-full h-full object-contain" />
                                                         <div className="absolute text-black text-[9px] bg-white px-2 rounded-full font-medium py-1 bottom-1 right-1 border">
@@ -65,16 +70,18 @@ const handleReturn = ()=> {
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col p-4 gap-2">
+                                                       
                                                         <div>
+                                                            <p className="text-xs font-medium text-primary">{notification.item_id ? formatItemId(notification.item_id) : ""}</p>
                                                             <p className="text-xs font-medium">{notification.found_item_name}</p>
                                                             <hr className="border-(--color-tertiary) mt-1 opacity-30" />
                                                         </div>
                                                         <div className="text-xs flex gap-1">
-                                                            <i className="fa-solid fa-calendar "></i>
+                                                            <Calendar size={15}/>
                                                             <p>{formatDateTime(notification.found_date)}</p>
                                                         </div>
                                                         <div className="text-xs flex gap-1">
-                                                            <i className="fa-solid fa-location-dot"></i>
+                                                            <MapPin size={15}/>
                                                             <p>{notification.location_found}</p>
                                                         </div>
                                                     </div>

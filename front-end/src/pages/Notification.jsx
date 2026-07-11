@@ -14,6 +14,7 @@ export default function Notification() {
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
     const userId = localStorage.getItem("user_id");
+
     
     
 
@@ -49,7 +50,6 @@ export default function Notification() {
         )
             .then((res) => res.json())
             .then((data) => {
-                console.log(data);
                 setNotifications(data);
                 if(data){
                     setIsLoading(false);

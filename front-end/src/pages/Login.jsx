@@ -33,19 +33,22 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
 
-   const token = localStorage.getItem("token");
+
+
+  
+
+    useEffect(() => {
+    const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
 
-    if (token) {
-      switch (role) {
-        case "super_admin":
-          return <Navigate to="/super_admin" replace />;
-        case "admin":
-          return <Navigate to="/admin" replace />;
-        default:
-          return <Navigate to="/home" replace />;
-      }
+    if (token && role) {
+      if (role === "super_admin") navigate("/super_admin", { replace: true });
+      else if (role === "admin") navigate("/admin", { replace: true });
+      else navigate("/home", { replace: true });
+    } else if (token && !role) {
+      localStorage.removeItem("token");
     }
+  }, []);
 
 
   useEffect(() => {

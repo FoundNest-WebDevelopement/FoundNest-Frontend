@@ -47,8 +47,25 @@ export default function Find() {
   const [buildings, setBuildings] = useState([]);
 
   const statuses = Object.values(FOUND_REPORT_STATUS);
-  const [reports, setReports] = useState();
+  const [reports, setReports] = useState([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
   const reportStatuses = ["Unclaimed", "Claimed"];
+
+  useEffect(() => {
+
+    setIsLoadingReports(true);
+    fetchWithAuth(`${API_URL}/api/found-reports`
+      ,  
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setReports(data);
+        setIsLoadingReports(false)
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  }, []);
 
   const categoryLabel =
   selectedCategories.length === 0
@@ -84,20 +101,7 @@ const locationLabel =
     ...selectedGates,
   ];
 
-  useEffect(() => {
-     const token = localStorage.getItem("token");
-    fetchWithAuth(`${API_URL}/api/found-reports`
-      ,  
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(data);
-        setReports(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
+  
 
   useEffect(() => {
 
@@ -105,7 +109,6 @@ const locationLabel =
     )
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
         setCategories(data);
       })
       .catch((err) => {
@@ -117,7 +120,6 @@ const locationLabel =
     fetch(`${API_URL}/api/offices`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
         setBuildings(data);
       })
       .catch((err) => {
@@ -129,7 +131,6 @@ const locationLabel =
     fetch(`${API_URL}/api/gates`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
         setGates(data);
       })
       .catch((err) => {
@@ -141,7 +142,6 @@ const locationLabel =
     fetch(`${API_URL}/api/shared-spaces`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
         setSpaces(data);
       })
       .catch((err) => {
@@ -217,7 +217,6 @@ const locationLabel =
 
   const onFoundItemClick = (id) => {
     navigate(`/find/${id}`);
-    console.log("ID :" + id)
   }
 
   const handleCategoryClick = (categoryId) => {
@@ -274,7 +273,7 @@ const locationLabel =
     <>
       <PageLabel label="Search Item" />
       <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col pb-25">
-        {spaces && buildings && gates && buildings && categories && reports ?
+        {!isLoadingReports &&  spaces && buildings && gates && buildings && categories ?
           (
             <>
               <div className="flex h-12 bg-white border border-[#DDD9CF]  rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] items-center my-3">

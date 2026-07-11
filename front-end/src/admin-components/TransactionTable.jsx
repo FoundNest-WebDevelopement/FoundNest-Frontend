@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, X } from "lucide-react";
 import TransactionManagementModal from "./TransactionManagementModal";
 
@@ -21,7 +21,8 @@ export default function TransactionTable(   {
     //TABLE CONST
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const [tableHeight, setTableHeight] = useState("");
+    const [itemsPerPage, setItemsPerPage] = useState();
     const safeReports = Array.isArray(reports) ? reports : [];
     const totalPages = Math.max(1, Math.ceil(safeReports.length / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -36,10 +37,32 @@ export default function TransactionTable(   {
         return `TXN-${String(id).padStart(5, "0")}`;
     };
 
+        useEffect(() => {
+        const updateTableSize = () => {
+            const height = window.innerHeight;
+    
+            if (height > 732) {
+                setTableHeight("min-h-155");
+                setItemsPerPage(9);
+            } else {
+                setTableHeight("min-h-106");
+                setItemsPerPage(6);
+            }
+        };
+    
+        updateTableSize();
+    
+        window.addEventListener("resize", updateTableSize);
+    
+        return () => {
+            window.removeEventListener("resize", updateTableSize);
+        };
+    }, []);
+
 
     return(
         <>
-            <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
+            <div className={`h-fit w-full max-w-full min-w-0 ${tableHeight} rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden`}>
                 <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
 
                     <table className="table table-zebra table-sm min-w-295 [&_th]:px-2 [&_td]:px-2 text-center">

@@ -1,9 +1,9 @@
 
-export default function Toast({message, icon}){
+export default function Toast({message, icon, solid}){
     return(
         <>
      
-            <div className="h-fit w-full rounded-full bg-white  flex p-2 items-center">
+            <div className="h-fit w-full rounded-full bg-white  flex p-2 items-center border border-primary">
                 <img src={icon} alt="icon" className="h-7" />
                 <div className="w-full text-sm flex justify-center">
                     <p>{message}</p>

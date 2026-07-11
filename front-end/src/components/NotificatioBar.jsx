@@ -13,29 +13,32 @@ export default function NotificationBar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const userId = localStorage.getItem("user_id")
 
-  useEffect(() => {
-  const fetchUnreadCount = () => {
-    fetchWithAuth(`${API_URL}/api/notifications/unread-count/${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setUnreadCount(data.unreadCount);
-        console.log(data.unreadCount)
-      })
-      .catch(console.error);
+ useEffect(() => {
+  if (!userId) return;
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/notifications/unread-count/${userId}`
+      );
+      const data = await res.json();
+      setUnreadCount(data.unreadCount);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // Run First
-  fetchUnreadCount();
   
+  fetchUnreadCount();
 
-  // RUN EVRY 10secs
+  
   const interval = setInterval(fetchUnreadCount, 2000);
 
   return () => clearInterval(interval);
-}, [API_URL, userId]);
+}, [userId]);
 
   return (
-    <div className="flex w-full shadow-sm fixed top-0 left-0 bg-white z-100 py-2">
+    <div className="flex w-full shadow-sm fixed top-0 left-0 bg-white z-4000 py-2">
 
       <div className="navbar-start">
         <img

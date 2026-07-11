@@ -12,10 +12,13 @@ import QRItemFinderModal from "../admin-components/QRItemFinderModal";
 import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useSearchParams, useLocation } from "react-router-dom";
+import WebLoading from "../global-components/WebLoading";
 
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
   const adminId = localStorage.getItem("admin_id");
+
+  const [isLoadingItem, setIsLoadingItem] = useState(false);
 
   const [openLogItem, setOpenLogItem] = useState(false);
   const [openQRScan, setOpenQRScan] = useState(false);
@@ -114,9 +117,13 @@ export default function ItemManagement() {
   }, []);
 
   useEffect(() => {
+    setIsLoadingItem(true)
     fetchWithAuth(`${API_URL}/api/found-reports`)
       .then((res) => res.json())
-      .then((data) => setReports(data))
+      .then((data) => {
+        setReports(data)
+        setIsLoadingItem(false)
+      })
       .catch((err) => console.error(err));
   }, []);
 
@@ -213,7 +220,10 @@ export default function ItemManagement() {
   return (
     <>
       <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
-        <div className="flex h-10 w-full">
+        {!isLoadingItem?
+          (
+            <>
+              <div className="flex h-10 w-full">
           <div className="flex flex-1 border border-[#DDD9CF] rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
             <input
               type="text"
@@ -263,6 +273,15 @@ export default function ItemManagement() {
             setSelectedItem={setSelectedItem}
           />
         </div>
+            </>
+          ):
+          (
+            <>
+             <WebLoading />
+            </>
+          )
+          
+        }
       </div>
 
       {/* Log New Item Modal */}

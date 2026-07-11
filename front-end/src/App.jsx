@@ -18,6 +18,8 @@ import AdminRoute from "./components/AdminRoute";
 import UserRoute from "./components/UserRoute";
 import SuperAdmin from "./SuperAdmin";
 import SuperAdminRoute from "./components/SuperAdminRoute";
+import ReportHistory from "./pages/ReportHistory";
+import MatchDetails from "./pages/MacthDetails";
 
 
 // hide the dock and notif from landingpage, log, reg page
@@ -42,9 +44,12 @@ function Layout() {
         <Route path="/home" element={<Home />} />
         <Route path="/map" element={<Map />} /> 
         <Route path="/report" element={<Report />} />
+        <Route path="/report/:id" element={<Report />} />
         <Route path="/find" element={<Find />} />
         <Route path="/find/:id" element={<FoundItemDetails/>} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/report-history/:id" element={<ReportHistory />} />
+        <Route path="/profile/match-details/:id" element={<MatchDetails />} />
         <Route path="/notifications" element={<Notification />} />
         <Route path="/notifications/:id" element={<NotificationDetails />} />
         </Route>

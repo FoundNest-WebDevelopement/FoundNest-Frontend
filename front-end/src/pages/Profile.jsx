@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import QRItem from "./QRItem";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -116,6 +117,7 @@ export default function Profile() {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [originalContact, setOriginalContact] = useState("");
+  const user_id = localStorage.getItem("user_id");
 
   const [user, setUser] = useState({
     name: "",
@@ -205,6 +207,31 @@ export default function Profile() {
     setPage("main");
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+  try {
+    setIsLoggingOut(true);
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    await fetchWithAuth(`${API_URL}/api/auth/logout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsLoggingOut(false);
+    const rememberedEmail = localStorage.getItem("remembered_email");
+    localStorage.clear();
+    if (rememberedEmail) {
+      localStorage.setItem("remembered_email", rememberedEmail);
+    }
+    navigate("/");
+  }
+};
+
   // =====================
   // MAIN PROFILE PAGE
   // =====================
@@ -260,7 +287,7 @@ export default function Profile() {
 
               {/* Report History */}
               <button
-                onClick={() => navigate("/report")}
+                onClick={() => navigate(`/profile/report-history/${user_id}`)}
                 className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
               >
                 <ReportHistoryIcon />
@@ -293,15 +320,7 @@ export default function Profile() {
 
               {/* Log out */}
               <button
-                onClick={() => {
-                  const rememberedEmail =
-                    localStorage.getItem("remembered_email");
-                  localStorage.clear();
-                  if (rememberedEmail) {
-                    localStorage.setItem("remembered_email", rememberedEmail);
-                  }
-                  navigate("/");
-                }}
+                onClick={handleLogout}
                 className="flex items-center gap-4 px-4 py-4 w-full"
               >
                 <LogoutIcon />

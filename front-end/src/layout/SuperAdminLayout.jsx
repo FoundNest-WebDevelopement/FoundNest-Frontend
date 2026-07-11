@@ -15,7 +15,7 @@ function SuperAdminLayout() {
         <SuperAdminTopBar tabName={tabName}/>
       </header>
 
-      <aside className="fixed top-20 left-0 bottom-0 w-60 bg-primary flex justify-center z-10">
+      <aside className="fixed top-20 left-0 bottom-0 w-60 bg-primary flex justify-center z-40">
             <SuperAdminMenu onChange={setTabName}/>
       </aside>
 
