@@ -120,6 +120,7 @@ export default function Profile() {
   const [user, setUser] = useState({
     name: "",
     studentId: "",
+    facultyId: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -130,10 +131,12 @@ export default function Profile() {
     const lastName = localStorage.getItem("last_name") || "";
     const email = localStorage.getItem("email") || "";
     const studentNumber = localStorage.getItem("student_number") || "";
+    const facultyId = localStorage.getItem("faculty_id") || "";
 
     setUser({
       name: `${firstName} ${lastName}`.trim() || "User",
       studentId: studentNumber,
+      facultyId: facultyId,
       firstName,
       lastName,
       email,
@@ -225,9 +228,15 @@ export default function Profile() {
             <div className="flex-1">
               <p className="font-bold text-[#4B2D23] text-base">{user.name}</p>
               <div className="w-full h-[1.5px] bg-gray-200 my-1"></div>
-              <p className="text-xs text-gray-500">
-                Student ID: {user.studentId}
-              </p>
+              {user.studentId ? (
+                <p className="text-xs text-gray-500">
+                  Student ID: {user.studentId}
+                </p>
+              ) : user.facultyId ? (
+                <p className="text-xs text-gray-500">
+                  Faculty ID: {user.facultyId}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -344,13 +353,15 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Student Number */}
+          {/* Student Number or Faculty ID */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">
-              Student Number
+              {user.studentId ? "Student Number" : "Faculty ID"}
             </p>
             <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-              <p className="text-sm text-[#4B2D23]">{user.studentId}</p>
+              <p className="text-sm text-[#4B2D23]">
+                {user.studentId || user.facultyId || "N/A"}
+              </p>
             </div>
           </div>
 
