@@ -3,6 +3,7 @@ import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2 }
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import WebLoading from "../global-components/WebLoading";
 
 const CENTER_COLORS = ["#7A0C0C", "#D4A017", "#8C7B6B", "#4A6FA5", "#5A8F5A", "#A55A8F"];
 
@@ -105,13 +106,9 @@ export default function SuperAdminDashboard() {
         fetchDashboard();
     }, []);
 
-    if (isLoading || !stats || !counters) {
-        return (
-            <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex items-center justify-center">
-                <p className="text-sm text-[#6B5C42]">Loading dashboard...</p>
-            </div>
-        );
-    }
+if (isLoading || !stats || !counters) {
+    return <WebLoading />;
+}
 
     const counterItems = [
         { label: "Total Admins", value: counters.total_admins },

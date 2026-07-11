@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import formatDate from "../utils/formatDate";
 import EditProfilePictureModal from "../super-admin-components/EditProfilePictureModal";
 import TransferPrivilegesModal from "../super-admin-components/TransferPrivilegesModal";
+import WebLoading from "../global-components/WebLoading";
 
 function formatUserId(id) {
     return `USR-${String(id).padStart(5, "0")}`;
@@ -43,13 +44,9 @@ export default function SuperAdminProfile() {
         fetchProfile();
     }, []);
 
-    if (isLoading || !profile) {
-        return (
-            <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex items-center justify-center">
-                <p className="text-sm text-[#6B5C42]">Loading profile...</p>
-            </div>
-        );
-    }
+if (isLoading || !profile) {
+    return <WebLoading />;
+}
 
     const fullName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
 
