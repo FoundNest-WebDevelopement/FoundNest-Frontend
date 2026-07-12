@@ -6,6 +6,7 @@ import bsu from "../assets/bsu.jpg";
 import { useState, useEffect } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+console.log("API_URL is:", API_URL);
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -80,6 +81,7 @@ function Login() {
         localStorage.setItem("last_name", data.user.last_name || "");
         localStorage.setItem("email", data.user.email || "");
         localStorage.setItem("student_number", data.user.student_number || "");
+        localStorage.setItem("faculty_id", data.user.faculty_id || "");
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("course_section", data.user.course_section || "");
 

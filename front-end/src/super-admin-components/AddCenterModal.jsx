@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import ConfirmDialog from "../global-components/ConfirmDialog";
+import CampusMapPicker from "./CampusMapPicker";
 
 export default function AddCenterModal({ onClose, onUpdated }) {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -12,8 +13,11 @@ export default function AddCenterModal({ onClose, onUpdated }) {
     const [operatingHours, setOperatingHours] = useState("");
     const [notes, setNotes] = useState("");
     const [locationName, setLocationName] = useState("");
+    const [latitude, setLatitude] = useState(null);
+    const [longitude, setLongitude] = useState(null);
 
     const [locationOptions, setLocationOptions] = useState([]);
+    const [existingCenters, setExistingCenters] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState("");
 
@@ -24,7 +28,8 @@ export default function AddCenterModal({ onClose, onUpdated }) {
         officeName !== "" ||
         floor !== "" ||
         operatingHours !== "" ||
-        notes !== "";
+        notes !== "" ||
+        latitude !== null;
 
     useEffect(() => {
         const loadLocationOptions = async () => {
@@ -43,7 +48,21 @@ export default function AddCenterModal({ onClose, onUpdated }) {
             }
         };
 
+        const loadExistingCenters = async () => {
+            try {
+                const response = await fetchWithAuth(`${API_URL}/api/offices-private/list`);
+                const data = await response.json();
+
+                if (response.ok && Array.isArray(data)) {
+                    setExistingCenters(data.filter((c) => c.latitude && c.longitude));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         loadLocationOptions();
+        loadExistingCenters();
     }, []);
 
     const handleSubmit = async () => {
@@ -77,6 +96,8 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                         floor: floor.trim(),
                         operating_hours: operatingHours.trim(),
                         image_url: "",
+                        latitude,
+                        longitude,
                     }),
                 }
             );
@@ -194,24 +215,48 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                 )}
                             </div>
 
-                            {/* RIGHT COLUMN — MAP PLACEHOLDER */}
+                            {/* RIGHT COLUMN — MAP */}
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-[#1A1208]">
                                     Center Location on Map
                                 </label>
-                                <div className="w-full h-64 md:h-full min-h-64 rounded-lg border border-[#DDD9CF] bg-[#F5F5F5] flex items-center justify-center">
-                                    <p className="text-sm text-[#9A8F7C]">Map coming soon</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="w-full h-10 bg-[#E5E1D8] rounded-md text-[#9A8F7C] text-sm font-medium cursor-not-allowed"
-                                >
-                                    Plot Building on Map
-                                </button>
-                                <p className="text-xs text-[#9A8F7C]">
-                                    The building name above will be used as the map marker.
-                                </p>
+                                <CampusMapPicker
+                                    latitude={latitude}
+                                    longitude={longitude}
+                                    onChange={(lat, lng) => {
+                                        setLatitude(lat);
+                                        setLongitude(lng);
+                                    }}
+                                    referenceCenters={existingCenters}
+                                    markerLabel={officeName || "New Center"}
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-[#6B5C42]">Latitude</label>
+        <input
+            type="number"
+            step="0.00000001"
+            value={latitude ?? ""}
+            onChange={(e) => setLatitude(e.target.value === "" ? null : parseFloat(e.target.value))}
+            placeholder="e.g. 14.85707485"
+            className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
+        />
+    </div>
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-[#6B5C42]">Longitude</label>
+        <input
+            type="number"
+            step="0.00000001"
+            value={longitude ?? ""}
+            onChange={(e) => setLongitude(e.target.value === "" ? null : parseFloat(e.target.value))}
+            placeholder="e.g. 120.81371264"
+            className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
+        />
+    </div>
+</div>
+<p className="text-xs text-[#9A8F7C]">
+    Click the map to place the pin, drag to adjust, or type coordinates directly above.
+</p>
                             </div>
                         </div>
                     </div>

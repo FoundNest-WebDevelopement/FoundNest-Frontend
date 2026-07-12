@@ -3,6 +3,7 @@ import { Search, Plus, Package, CheckCircle2, FileText, AlertTriangle } from "lu
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import GenerateReportModal from "../super-admin-components/GenerateReportModal";
+import WebLoading from "../global-components/WebLoading";
 
 function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtextColor }) {
     return (
@@ -64,13 +65,9 @@ export default function SuperAdminSystemReports() {
     const startIndex = (activePage - 1) * itemsPerPage;
     const paginatedCenters = filteredCenters.slice(startIndex, startIndex + itemsPerPage);
 
-    if (isLoading || !stats) {
-        return (
-            <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex items-center justify-center">
-                <p className="text-sm text-[#6B5C42]">Loading system reports...</p>
-            </div>
-        );
-    }
+if (isLoading || !stats) {
+    return <WebLoading />;
+}
 
     return (
         <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex flex-col gap-6">
