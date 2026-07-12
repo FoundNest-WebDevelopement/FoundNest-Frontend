@@ -17,7 +17,7 @@ export default function ItemManagementTable({
     setSelectedItem,
 
 }) {
-    console.log(reports[0])
+  
     const API_URL = import.meta.env.VITE_API_URL;
 
     const userId = localStorage.getItem("user_id");

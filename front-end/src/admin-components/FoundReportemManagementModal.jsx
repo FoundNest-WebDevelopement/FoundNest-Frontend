@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck } from "lucide-react";
 import QRCodeLib from "qrcode";
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
+import { formatActionType } from "../utils/formatActionType.js";
 import formatNotificationDate from "../utils/fotmatNotifications.js";
 import AdminTextField from "./AdminTextField.jsx";
 import AdminDateInput from "./AdminDateInput.jsx";
@@ -9,6 +10,7 @@ import AdminTextArea from "./AdminTextArea.jsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useNavigate } from "react-router-dom";
 import formatDateTime from "../utils/formatDataTimeNew.js";
+import formatDate from "../utils/formatDate.js";
 import { toast } from "react-toastify";
 import AdminConfirmDialog from "./AdminConfirmDialog.jsx";
 import {
@@ -261,7 +263,7 @@ export default function FoundReportItemManagementModal({
 
 
 
-  
+
 
   //OPEN EDIT VARIABLES
   const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
@@ -565,6 +567,7 @@ export default function FoundReportItemManagementModal({
     if (!selectedItem?.item_id) return;
 
     fetchItemHistory(selectedItem.item_id);
+
   }, [selectedItem]);
 
   const handleHiistoryTab = () => {
@@ -644,26 +647,26 @@ export default function FoundReportItemManagementModal({
   };
 
 
-    const hasDisposalFormChanges =
-  itemWhereabouts.trim() ||
-  donationDate ||
-  notes.trim() ||
-  reasonForDiscarding ||
-  selectedProofFile;
+  const hasDisposalFormChanges =
+    itemWhereabouts.trim() ||
+    donationDate ||
+    notes.trim() ||
+    reasonForDiscarding ||
+    selectedProofFile;
 
   // Print QR Code
-const handlePrintQRCode = async () => {
-  setIsPrintingQR(true);
-  try {
-    // Generate QR from the found report's item ID (not owner's pre-registered QR)
-    const qrData = formatItemId(selectedItem.item_id);
-    const qrImageUrl = await QRCodeLib.toDataURL(qrData, {
-      width: 300,
-      margin: 2,
-    });
+  const handlePrintQRCode = async () => {
+    setIsPrintingQR(true);
+    try {
+      // Generate QR from the found report's item ID (not owner's pre-registered QR)
+      const qrData = formatItemId(selectedItem.item_id);
+      const qrImageUrl = await QRCodeLib.toDataURL(qrData, {
+        width: 300,
+        margin: 2,
+      });
 
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
       <html>
         <head>
           <title>Print QR Code - ${selectedItem.item_name}</title>
@@ -714,13 +717,13 @@ const handlePrintQRCode = async () => {
         </body>
       </html>
     `);
-    printWindow.document.close();
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setIsPrintingQR(false);
-  }
-};
+      printWindow.document.close();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsPrintingQR(false);
+    }
+  };
 
   const [openCancelDisposed, setOpenCancelDisposed] = useState(false);
   const [openConfirmDesiposed, setOpenConfirmDesiposed] = useState(false);
@@ -732,7 +735,7 @@ const handlePrintQRCode = async () => {
     setEditTab(true);
     setDisposedTab(false);
     setOpenCancelDisposed(false);
-    
+
   };
 
   const isValidDisposalDate = (dateStr) => {
@@ -752,126 +755,126 @@ const handlePrintQRCode = async () => {
   const disposalDateValid = isValidDisposalDate(donationDate);
 
 
-const isDisposalValid =
-  disposalMethod === "DONATED"
-    ? (
+  const isDisposalValid =
+    disposalMethod === "DONATED"
+      ? (
         itemWhereabouts?.trim() &&
         donationDate &&
         disposalDateValid &&
         selectedProofFile
       )
-    : disposalMethod === "DISPOSED_AS_WASTE"
-    ? (
-        reasonForDiscarding &&
-        donationDate &&
-        disposalDateValid &&
-        selectedProofFile
-      )
-    : false;
+      : disposalMethod === "DISPOSED_AS_WASTE"
+        ? (
+          reasonForDiscarding &&
+          donationDate &&
+          disposalDateValid &&
+          selectedProofFile
+        )
+        : false;
 
-const handleDisposedItem = async () => {
-  setIsDisposing(true);
-  setOpenConfirmDesiposed(false);
+  const handleDisposedItem = async () => {
+    setIsDisposing(true);
+    setOpenConfirmDesiposed(false);
 
-  try {
-    const formData = new FormData();
+    try {
+      const formData = new FormData();
 
-    formData.append(
-      "found_report_id",
-      selectedItem.found_report_id
-    );
-
-    formData.append(
-      "item_id",
-      selectedItem.item_id
-    );
-
-    formData.append(
-      "office_name",
-      selectedItem.office_name
-    );
-
-    formData.append(
-      "disposed_by_admin_id",
-      adminId
-    );
-
-    formData.append(
-      "disposal_method",
-      disposalMethod
-    );
-
-    formData.append(
-      "additional_notes",
-      notes
-    );
-
-    formData.append(
-      "disposal_date",
-      donationDate
-    );
-
-    formData.append(
-      "office_id",
-      officeIdNotification
-    );
-    formData.append(
-      "admin_full_name",
-      adminFullName
-    );
-
-    if (selectedProofFile) {
       formData.append(
-        "proof_img",
-        selectedProofFile
+        "found_report_id",
+        selectedItem.found_report_id
       );
-    }
 
-    if (disposalMethod === "DONATED") {
       formData.append(
-        "disposal_whereabouts",
-        itemWhereabouts
+        "item_id",
+        selectedItem.item_id
       );
-    }
 
-
-
-    if (disposalMethod === "DISPOSED_AS_WASTE") {
       formData.append(
-        "discard_reason",
-        reasonForDiscarding
+        "office_name",
+        selectedItem.office_name
       );
-    }
 
-    const response = await fetchWithAuth(
-      `${API_URL}/api/disposed-item`,
-      {
-        method: "POST",
-        body: formData,
+      formData.append(
+        "disposed_by_admin_id",
+        adminId
+      );
+
+      formData.append(
+        "disposal_method",
+        disposalMethod
+      );
+
+      formData.append(
+        "additional_notes",
+        notes
+      );
+
+      formData.append(
+        "disposal_date",
+        donationDate
+      );
+
+      formData.append(
+        "office_id",
+        officeIdNotification
+      );
+      formData.append(
+        "admin_full_name",
+        adminFullName
+      );
+
+      if (selectedProofFile) {
+        formData.append(
+          "proof_img",
+          selectedProofFile
+        );
       }
-    );
+
+      if (disposalMethod === "DONATED") {
+        formData.append(
+          "disposal_whereabouts",
+          itemWhereabouts
+        );
+      }
 
 
-    const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to dispose item."
+      if (disposalMethod === "DISPOSED_AS_WASTE") {
+        formData.append(
+          "discard_reason",
+          reasonForDiscarding
+        );
+      }
+
+      const response = await fetchWithAuth(
+        `${API_URL}/api/disposed-item`,
+        {
+          method: "POST",
+          body: formData,
+        }
       );
-    }
 
-    // Refresh table
-    const reportsResponse = await fetchWithAuth(
-      `${API_URL}/api/found-reports`
-    );
 
-    const reportsData = await reportsResponse.json();
+      const data = await response.json();
 
-    if (Array.isArray(reportsData)) {
-      onUpdated?.(reportsData);
-    }
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to dispose item."
+        );
+      }
 
-    const updatedSelected = reportsData.find(
+      // Refresh table
+      const reportsResponse = await fetchWithAuth(
+        `${API_URL}/api/found-reports`
+      );
+
+      const reportsData = await reportsResponse.json();
+
+      if (Array.isArray(reportsData)) {
+        onUpdated?.(reportsData);
+      }
+
+      const updatedSelected = reportsData.find(
         (report) => report.found_report_id === selectedItem.found_report_id,
       );
 
@@ -879,21 +882,21 @@ const handleDisposedItem = async () => {
         setSelectedItem(updatedSelected);
       }
 
-    resetDisposalForm();
-    setDisposalMethod("");
+      resetDisposalForm();
+      setDisposalMethod("");
 
-    setDisposedTab(false);
-    setEditTab(true);
-  
+      setDisposedTab(false);
+      setEditTab(true);
 
-    toast.success("Item disposed successfully.");
-  } catch (error) {
-    console.error(error);
-    toast.error(error.message);
-  } finally {
-    setIsDisposing(false);
-  }
-};
+
+      toast.success("Item disposed successfully.");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setIsDisposing(false);
+    }
+  };
 
   //archive states
   const [isArchiving, setIsArchiving] = useState(false);
@@ -908,13 +911,13 @@ const handleDisposedItem = async () => {
         `${API_URL}/api/found-reports/${foundReportId}/archive`,
         {
           method: "PUT",
-           headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        office_id: officeIdNotification,
-        admin_full_name: adminFullName,
-      }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            office_id: officeIdNotification,
+            admin_full_name: adminFullName,
+          }),
         }
       );
 
@@ -1002,6 +1005,45 @@ const handleDisposedItem = async () => {
     }
   };
 
+  const [disposedDetails, setDisposedDetails] = useState([]);
+  const [isDisposedDetails, setIsDisposedDetails] = useState(false);
+  const [openDisposedDetails, setOpenDisposedDetails] = useState(false);
+
+
+  const fetchDisposedDetails = async () => {
+    if (!selectedItem.found_report_id) return;
+
+    try {
+      setIsDisposedDetails(true);
+
+
+      const response = await fetchWithAuth(
+        `${API_URL}/api/disposed-item/${selectedItem.found_report_id}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch disposed item details.");
+      }
+
+      const result = await response.json();
+
+      setDisposedDetails(result.data);
+      console.log("data", result.data)
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDisposedDetails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedItem?.status === "disposed") {
+      fetchDisposedDetails();
+    } else {
+      setDisposedDetails(null)
+    }
+  }, [selectedItem])
+
   return (
     <>
       <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
@@ -1059,6 +1101,10 @@ const handleDisposedItem = async () => {
               <div className="h-full w-full p-5 pt-15">
                 {itemInfo ? (
                   <>
+                    {!isDisposedDetails ?
+                    (
+                      <>
+                        
                     {selectedItem.linked_report &&
                       selectedItem.status === "claimed" && (
                         <div className="flex flex-col gap-2 mb-4">
@@ -1446,20 +1492,90 @@ const handleDisposedItem = async () => {
                           <p className="text-black">{selectedItem.office_name}</p>
                         )}
                       </div>
+
                     </div>
-                     {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
-                                 (<>
-                                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
-                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                         <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
-                                         <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.date_archived)}</span><span></span></p>
-                                    </div>
-                                       
-                                 </div>
-                                 </>)
-                                     
-                                 }
+                 {disposedDetails &&
+                 (
+                  <>
+                     <div className={`w-full gap-3 flex rounded-lg my-2 border-l-3 text-xs p-4 flex-col
+                         ${disposedDetails?.disposal_method === "DONATED"? "bg-green-100  border-l-green-700  text-green-700 "
+                           : 
+                         "  bg-gray-200  border-l-gray-700  text-gray-700 "}`}>
+                      <div className="flex items-center gap-1">
+                        {disposedDetails?.disposal_method === "DONATED"? 
+                          <i className="fa-regular fa-heart text-sm "></i> 
+                          :
+                          <i className="fa-regular fa-trash-can text-sm"></i>
+                        }
+                        
+                        <p className="font-medium ">{disposedDetails?.disposal_method === "DONATED"? "Donated" : "Disposed as waste"}</p>
+                      </div>
+                      <div className="text-[10px] xl:text-xs flex flex-col gap-1">
+                        <p className="text-[#6B5C42]">Disposed by: <span className="text-black font-medium">{disposedDetails.disposed_by_admin_name}</span></p>
+                        <p className="text-[#6B5C42]">Disposed on {formatDateTime(disposedDetails.created_at)}</p>
+
+                      </div>
+                      <hr className="border-(--color-tertiary)  opacity-30 " />
+                      <button className="text-left text-primary text-[10px] xl:text-xs cursor-pointer"
+                            onClick={()=> { setOpenDisposedDetails(!openDisposedDetails) }}>
+                        View Disposal Details <i className={`fa-solid fa-angle-${openDisposedDetails? "up" : "down"}`}></i>
+                        </button>
+
+                    </div>
+                   {openDisposedDetails &&
+                    <div className={`w-full gap-3 flex  flex-col rounded-lg my-2 text-xs p-4
+                         ${disposedDetails?.disposal_method === "DONATED"? "bg-green-100   text-green-700 "
+                           : 
+                         "  bg-gray-200  text-gray-700 "}`}>
+                      <p className="text-[#6B5C42]">PROOF OF DISPOSAL</p>
+                      <div className=" w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                        <img src={disposedDetails.proof_img} alt={"proof photo"}
+                          className="h-full w-full object-contain" />
+                      </div>
+                      <div className="flex flex-col text-black gap-3 text-[10px] xl:text-xs">
+                        <div className="flex">
+                          <div className="flex flex-col flex-1">
+                            <p className=" text-[#6B5C42] ">DISPOSAL METHOD</p>
+                            <p >{disposedDetails?.disposal_method === "DONATED"? "For Donation" : "Disposed as waste"}</p>
+                          </div>
+                          <div className="flex flex-col flex-1">
+                            <p className=" text-[#6B5C42]">DATE OF DISPOSAL</p>
+                            <p >{formatDate(disposedDetails.disposal_date)}</p>
+                          </div>
+
+                        </div>  
+                        <div className="flex flex-col flex-1">
+                            <p className=" text-[#6B5C42]">{disposedDetails?.disposal_method === "DONATED"? "BENEFICIARY/LOCATION" : "REASON"}</p>
+                            <p >{disposedDetails?.disposal_method === "DONATED"? disposedDetails.disposal_whereabouts : formatActionType(disposedDetails.discard_reason)}</p>
+                          </div>
+                          <div className="flex flex-col flex-1">
+                            <p className=" text-[#6B5C42]">ADDITIONAL NOTES</p>
+                            <p >{disposedDetails.additional_notes || "N/A"}</p>
+                          </div>
+
+
+                      </div>
+
+                    </div>
+
+                   }
+                  </>
+                 )
+
+                 }
+                    {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
+                      (<>
+                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                        <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
+                          <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                            <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
+                            <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.date_archived)}</span><span></span></p>
+                          </div>
+
+                        </div>
+                      </>)
+
+                    }
                     {selectedItem.status === 'archived' &&
                       (
                         <>
@@ -1471,7 +1587,7 @@ const handleDisposedItem = async () => {
                             onClick={() => { setOpenRestoreDialog(true) }}
                             disabled={isRestoring}
                           >
-                            {isRestoring? "Restoring..." : (
+                            {isRestoring ? "Restoring..." : (
                               <>
                                 <i className="fa-solid fa-arrow-rotate-left"></i> Restore Listing
                               </>
@@ -1535,7 +1651,7 @@ const handleDisposedItem = async () => {
                               }
                               disabled={
                                 selectedItem.status === "claimed" ||
-                                selectedItem.status === "disposed" || 
+                                selectedItem.status === "disposed" ||
                                 isArchiving
                               }
                             >
@@ -1588,7 +1704,7 @@ const handleDisposedItem = async () => {
                               }}
                               disabled={
                                 selectedItem.status === "claimed" ||
-                                selectedItem.status === "disposed" || 
+                                selectedItem.status === "disposed" ||
                                 isArchiving
                               }
                             >
@@ -1604,20 +1720,20 @@ const handleDisposedItem = async () => {
                     <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
                       {!isEditing && selectedItem.status !== 'archived' && (
                         <div className="w-full flex flex-col gap-1">
-                       <button
-  type="button"
-  onClick={handlePrintQRCode}
-  className={`flex gap-3 p-2 rounded-md items-center cursor-pointer transition-transform duration-100
+                          <button
+                            type="button"
+                            onClick={handlePrintQRCode}
+                            className={`flex gap-3 p-2 rounded-md items-center cursor-pointer transition-transform duration-100
     active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
-  disabled={
-    selectedItem.status === "claimed" ||
-    selectedItem.status === "disposed" ||
-    isPrintingQR
-  }
->
-  <QrCode size="20" />
-  <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
-</button>
+                            disabled={
+                              selectedItem.status === "claimed" ||
+                              selectedItem.status === "disposed" ||
+                              isPrintingQR
+                            }
+                          >
+                            <QrCode size="20" />
+                            <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
+                          </button>
                           {!selectedItem.qr_code_id && (
                             <p className="text-[#6B5C42] text-[10px] text-center">
                               This item was not pre-registered with a QR code by
@@ -1627,6 +1743,16 @@ const handleDisposedItem = async () => {
                         </div>
                       )}
                     </div>
+                      </>
+                    )
+                    :
+                    (
+                      <>
+                      <span className="text-[#6B5C42] text-sm">fetching item details...</span>
+                      </>
+                    )
+
+                    }
                   </>
                 ) : (
                   <>
@@ -1645,7 +1771,7 @@ const handleDisposedItem = async () => {
                                   </div>
                                   <div>
                                     <p className="text-xs">
-                                      {history.history_type}
+                                      {formatActionType(history.history_type)}
                                     </p>
                                     <p className="text-[10px] text-[#6B5C42] mb-1">
                                       {history.details}
@@ -1984,10 +2110,10 @@ const handleDisposedItem = async () => {
                         title="Date of Donation"
                         reqField={true}
                         value={donationDate}
-                         disabled={isDisposing}
+                        disabled={isDisposing}
                         onChange={setDonationDate}
                       />
-                                            {donationDate && !disposalDateValid && (
+                      {donationDate && !disposalDateValid && (
                         <p className="text-xs text-primary">
                           Disposal date cannot be in the future.
                         </p>
@@ -2040,29 +2166,29 @@ const handleDisposedItem = async () => {
                         value={notes}
                         onChange={setNotes}
                       />
-                       <hr className="border-(--color-tertiary) my-4 opacity-30" />
-                <div className="w-full h-10  flex gap-2 text-xs mt-auto">
-                  <button
-                    className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                    onClick={() => {
-                        if (hasDisposalFormChanges) {
-                          setOpenCancelDisposed(true);
-                        } else {
-                          handleCancelDisposed();
-                        }
-                      }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!isDisposalValid || isDisposing}
-                    onClick={()=>setOpenConfirmDesiposed(true)}
-                    className={`flex-1 h-full bg-primary  font-medium text-white rounded-md disabled:opacity-40`}
-                  >
-                    {isDisposing ? "Disposing..." : "Confirm Disposal"}
-                  </button>
-                </div>
+                      <hr className="border-(--color-tertiary) my-4 opacity-30" />
+                      <div className="w-full h-10  flex gap-2 text-xs mt-auto">
+                        <button
+                          className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                          onClick={() => {
+                            if (hasDisposalFormChanges) {
+                              setOpenCancelDisposed(true);
+                            } else {
+                              handleCancelDisposed();
+                            }
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isDisposalValid || isDisposing}
+                          onClick={() => setOpenConfirmDesiposed(true)}
+                          className={`flex-1 h-full bg-primary  font-medium text-white rounded-md disabled:opacity-40`}
+                        >
+                          {isDisposing ? "Disposing..." : "Confirm Disposal"}
+                        </button>
+                      </div>
                     </>
                   )
 
@@ -2084,7 +2210,7 @@ const handleDisposedItem = async () => {
                         value={donationDate}
                         onChange={setDonationDate}
                       />
-                       {donationDate && !disposalDateValid && (
+                      {donationDate && !disposalDateValid && (
                         <p className="text-xs text-primary">
                           Disposal date cannot be in the future.
                         </p>
@@ -2131,41 +2257,41 @@ const handleDisposedItem = async () => {
                       />
 
 
-                     
+
                       <AdminTextArea
                         title="Additional Notes"
                         reqField={true}
                         value={notes}
                         onChange={setNotes}
                       />
-                       <hr className="border-(--color-tertiary) my-4 opacity-30" />
-                <div className="w-full h-10  flex gap-2 text-xs mt-auto">
-                  <button
-                    className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                    onClick={() => {
-                      if (hasDisposalFormChanges) {
-                        setOpenCancelDisposed(true);
-                      } else {
-                        handleCancelDisposed();
-                      }
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!isDisposalValid || isDisposing}
-                    onClick={()=>setOpenConfirmDesiposed(true)}
-                    className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40`}
-                  >
-                    {isDisposing ? "Disposing..." : "Confirm Disposal"}
-                  </button>
-                </div>
+                      <hr className="border-(--color-tertiary) my-4 opacity-30" />
+                      <div className="w-full h-10  flex gap-2 text-xs mt-auto">
+                        <button
+                          className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
+                          onClick={() => {
+                            if (hasDisposalFormChanges) {
+                              setOpenCancelDisposed(true);
+                            } else {
+                              handleCancelDisposed();
+                            }
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isDisposalValid || isDisposing}
+                          onClick={() => setOpenConfirmDesiposed(true)}
+                          className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40`}
+                        >
+                          {isDisposing ? "Disposing..." : "Confirm Disposal"}
+                        </button>
+                      </div>
                     </>
                   )
 
                 }
-               
+
               </div>
             </>
           )}
@@ -2465,8 +2591,8 @@ const handleDisposedItem = async () => {
 
         />
       }
-       {openCancelDisposed &&
-         <AdminConfirmDialog
+      {openCancelDisposed &&
+        <AdminConfirmDialog
           description={`Cancel the DIsposal of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
           onClose={() => {
             setOpenCancelDisposed(false)
@@ -2477,7 +2603,7 @@ const handleDisposedItem = async () => {
         />
       }
       {openConfirmDesiposed &&
-         <AdminConfirmDialog
+        <AdminConfirmDialog
           description={`Are you sure you want to permanently dispose of this item ${formatItemId(selectedItem.item_id)}? This action cannot be undone and will officially close its record.`}
           onClose={() => {
             setOpenConfirmDesiposed(false)
