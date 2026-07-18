@@ -1,18 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
-// Hardcoded coordinates since they never change
-const officeCoordinates = {
-  "Alvarado Hall": { lat: 14.857737666695048, lng: 120.81587817292802 },
-  "Pimentel Hall": { lat: 14.857156697428334, lng: 120.81330699766315 },
-  "Natividad Hall": { lat: 14.8575, lng: 120.8140 },
-  "Federizo Hall": { lat: 14.8578, lng: 120.8135 },
-  "Roxas Hall": { lat: 14.8572, lng: 120.8142 },
-};
 
 const createMarkerIcon = (label) =>
   new L.DivIcon({
@@ -53,7 +45,8 @@ export default function Map() {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
-  const [toast, setToast] = useState(false);
+  const [myReview, setMyReview] = useState(null);
+  const [toast, setToast] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState("Search for a Drop-off location...");
   const [reviews, setReviews] = useState([]);
@@ -63,15 +56,16 @@ export default function Map() {
   useEffect(() => {
     const fetchOffices = async () => {
       try {
-        const res = await fetch(`${API_URL}/offices`);
+        const res = await fetch(`${API_URL}/api/offices`);
         const data = await res.json();
         if (res.ok) {
-          // Map offices with coordinates
-          const mapped = data.map((office) => ({
-            ...office,
-            lat: officeCoordinates[office.office_name]?.lat || 14.8574,
-            lng: officeCoordinates[office.office_name]?.lng || 120.8146,
-          }));
+          const mapped = data
+            .filter((office) => office.status !== false)
+            .map((office) => ({
+              ...office,
+              lat: office.latitude ? Number(office.latitude) : 14.8574,
+              lng: office.longitude ? Number(office.longitude) : 120.8146,
+            }));
           setOffices(mapped);
         }
       } catch (err) {
@@ -81,11 +75,11 @@ export default function Map() {
     fetchOffices();
   }, []);
 
-  // Fetch reviews when office is selected
+  // Fetch ALL reviews for the selected office
   const fetchReviews = useCallback(async (officeId) => {
     setLoadingReviews(true);
     try {
-      const res = await fetch(`${API_URL}/offices/${officeId}/reviews`);
+      const res = await fetch(`${API_URL}/api/offices/${officeId}/reviews`);
       const data = await res.json();
       if (res.ok) {
         setReviews(data);
@@ -97,36 +91,72 @@ export default function Map() {
     }
   }, []);
 
+  // Fetch the CURRENT user's own review for the selected office (if any)
+  const fetchMyReview = useCallback(async (officeId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/offices/${officeId}/reviews/mine?user_id=${user_id}`);
+      const data = await res.json();
+      if (res.ok && data) {
+        setMyReview(data);
+        setRating(data.rating);
+        setReviewText(data.review_text || "");
+      } else {
+        setMyReview(null);
+        setRating(0);
+        setReviewText("");
+      }
+    } catch (err) {
+      console.error(err);
+      setMyReview(null);
+    }
+  }, [user_id]);
+
   const handleMarkerClick = (office) => {
     setSelectedOffice(office);
-    setRating(0);
-    setReviewText("");
+    fetchMyReview(office.office_id);
     fetchReviews(office.office_id);
   };
 
   const handleClose = () => {
     setSelectedOffice(null);
     setReviews([]);
+    setMyReview(null);
   };
 
-  const handlePostReview = async () => {
-    if (rating === 0 || reviewText.trim() === "") return;
+const handlePostReview = async () => {
+    if (rating === 0) return;
+
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/offices/${selectedOffice.office_id}/reviews`, {
-        method: "POST",
-        body: JSON.stringify({ user_id, rating, review_text: reviewText }),
-      });
-      if (res.ok) {
-        setRating(0);
-        setReviewText("");
-        setToast(true);
-        setTimeout(() => setToast(false), 3000);
-        fetchReviews(selectedOffice.office_id);
+      if (myReview) {
+        const res = await fetchWithAuth(`${API_URL}/api/reviews/${myReview.review_id}`, {
+          method: "PUT",
+          body: JSON.stringify({ rating, review_text: reviewText }),
+        });
+        if (res.ok) {
+          setToast("Review updated. Thank you for your feedback!");
+          setTimeout(() => setToast(null), 3000);
+          fetchMyReview(selectedOffice.office_id);
+          fetchReviews(selectedOffice.office_id);
+        }
+      } else {
+        if (reviewText.trim() === "") return;
+        const res = await fetchWithAuth(`${API_URL}/api/offices/${selectedOffice.office_id}/reviews`, {
+          method: "POST",
+          body: JSON.stringify({ user_id, rating, review_text: reviewText }),
+        });
+        if (res.ok) {
+          setRating(0);
+          setReviewText("");
+          setToast("Review posted. Thank you for your feedback!");
+          setTimeout(() => setToast(null), 3000);
+          fetchMyReview(selectedOffice.office_id);
+          fetchReviews(selectedOffice.office_id);
+        }
       }
     } catch (err) {
       console.error(err);
     }
-  };
+};
 
   const getAverageRating = () => {
     if (reviews.length === 0) return "0.0";
@@ -303,7 +333,9 @@ export default function Map() {
 
           {/* Rate and Review */}
           <div className="px-4 pt-4">
-            <p className="font-semibold text-sm mb-3">Rate and Review</p>
+            <p className="font-semibold text-sm mb-3">
+              {myReview ? "Edit Your Review" : "Rate and Review"}
+            </p>
 
             <div className="flex gap-2 mb-3 justify-center">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -334,18 +366,12 @@ export default function Map() {
               onClick={handlePostReview}
               className="w-full py-3 rounded-full text-sm font-semibold mt-2"
               style={{
-                backgroundColor:
-                  rating > 0 && reviewText.trim() !== ""
-                    ? "#990000"
-                    : "rgba(75, 45, 35, 0.3)",
+                backgroundColor: rating > 0 ? "#990000" : "rgba(75, 45, 35, 0.3)",
                 color: "white",
-                cursor:
-                  rating > 0 && reviewText.trim() !== ""
-                    ? "pointer"
-                    : "default",
+                cursor: rating > 0 ? "pointer" : "default",
               }}
             >
-              Post
+              {myReview ? "Update Review" : "Post"}
             </button>
           </div>
 
@@ -395,15 +421,15 @@ export default function Map() {
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-20 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
-          <span className="text-white text-sm">ℹ️</span>
-          <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-            Review posted. Thank you for your feedback!
-          </p>
-        </div>
-      )}
+     {/* Toast */}
+{toast && (
+    <div className="fixed bottom-20 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
+      <span className="text-white text-sm">ℹ️</span>
+      <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+        {toast}
+      </p>
+    </div>
+)}
     </div>
   );
 }
