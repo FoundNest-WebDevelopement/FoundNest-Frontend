@@ -228,7 +228,7 @@ export default function MatchDetails() {
                              onClick={()=>{setSelectedPhoto(match.found_image_url), setHowToClaim(true)}}>
                             <img src={match.found_image_url} alt={match.found_item_name} className="w-full h-full rounded-lg" />
                             <div className="text-lg rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white"></i>
+                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
                             </div>
                         </div>
 
