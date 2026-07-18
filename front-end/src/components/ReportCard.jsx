@@ -16,6 +16,7 @@ export default function ReportCard({
     onEdit,
     onCancel,
     dateCancelled,
+    navBack = null,
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
     const [openMatches, setOpenMatches] = useState(false);
@@ -170,7 +171,9 @@ const normalizedMatches = matches?.map(match => ({
          <div className="w-full h-fit bg-white flex flex-col p-4 rounded-xl">
             <div className="flex gap-2">
                 <div className="h-32 w-1/2 bg-[#AE7365]/50 flex items-center justify-center rounded-xl relative">
+                    {imageSrc &&
                     <img src={imageSrc} alt="item" className="w-full h-full object-contain" />
+                    }
                 </div>
                 <div className="w-1/2 flex flex-col gap-1">
                     {!matches.length <= 0 && !dateCancelled && (
@@ -226,7 +229,7 @@ const normalizedMatches = matches?.map(match => ({
                                     key={match.found_report_id}
                                     data={match}
                                     match={true}
-                                    onClick={() => navigate(`/profile/match-details/${match.match_id}`)}
+                                    onClick={() => {navBack? navigate(`/profile/match-details/${match.match_id}/${reportId}`) : navigate(`/profile/match-details/${match.match_id}`)}}
                                 />
                             ))}
                         </div>
@@ -238,7 +241,7 @@ const normalizedMatches = matches?.map(match => ({
             <div className="flex gap-1 mt-2">
                 <button
                     className="flex gap-1 items-center justify-center bg-white border border-primary text-primary rounded-lg text-xs py-2 flex-1"
-                    onClick={ ()=> navigate(`/report/${reportId}`)}
+                    onClick={ ()=> {navBack? navigate(`/report/${reportId}/${reportId}`) : navigate(`/report/${reportId}`)}}
                 >
                     <i className="fa-regular fa-pen-to-square"></i> <p>Edit Report</p>
                 </button>

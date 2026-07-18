@@ -11,6 +11,7 @@ export default function MatchDetails() {
 
     const navigate = useNavigate();
     const { id } = useParams();
+    const { reportId } = useParams();
 
     const userId = localStorage.getItem("user_id")
 
@@ -213,7 +214,7 @@ export default function MatchDetails() {
 
     return (
         <>
-            <PageLabelWithReturn label={`Potential Match ${formatItemId(match?.found_item_id)}`} onClick={() => navigate(`/profile/report-history/${userId}`)} />
+            <PageLabelWithReturn label={`Potential Match ${formatItemId(match?.found_item_id)}`} onClick={() => {reportId? navigate(`/notifications/${reportId}/verify`) : navigate(`/profile/report-history/${userId}`)}} />
             <div className="bg-(--color-secondary) min-h-screen p-4 flex flex-col gap-3 pb-25">
                 <div className="flex w-full my-2 items-center gap-3">
                     <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />

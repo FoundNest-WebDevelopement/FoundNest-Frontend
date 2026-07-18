@@ -41,6 +41,7 @@ export default function Report() {
   const [dsiableOtherLcoations, setdDisableOtherLcoations] = useState(false);
 
   const { id } = useParams();
+  const { reportId } = useParams();
 
   const getDropdownLabel = () => {
     if (totalLocations === 0) return "Select Locations";
@@ -54,12 +55,18 @@ export default function Report() {
     return `Locations (${totalLocations})`;
   };
 
-  // --- SELECTED DATA STATES ---
+  // SELECTED DATA STATES
   const [selectedCollegeBuilding, setSelectedCollegeBuilding] = useState([]);
   const [selectedSharedSpaces, setSelectedSharedSpaces] = useState([]);
   const [selectedGates, setSelectedGates] = useState([]);
   const [selectedOthers, setSelectedOthers] = useState([]);
   const [cantRemember, setCantRemember] = useState(false);
+
+  const sanitizeInput = (value, maxLength) =>
+  value
+    .replace(/\s+/g, " ")      
+    .replace(/[<>]/g, "")    
+    .slice(0, maxLength);
 
   const totalLocations =
     selectedCollegeBuilding.length +
@@ -68,7 +75,7 @@ export default function Report() {
     selectedOthers.length +
     (cantRemember ? 1 : 0);
 
-  // --- CHECKBOX TOGGLE HANDLERS ---
+  // CHECKBOX TOGGLE HANDLERS 
   const handleCollgeClick = (officeName) => {
     setSelectedCollegeBuilding((prev) =>
       prev.includes(officeName)
@@ -170,7 +177,10 @@ export default function Report() {
     setIsCancel(false);
   }
   const handleDiscard = () => {
-    if(id){
+    if(reportId){
+      navigate(`/notifications/${reportId}/verify`);
+    }
+    else if(id){
       navigate(`/profile/report-history/${userID}`);
     }else{
       setIsCancel(false);
@@ -191,7 +201,7 @@ export default function Report() {
 
   const handleUpdate = async () => {
 
-
+    setShowSubmitConfirmation(false)
 
     try {
       setIsUpdating(true);
@@ -318,15 +328,7 @@ export default function Report() {
       console.error(err);
     }
   };
-  //new 
-  // const handleChange = (e) => {
-  //   const file = e.target.files[0];
 
-  //   if (file) {
-  //     setSelectedFile(file);
-  //     setImage(URL.createObjectURL(file));
-  //   }
-  // };
   const handleChange = async (e) => {
     const file = e.target.files[0];
 
@@ -613,9 +615,12 @@ useEffect(() => {
              
             </div>
             <DropDown title="Categories*" placeholder="Select Category" value={categoryID} options={categories} onChange={setCategoryID} />
-            <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} />
-            <TextArea title="Detailed Description*" placeholder="Brand, Model, Size, Color, Material, etc." value={description} onChange={setDescription} error={false} />
-            <TextField title="Contents (if applicable)" placeholder="e.g., Cash amount, ID name" value={contents} onChange={setContents} error={false} />
+            <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} maxLength={50}/>
+            <TextArea title="Detailed Description*" placeholder="Brand, Model, Size, Color, Material, etc." value={description} onChange={(value) => setDescription(sanitizeInput(value, 500))} error={false} maxLength={500}/>
+              <p className="text-xs text-gray-500 text-right">
+                  {description.length}/500
+              </p>
+            <TextField title="Contents (if applicable)" placeholder="e.g., Cash amount, ID name" value={contents} onChange={setContents} error={false} maxLength={100}/>
             <HorizontalBreak />
             <div className="pb-5"></div>
             <div className="flex justify-between items-center pb-20">
@@ -860,7 +865,7 @@ useEffect(() => {
               )}
             </div>
              
-              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} />
+              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} maxLength={100}/>
               <div className=" bg-primary/20 text-primary-content w-full my-3 rounded-md">
                 <div className="card-body">
                   <div className="w-full flex items-center">
@@ -1004,15 +1009,10 @@ useEffect(() => {
               <ButtonPositive label="Remove Photo" enable={showImageOptions} onClick={() => {
                 setShowImageOptions(false);
                 setImage("REMOVE");
-                setSelectedFile("REMOVE");
-                
+                setSelectedFile("REMOVE");    
               }} />
-
               }
               <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
-
-
-
             </div>
           </div>
         )}
@@ -1035,12 +1035,8 @@ useEffect(() => {
                 setSelectedFile("REMOVE");
                 
               }} />
-
               }
               <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
-
-
-
             </div>
           </div>
         )}
@@ -1055,7 +1051,6 @@ useEffect(() => {
         />
 
         }
-
 
       </div>
       {isLoadingReport && 

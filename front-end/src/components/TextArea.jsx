@@ -3,7 +3,8 @@ export default function TextArea({
   placeholder,
   value,
   onChange = () => {},
-  error
+  error,
+  maxLength
 }) {
   return (
     <fieldset className="fieldset">
@@ -19,6 +20,7 @@ export default function TextArea({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          maxLength={maxLength}
         />
 
       </div>

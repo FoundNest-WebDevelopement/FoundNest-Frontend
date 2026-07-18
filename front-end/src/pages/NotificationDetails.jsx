@@ -92,7 +92,10 @@ const handleReturn = ()=> {
                                                 </div>
                                             </div>
                                         </div>
-                                        <button className="w-full h-10 bg-primary self-end font-medium text-white text-sm rounded-lg"> Verify this Match </button>
+                                        <button 
+                                            className="w-full h-10 bg-primary self-end font-medium text-white text-sm rounded-lg"
+                                            onClick={()=> navigate(`/notifications/${notification?.lost_report_id}/verify`)}
+                                        > Verify this Match </button>
                                     </div>
                         </>
                     )
