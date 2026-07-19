@@ -1,4 +1,4 @@
-export default function TextField({title,placeholder,value,onChange=() => {},error, maxLength}) {
+export default function TextField({title,placeholder,value,onChange=() => {},error, maxLength, disabled}) {
     return (
         <>
             <fieldset className="fieldset ">
@@ -6,9 +6,10 @@ export default function TextField({title,placeholder,value,onChange=() => {},err
                 <div className={`rounded-md ${error? "p-1  border border-red-600":""}`}>
                     <input 
                         type="text" 
-                        className="input bg-white rounded-md text-xs w-full" 
+                        className="input bg-white rounded-md text-xs w-full disabled:opacity-80" 
                         placeholder={placeholder} 
                         value={value} 
+                        disabled={disabled}
                         onChange={(e) => onChange(e.target.value)}
                         maxLength={maxLength}
                          />

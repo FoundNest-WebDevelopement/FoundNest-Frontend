@@ -2,7 +2,8 @@ export default function DateInput({
   title,
   value,
   onChange,
-  error
+  error,
+  disabled,
 }) {
   return (
     <fieldset className="fieldset">
@@ -15,8 +16,9 @@ export default function DateInput({
 
         <input
           type="date"
-          className="input bg-white text-xs rounded-md w-full"
+          className="input bg-white text-xs rounded-md w-full disabled:opacity-80"
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
         />
 

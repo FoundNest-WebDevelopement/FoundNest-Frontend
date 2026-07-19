@@ -19,6 +19,7 @@ import InfoIcon from "../assets/info_icon.png"
 import toast from "react-hot-toast";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useNavigate, useParams } from "react-router-dom";
+import PageLabelWithReturn from "../components/PageLabelWithReturn";
 
 export default function Report() {
 
@@ -42,6 +43,23 @@ export default function Report() {
 
   const { id } = useParams();
   const { reportId } = useParams();
+  const { mode } = useParams();
+
+  const navBack = () => {
+    if(mode == "view" && reportId){
+      navigate(`/notifications/${reportId}/verify`)
+    }
+    else{
+      navigate(`/profile/report-history/${userID}`)
+    }
+  
+  }
+
+
+
+
+  
+
 
   const getDropdownLabel = () => {
     if (totalLocations === 0) return "Select Locations";
@@ -547,7 +565,17 @@ useEffect(() => {
   return (
     <>
       <div className={`${submitted ? "hidden" : ""}`} >
-        <PageLabel label= {id? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
+        
+        {mode? 
+          <>
+            <PageLabelWithReturn label= {"View Lost Item Report Form"} onClick={navBack}/>
+          </>
+          :
+          <>
+          <PageLabel label= {id? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
+          </>
+
+        }
       </div>
       <div className={`${submitted ? "bg-(--color-primary) flex flex-col items-center justify-center" : "bg-(--color-secondary)"}  min-h-screen px-4`}>
 
@@ -556,14 +584,22 @@ useEffect(() => {
           (<>
             <PageLabel2 label="Item Description" />
             <HorizontalBreak />
-            <div className="bg-white w-full h-fit p-2 rounded-xl mt-4 mb-2 flex items-center justify-center flex-col">
+            <div className="bg-white w-full h-fit p-2 rounded-xl mt-4 mb-2 flex items-center justify-center flex-col ">
               {(image && image !== "REMOVE")  ? (
                 <img
-                  src={image === "REMOVE"? ""  : image}
-                  alt="Uploaded"
-                  onClick={() => { setShowImageOptions(true) }}
-                  className="w-full max-h-50 object-contain rounded-xl cursor-pointer hover:opacity-80 transition"
-                />
+                src={image}
+                alt="Uploaded"
+                onClick={() => {
+                  if (mode !== "view") {
+                    setShowImageOptions(true);
+                  }
+                }}
+                className={`w-full max-h-50 object-contain rounded-xl transition ${
+                  mode === "view"
+                    ? "cursor-default"
+                    : "cursor-pointer hover:opacity-80"
+                }`}
+              />
               ) : (
                 <div className="p-1 border border-dashed rounded-full border-(--color-primary)">
                   {/* <label onClick={openFilePicker} className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center">
@@ -571,8 +607,9 @@ useEffect(() => {
                   </label> */}
                   <button
                     type="button"
+                    disabled={mode === "view"}
                     onClick={() => setShowImageOptions(true)}
-                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center"
+                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center disabled:opacity-80"
                   >
                     <i className="fa-solid fa-plus text-white"></i>
                   </button>
@@ -614,20 +651,20 @@ useEffect(() => {
 
              
             </div>
-            <DropDown title="Categories*" placeholder="Select Category" value={categoryID} options={categories} onChange={setCategoryID} />
-            <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} maxLength={50}/>
-            <TextArea title="Detailed Description*" placeholder="Brand, Model, Size, Color, Material, etc." value={description} onChange={(value) => setDescription(sanitizeInput(value, 500))} error={false} maxLength={500}/>
+            <DropDown title="Categories*" placeholder="Select Category" value={categoryID} options={categories} onChange={setCategoryID} disabled={mode === "view"} />
+            <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} maxLength={50} disabled={mode === "view"}/>
+            <TextArea title="Detailed Description*" placeholder="Brand, Model, Size, Color, Material, etc." value={description} onChange={(value) => setDescription(sanitizeInput(value, 500))} error={false} maxLength={500} disabled={mode === "view"}/>
               <p className="text-xs text-gray-500 text-right">
                   {description.length}/500
               </p>
-            <TextField title="Contents (if applicable)" placeholder="e.g., Cash amount, ID name" value={contents} onChange={setContents} error={false} maxLength={100}/>
+            <TextField title="Contents (if applicable)" placeholder="e.g., Cash amount, ID name" value={contents} onChange={setContents} error={false} maxLength={100} disabled={mode === "view"}/>
             <HorizontalBreak />
             <div className="pb-5"></div>
             <div className="flex justify-between items-center pb-20">
               <p className="text-xs">Page 1 out of 2</p>
 
               <div className="flex gap-2">
-                {isEdit ?
+                {isEdit && !mode?
                   (
                     <>
                       <ButtonNegative label="Cancel" onClick={handleCancel} />
@@ -660,6 +697,7 @@ useEffect(() => {
                 onChange={handleDateChange}
                 error={dateLost && !dateValid}
                 max={new Date().toISOString().split("T")[0]}
+                disabled={mode === "view"}
               />
               {dateLost && !dateValid && (
                 <p className="text-xs text-red-500 mt-1 ml-1">Date cannot be in the future.</p>
@@ -670,7 +708,7 @@ useEffect(() => {
                 value={timeLost}
                 onChange={setTimeLost}
                 error={dateValid && timeLost && !timeValid}
-                disabled={!dateValid}
+                disabled={!dateValid || (mode === "view")}
               />
               {!dateValid && (
                 <p className="text-xs text-yellow-500 mt-1 ml-1">Enter a valid date first.</p>
@@ -682,12 +720,13 @@ useEffect(() => {
             <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
             <div className="relative w-full mt-2">
               <button
-                className={`w-full p-3 text-xs ${
+                className={`w-full p-3 text-xs disabled:opacity-80 ${
                   openLocations ? " border-primary text-black border" : " "
                 } 
                 ${totalLocations === 0? "text-[#4B2D23]/50" : "text-black"}
                 rounded-md  flex items-center justify-between min-w-37.5 shadow-sm bg-white `}
                 onClick={() => setOpenLocations(!openLocations)}
+                disabled={mode === "view"}
               >
                 <span className="font-medium truncate max-w-55 text-left">
                   {getDropdownLabel()}
@@ -708,7 +747,7 @@ useEffect(() => {
                         onClick={() =>
                           setOpenCollgeBuilding(!openCollgeBuilding)
                         }
-                        disabled={dsiableOtherLcoations}
+                        disabled={dsiableOtherLcoations || (mode === "view")}
                         className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
                       >
                         <span>
@@ -865,7 +904,7 @@ useEffect(() => {
               )}
             </div>
              
-              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} maxLength={100}/>
+              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} maxLength={100} disabled={mode === "view"}/>
               <div className=" bg-primary/20 text-primary-content w-full my-3 rounded-md">
                 <div className="card-body">
                   <div className="w-full flex items-center">
@@ -882,7 +921,9 @@ useEffect(() => {
                 <p className="text-xs">Page 2 out of 2</p>
                 <div className="flex gap-2">
                   <ButtonNegative label="Back" onClick={() => { setNextPage(false) }} />
-                  {isEdit ?
+                  {!mode &&
+                  <>
+                   {isEdit ?
                     (
                       <>
                         <ButtonPositive label="Confirm" enable={timeValid} onClick={()=>setShowSubmitConfirmation(true)} />
@@ -894,6 +935,9 @@ useEffect(() => {
                         <ButtonPositive label="Submit" enable={timeValid && totalLocations > 0} onClick={()=>setShowSubmitConfirmation(true)} />
                       </>
                     )
+                  }
+                  </>
+
                   }
                 </div>
               </div>

@@ -3,7 +3,8 @@ export default function DropDown({
   placeholder,
   value,
   options = [],
-  onChange
+  onChange,
+  disabled,
 }) {
   return (
     <fieldset className="fieldset">
@@ -13,9 +14,10 @@ export default function DropDown({
       </legend>
 
       <select
-        className="select bg-white rounded-md text-xs w-full"
+        className="select bg-white rounded-md text-xs w-full disabled:opacity-80"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         required
       >
 

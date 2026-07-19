@@ -168,8 +168,8 @@ const normalizedMatches = matches?.map(match => ({
 
     return (
        <>
-         <div className="w-full h-fit bg-white flex flex-col p-4 rounded-xl">
-            <div className="flex gap-2">
+         <div className="w-full h-fit bg-white flex flex-col p-4 rounded-xl" >
+            <div className="flex gap-2" onClick={()=> {navBack? navigate(`/report/${reportId}/mode/view/${reportId}`) : navigate(`/report/${reportId}/mode/view`)}}>
                 <div className="h-32 w-1/2 bg-[#AE7365]/50 flex items-center justify-center rounded-xl relative">
                     {imageSrc &&
                     <img src={imageSrc} alt="item" className="w-full h-full object-contain" />

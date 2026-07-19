@@ -4,7 +4,8 @@ export default function TextArea({
   value,
   onChange = () => {},
   error,
-  maxLength
+  maxLength,
+  disabled,
 }) {
   return (
     <fieldset className="fieldset">
@@ -16,9 +17,10 @@ export default function TextArea({
       <div className={`rounded-md ${error ? "p-1 border border-red-600" : ""}`}>
 
         <textarea
-          className="textarea h-20 bg-white rounded-md text-xs w-full"
+          className="textarea h-20 bg-white rounded-md text-xs w-full disabled:opacity-80"
           placeholder={placeholder}
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           maxLength={maxLength}
         />

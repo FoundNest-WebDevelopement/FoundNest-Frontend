@@ -47,6 +47,8 @@ function Layout() {
         <Route path="/report" element={<Report />} />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/report/:id/:reportId" element={<Report />} />
+        <Route path="/report/:id/mode/:mode" element={<Report />} />
+        <Route path="/report/:id/mode/:mode/:reportId" element={<Report />} />
         <Route path="/find" element={<Find />} />
         <Route path="/find/:id" element={<FoundItemDetails/>} />
         <Route path="/profile" element={<Profile />} />
