@@ -3,7 +3,7 @@ import formatDate from "../utils/formatDate";
 import formatTime from "../utils/formatTime";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { Link2, TriangleAlert} from "lucide-react"
+import { Link2, TriangleAlert, X } from "lucide-react"
 import { toast } from "react-toastify";
 
 export default function TransactionManagementModal(
@@ -17,15 +17,14 @@ export default function TransactionManagementModal(
         allLocations = [], }
 
 ) {
-
-    console.log(selectedRecord);
-
     const API_URL = import.meta.env.VITE_API_URL;
     const [isReverting, setIsReverting] = useState(false);
 
+    const [selectedImage, setSelectedImage] = useState(null);
+
     const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
-  const officeIdNotification = localStorage.getItem("office_location");
-  
+    const officeIdNotification = localStorage.getItem("office_location");
+
 
     //Close and reset Modal
     const handleCloseModal = () => {
@@ -49,33 +48,33 @@ export default function TransactionManagementModal(
 
     const handleRevertTransaction = async () => {
         setIsReverting(true);
-        
 
-  try {
-    const response = await fetchWithAuth(
-      `${API_URL}/api/claim-records/${selectedRecord.claim_id}/status`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          claimant_status: false,
-          office_id: officeIdNotification,
-          admin_full_name: adminFullName,
-        }),
-      }
-    );
 
-    const data = await response.json();
+        try {
+            const response = await fetchWithAuth(
+                `${API_URL}/api/claim-records/${selectedRecord.claim_id}/status`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        claimant_status: false,
+                        office_id: officeIdNotification,
+                        admin_full_name: adminFullName,
+                    }),
+                }
+            );
 
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to revert transaction");
-      
-    }
+            const data = await response.json();
 
-     
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to revert transaction");
 
-    console.log(data);
+            }
 
-    // Refresh table
+
+
+            console.log(data);
+
+            // Refresh table
             const recordsResponse = await fetchWithAuth(
                 `${API_URL}/api/claim-records`
             );
@@ -88,16 +87,16 @@ export default function TransactionManagementModal(
                 record => record.claim_id === selectedRecord.claim_id
             );
 
-    setIsReverting(false);
-    setSelectedRecord(updatedRecord);
-    setOpenRevertDialog(false);
-    toast.success(`Successfully marked ${formatTXNId(selectedRecord.claim_id)} as Reverted. `)
+            setIsReverting(false);
+            setSelectedRecord(updatedRecord);
+            setOpenRevertDialog(false);
+            toast.success(`Successfully marked ${formatTXNId(selectedRecord.claim_id)} as Reverted. `)
 
 
-  } catch (err) {
-    console.error(err);
-  }
-};
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
 
 
@@ -137,9 +136,13 @@ export default function TransactionManagementModal(
                             <p className="text-black font-semibold text-sm">CLAIMED ITEM</p>
                             {selectedRecord.image_url &&
                                 (
-                                    <div className=" w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                    <div className=" relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer"
+                                        onClick={() => setSelectedImage(selectedRecord?.image_url)}>
                                         <img src={selectedRecord.image_url} alt={selectedRecord.item_name}
                                             className="h-full w-full object-contain" />
+                                        <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
+                                            <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
+                                        </div>
                                     </div>
                                 )
                             }
@@ -201,34 +204,34 @@ export default function TransactionManagementModal(
                                     <p className="text-xs">{selectedRecord.reported_by}</p>
                                 </div>
                             </div>
-                          
-                            {selectedRecord.lost_report_id && 
+
+                            {selectedRecord.lost_report_id &&
                                 (
                                     <>
                                         {selectedRecord.claimant_status === true &&
 
-                                        (
-                                            <>
-                                                <div className="flex items-center gap-2">
-                                            <Link2 size={15} />
-                                            <p className="text-black font-semibold text-sm">LINKED LOST REPORT</p>
-                                        </div>
-                                        <div className=" flex flex-col w-full gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-2 xl:p-4">
-                                            <div className="flex justify-between text-[10px] xl:text-xs">
-                                                <div className="text-black rounded-md flex items-center text-xs xl:text-sm">
-                                                    <p className="font-semibold">{formatReportId(selectedRecord.lost_report_id)}</p>
-                                                </div>
-                                                <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold">
-                                                    <p>Auto-Resolved</p>
-                                                </div>
-                                            </div>
-                                            <p className="text-xs xl:text-sm font-semibold">{selectedRecord.lost_report_reported_by}</p>
-                                            <p className="text-[10px] xl:text-xs text-[#6B5C42]">{selectedRecord.lost_report_student_number || (selectedRecord.lost_report_email || selectedRecord.lost_report_contact_number)}</p>
-                                            <p className="text-[10px] xl:text-xs text-[#6B5C42]">Reported Lost: {selectedRecord.item_name}</p>
-                                            <p className="text-[10px] xl:text-xs text-[#6B5C42] italic opacity-40">Auto-resolved when item was claimed.</p>
-                                        </div>
-                                            </>
-                                        )
+                                            (
+                                                <>
+                                                    <div className="flex items-center gap-2">
+                                                        <Link2 size={15} />
+                                                        <p className="text-black font-semibold text-sm">LINKED LOST REPORT</p>
+                                                    </div>
+                                                    <div className=" flex flex-col w-full gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-2 xl:p-4">
+                                                        <div className="flex justify-between text-[10px] xl:text-xs">
+                                                            <div className="text-black rounded-md flex items-center text-xs xl:text-sm">
+                                                                <p className="font-semibold">{formatReportId(selectedRecord.lost_report_id)}</p>
+                                                            </div>
+                                                            <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold">
+                                                                <p>Auto-Resolved</p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs xl:text-sm font-semibold">{selectedRecord.lost_report_reported_by}</p>
+                                                        <p className="text-[10px] xl:text-xs text-[#6B5C42]">{selectedRecord.lost_report_student_number || (selectedRecord.lost_report_email || selectedRecord.lost_report_contact_number)}</p>
+                                                        <p className="text-[10px] xl:text-xs text-[#6B5C42]">Reported Lost: {selectedRecord.item_name}</p>
+                                                        <p className="text-[10px] xl:text-xs text-[#6B5C42] italic opacity-40">Auto-resolved when item was claimed.</p>
+                                                    </div>
+                                                </>
+                                            )
 
                                         }
                                         <hr className="border-(--color-tertiary) my-5 opacity-30" />
@@ -243,62 +246,67 @@ export default function TransactionManagementModal(
                                                 </div>
                                             </div>
                                         </div>
-                                           <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                         
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+
 
                                     </>
                                 )
 
                             }
-                              {selectedRecord.claimant_photo_url  &&
-                                            (
-                                                <>
-                                    
+                            {selectedRecord.claimant_photo_url &&
+                                (
+                                    <>
+
                                         <p className="text-black font-semibold text-sm">PROOF OF CLAIM PHOTO</p>
                                         <p className="text-[#6B5C42]  text-xs">Photo of claimant with item, captured at time of release.</p>
-                                     
-                                                <div className=" w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
-                                                    <img src={selectedRecord.claimant_photo_url} alt={selectedRecord.claimant_full_name}
-                                                        className="h-full w-full object-contain" />
-                                                </div>
-                                                </>
-                                            )
-                                        }
-                                          {selectedRecord.claimant_status === false   &&
 
-                            (
-                                <>
-                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                            <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] border border-[#F0B8B8] p-3 xl:p-5 ">
-                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                        <p className="text-xs xl:text-sm font-semibold text-[#C0392B]">Transaction Reverted</p>
-                                         <p className="text-[#6B5C42]">Resolved on <span>{formatDateTime(selectedRecord.date_reverted)}</span><span></span></p>
-                                         <p className="text-[#6B5C42]">Reverted by {selectedRecord.reverted_by_admin_full_name}</p>
-                                    </div>
-                                       
-                                 </div>
-                                </>
-                            )
+                                        <div className=" relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer"
+                                            onClick={() => setSelectedImage(selectedRecord?.claimant_photo_url)}>
+                                            <img src={selectedRecord.claimant_photo_url} alt={selectedRecord.claimant_full_name}
+                                                className="h-full w-full object-contain" />
+
+                                            <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
+                                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
+                                            </div>
+                                        </div>
+                                    </>
+                                )
+                            }
+                            {selectedRecord.claimant_status === false &&
+
+                                (
+                                    <>
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                        <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] border border-[#F0B8B8] p-3 xl:p-5 ">
+                                            <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                                                <p className="text-xs xl:text-sm font-semibold text-[#C0392B]">Transaction Reverted</p>
+                                                <p className="text-[#6B5C42]">Resolved on <span>{formatDateTime(selectedRecord.date_reverted)}</span><span></span></p>
+                                                <p className="text-[#6B5C42]">Reverted by {selectedRecord.reverted_by_admin_full_name}</p>
+                                            </div>
+
+                                        </div>
+                                    </>
+                                )
 
                             }
-                               { selectedRecord.claimant_status === true &&
-                                 <div>
+                            {selectedRecord.claimant_status === true &&
+                                <div>
                                     <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                     <button className="w-full h-10 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                                            onClick={()=>setOpenRevertDialog(true)}
-                                            disabled={isReverting || selectedRecord.claimant_status === false}
-                                   >{isReverting? "Reverting..." : "Revert Transaction"}</button>
+                                        onClick={() => setOpenRevertDialog(true)}
+                                        disabled={isReverting || selectedRecord.claimant_status === false}
+                                    >{isReverting ? "Reverting..." : "Revert Transaction"}</button>
                                 </div>
-                               }
-                                     {selectedRecord.claimant_status === false  &&
+                            }
+                            {selectedRecord.claimant_status === false &&
                                 <div className=" text-[10px] xl:text-xs gap-1">
-                                     
-                                  
-                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                            <p className="text-[#6B5C42]">This transaction has been reverted and no further action available</p>
-                                         
-                                    </div>
-                                         }  
+
+
+                                    <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                    <p className="text-[#6B5C42]">This transaction has been reverted and no further action available</p>
+
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -308,55 +316,74 @@ export default function TransactionManagementModal(
 
             </div>
 
-            {openRevertDialog && 
-            (
-                <>
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+            {openRevertDialog &&
+                (
+                    <>
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                            <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                                <p className="font-semibold">Revert Transaction</p>
-                                <button onClick={() => setOpenRevertDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                            <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                    <p className="font-semibold">Revert Transaction</p>
+                                    <button onClick={() => setOpenRevertDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
 
-                            </div>
-                            <div className="flex flex-col flex-1 p-3 gap-2">
-                                <div className="w-full flex justify-center items-center">
-                                    <TriangleAlert size={40} className="text-(--color-quaternary)"/>
                                 </div>
-                                <div className="w-full bg-[#F9ECEC] rounded-lg flex flex-col gap-2 p-4">
-                                    <p className="text-[#6B5C42] font-bold text-sm  ">{formatTXNId(selectedRecord.claim_id)}</p>
-                                    <div className="text-xs  gap-2 flex flex-col">
-                                        <p>Item: {selectedRecord.item_name} <span>({formatItemId(selectedRecord.item_id)})</span></p>
-                                    <p>Claimant:  {selectedRecord.claimant_full_name}</p>
-                                    <p className="text-[#6B5C42] ">Date Claimed:  {formatDateTime(selectedRecord.claim_date)}</p>
+                                <div className="flex flex-col flex-1 p-3 gap-2">
+                                    <div className="w-full flex justify-center items-center">
+                                        <TriangleAlert size={40} className="text-(--color-quaternary)" />
                                     </div>
+                                    <div className="w-full bg-[#F9ECEC] rounded-lg flex flex-col gap-2 p-4">
+                                        <p className="text-[#6B5C42] font-bold text-sm  ">{formatTXNId(selectedRecord.claim_id)}</p>
+                                        <div className="text-xs  gap-2 flex flex-col">
+                                            <p>Item: {selectedRecord.item_name} <span>({formatItemId(selectedRecord.item_id)})</span></p>
+                                            <p>Claimant:  {selectedRecord.claimant_full_name}</p>
+                                            <p className="text-[#6B5C42] ">Date Claimed:  {formatDateTime(selectedRecord.claim_date)}</p>
+                                        </div>
 
-                                    
-                                </div>
-                                <div className="text-xs text-justify">
-                                    <p>Reverting this transaction will return the item to <span className="font-semibold">Unclaimed</span> status. A permanent log of this record will be retained in the Transactions tab for auditing.<span className="font-semibold"> This action cannot be undone</span>.</p>
-                                </div>
-                                <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
-                                    <p>This revert will be permanently logged under your account.</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                                        onClick={() => setOpenRevertDialog(false)}
-                                    >Cancel</button>
-                                    <button
-                                        className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:cursor-not-allowed"
-                                        onClick={handleRevertTransaction}
-                                        disabled={isReverting}
-                                    >{isReverting ? "Reverting.." : "Confirm Revert"}</button>
+
+                                    </div>
+                                    <div className="text-xs text-justify">
+                                        <p>Reverting this transaction will return the item to <span className="font-semibold">Unclaimed</span> status. A permanent log of this record will be retained in the Transactions tab for auditing.<span className="font-semibold"> This action cannot be undone</span>.</p>
+                                    </div>
+                                    <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
+                                        <p>This revert will be permanently logged under your account.</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                            onClick={() => setOpenRevertDialog(false)}
+                                        >Cancel</button>
+                                        <button
+                                            className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:cursor-not-allowed"
+                                            onClick={handleRevertTransaction}
+                                            disabled={isReverting}
+                                        >{isReverting ? "Reverting.." : "Confirm Revert"}</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </>
-            )
+                    </>
+                )
 
             }
+
+            {/* Image Modal */}
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
+                    <div className="relative rounded-2xl h-125">
+                        <button
+                            className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <X size={16} />
+                        </button>
+                        <img
+                            src={selectedImage}
+                            alt="Preview"
+                            className="h-full w-full  "
+                        />
+                    </div>
+                </div>
+            )}
 
         </>
     )

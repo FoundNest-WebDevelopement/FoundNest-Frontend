@@ -104,6 +104,7 @@ const [openConfirmLogout, setOpenConfirmLogout] = useState(false);
     flex gap-5 items-center
     transition-transform duration-100
     active:bg-[#5C0000]/50
+    cursor-pointer
   "
 >
   <LogOut size={20} className="ml-5" />

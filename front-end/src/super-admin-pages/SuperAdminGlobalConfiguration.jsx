@@ -315,11 +315,11 @@ export default function SuperAdminGlobalConfiguration() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {isLoadingPolicies && (
-                            <p className="text-sm text-[#6B5C42] col-span-2 text-center py-10">
+                            <div className="text-sm text-[#6B5C42] col-span-2 text-center py-10">
                                 <WebLoading
                                     marginBottom="mb-90"
                                 />
-                            </p>
+                            </div>
                         )}
 
                         {!isLoadingPolicies &&

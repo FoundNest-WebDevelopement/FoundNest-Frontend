@@ -87,7 +87,7 @@ export default function ItemManagementTable({
                                 <th className="w-32">CATEGORY</th>
                                 <th className="w-40">LOCATION</th>
                                 <th className="w-32">DATE FOUND</th>
-                                <th className="w-37">STATUS</th>
+                                <th className="min-w-37 ">STATUS</th>
                                 <th className="w-40">LINKED REPORT</th>
                                 <th className="w-40">REPORTED BY</th>
                                 <th className="w-24">ACTIONS</th>
@@ -148,7 +148,7 @@ export default function ItemManagementTable({
 
                                     <td className="align-middle text-center ">{item.admin_full_name}</td>
 
-                                    <td className="align-middle text-center">
+                                    <td className="align-middle text-center ">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100
                                      active:scale-95 disabled:opacity-20 "
                                             onClick={() => { setSelectedItem(item) }}
@@ -226,27 +226,22 @@ export default function ItemManagementTable({
                 </div>
             </div>
 
-            {/* Image Modal */}
+      
             {selectedImage && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-                    <div className="relative bg-white p-3 rounded-2xl">
-
+                    <div className="relative rounded-2xl h-125">
                         <button
-                            className="absolute top-2 right-2 btn btn-sm btn-circle"
+                            className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
                             onClick={() => setSelectedImage(null)}
                         >
                             <X size={16} />
                         </button>
-
                         <img
                             src={selectedImage}
                             alt="Preview"
-                            className="max-w-125 max-h-125 rounded-xl"
+                            className="h-full w-full  "
                         />
-
                     </div>
-
                 </div>
             )}
 

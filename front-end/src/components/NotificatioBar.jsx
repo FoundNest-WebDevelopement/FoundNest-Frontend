@@ -64,10 +64,10 @@ export default function NotificationBar() {
 
           {({ isActive }) =>
             isActive ? (
-              <Bell className="size-6 fill-current" />
+              <Bell className="size-6 fill-current transition-transform duration-100 ease-out enabled:active:scale-90" />
             ) :
-              <div className="relative">
-                <Bell className="size-6" />
+              <div className="relative ">
+                <Bell className="size-6 " />
 
                 {unreadCount > 0 && (
                   <i className="fa-solid fa-circle text-(--color-quaternary) text-[10px] ml-2 absolute top-0 right-0"></i>

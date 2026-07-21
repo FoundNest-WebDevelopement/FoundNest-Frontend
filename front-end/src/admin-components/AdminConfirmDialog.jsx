@@ -44,7 +44,7 @@ export default function AdminConfirmDialog({
           <div className="flex gap-2">
             <button
               type="button"
-              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer"
               onClick={onClose}
             >
               {cancelText}
@@ -52,7 +52,7 @@ export default function AdminConfirmDialog({
 
             <button
               type="button"
-              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95
+              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer
               disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={disabled}
               onClick={onConfirm}

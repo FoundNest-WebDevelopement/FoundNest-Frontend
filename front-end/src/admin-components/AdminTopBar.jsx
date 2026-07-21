@@ -133,7 +133,7 @@ const markAllAdminNotificationsAsRead = async () => {
                     <div className="flex items-center gap-2 ">
                         <div className="relative group flex items-center justify-center">
                             <button
-                                className={`text-primary outline-none relative
+                                className={`text-primary outline-none relative cursor-pointer
                                 `}
                                 onClick={() => { setIsNotifOpen(!isNotifOpen) }}
                             >

@@ -609,7 +609,9 @@ useEffect(() => {
                     type="button"
                     disabled={mode === "view"}
                     onClick={() => setShowImageOptions(true)}
-                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center disabled:opacity-80"
+                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center disabled:opacity-80
+                    transition-transform duration-100 ease-out enabled:active:scale-90
+                    "
                   >
                     <i className="fa-solid fa-plus text-white"></i>
                   </button>
@@ -720,7 +722,7 @@ useEffect(() => {
             <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
             <div className="relative w-full mt-2">
               <button
-                className={`w-full p-3 text-xs disabled:opacity-80 ${
+                className={`w-full p-3 text-xs disabled:opacity-80 transition-transform duration-100 ease-out enabled:active:scale-90${
                   openLocations ? " border-primary text-black border" : " "
                 } 
                 ${totalLocations === 0? "text-[#4B2D23]/50" : "text-black"}
@@ -748,7 +750,7 @@ useEffect(() => {
                           setOpenCollgeBuilding(!openCollgeBuilding)
                         }
                         disabled={dsiableOtherLcoations || (mode === "view")}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40 transition-transform duration-100 ease-out enabled:active:scale-90"
                       >
                         <span>
                           College Buildings{" "}
@@ -766,7 +768,7 @@ useEffect(() => {
                           {locations?.map((building) => (
                             <label
                               key={building.office_id}
-                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
+                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors transition-transform duration-100 ease-out enabled:active:scale-90"
                             >
                               <input
                                 type="checkbox"
@@ -790,7 +792,7 @@ useEffect(() => {
                       <button
                         onClick={() => setOpenSharedSpaces(!openSharedSpaces)}
                         disabled={dsiableOtherLcoations}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40  duration-100 ease-out enabled:active:scale-90"
                       >
                         <span>
                           Shared Spaces{" "}
@@ -808,7 +810,7 @@ useEffect(() => {
                           {sharedSpaces?.map((space) => (
                             <label
                               key={space.shared_space_id}
-                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
+                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors duration-100 ease-out enabled:active:scale-90"
                             >
                               <input
                                 type="checkbox"
@@ -832,7 +834,7 @@ useEffect(() => {
                       <button
                         onClick={() => setOpenGates(!openGates)}
                         disabled={dsiableOtherLcoations}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40"
+                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40 duration-100 ease-out enabled:active:scale-90"
                       >
                         <span>
                           Gates{" "}

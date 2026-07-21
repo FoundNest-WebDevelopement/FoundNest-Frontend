@@ -215,51 +215,24 @@ export default function LostReportTable(
                 </div>
             </div>
 
+   
+
             {/* Image Modal */}
             {selectedImage && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-                    <div className="relative bg-white p-3 rounded-2xl">
-
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
+                    <div className="relative rounded-2xl h-125">
                         <button
-                            className="absolute top-2 right-2 btn btn-sm btn-circle"
+                            className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
                             onClick={() => setSelectedImage(null)}
                         >
                             <X size={16} />
                         </button>
-
                         <img
                             src={selectedImage}
                             alt="Preview"
-                            className="max-w-125 max-h-125 rounded-xl"
+                            className="h-full w-full  "
                         />
-
                     </div>
-
-                </div>
-            )}
-
-            {/* Image Modal */}
-            {selectedImage && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-                    <div className="relative bg-white p-3 rounded-2xl">
-
-                        <button
-                            className="absolute top-2 right-2 btn btn-sm btn-circle"
-                            onClick={() => setSelectedImage(null)}
-                        >
-                            <X size={16} />
-                        </button>
-
-                        <img
-                            src={selectedImage}
-                            alt="Preview"
-                            className="max-w-125 max-h-125 rounded-xl"
-                        />
-
-                    </div>
-
                 </div>
             )}
 

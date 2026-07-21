@@ -3,7 +3,7 @@ import formatDate from "../utils/formatDate";
 import formatTime from "../utils/formatTime";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { Link2, Archive, ArchiveRestore } from "lucide-react"
+import { Link2, Archive, ArchiveRestore, X } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import { toast } from "react-toastify";
@@ -23,19 +23,21 @@ export default function LostReportMangementModal(
     }
 
 ) {
-    console.log(selectedItem)
+
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
 
     const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
     const officeIdNotification = localStorage.getItem("office_location");
 
+    const [selectedImage, setSelectedImage] = useState(null);
+
     //mark as resovle toggle variable
     const [resolved, setResolved] = useState(false);
 
     const [openArchiveDialog, setOpenArchiveDialog] = useState(false);
     const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
-   
+
 
     //Close and reset Modal
     const handleCloseModal = () => {
@@ -83,7 +85,7 @@ export default function LostReportMangementModal(
     const [isArchiving, setIsArchiving] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
 
-    
+
 
     const handleResolvedReport = async () => {
         setIsLoading(true);
@@ -94,8 +96,8 @@ export default function LostReportMangementModal(
                 {
                     method: "PATCH",
                     body: JSON.stringify({
-                    admin_full_name: adminFullName,
-                    }),   
+                        admin_full_name: adminFullName,
+                    }),
                 }
             );
 
@@ -136,123 +138,123 @@ export default function LostReportMangementModal(
 
 
     const handleArchiveReport = async () => {
-    setIsArchiving(true);
-    
+        setIsArchiving(true);
 
-    try {
-        const response = await fetchWithAuth(
-            `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/archive`,
-            {
-                method: "PUT",
-                body: JSON.stringify({
-                office_id: officeIdNotification,
-                admin_full_name: adminFullName,
-                }),  
-                
 
-            }
-        );
+        try {
+            const response = await fetchWithAuth(
+                `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/archive`,
+                {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        office_id: officeIdNotification,
+                        admin_full_name: adminFullName,
+                    }),
 
-        const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(
-                data.error || "Failed to archive report"
+                }
             );
-        }
 
-        // Refresh table
-        const reportsResponse = await fetchWithAuth(
-            `${API_URL}/api/lost-reports`
-        );
+            const data = await response.json();
 
-        const reportsData = await reportsResponse.json();
-
-        if (Array.isArray(reportsData)) {
-            onUpdated?.(reportsData);
-        }
-
-        const updatedReport = reportsData.find(
-            report =>
-                report.lost_report_id ===
-                selectedItem.lost_report_id
-        );
-
-        if (updatedReport) {
-            setSelectedItem(updatedReport);
-        }
-
-        toast.success(
-            `Successfully marked ${formatReportId(selectedItem.lost_report_id)} as Archived. .`
-        );
-        setOpenArchiveDialog(false);
-
-    } catch (err) {
-        console.error(err);
-        toast.error(err.message);
-    } finally {
-        setIsArchiving(false);
-    }
-};
-
-const handleRestoreReport = async () => {
-    setIsRestoring(true);
-    
-
-    try {
-        const response = await fetchWithAuth(
-            `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/restore`,
-            {
-                method: "PUT",
-                body: JSON.stringify({
-                office_id: officeIdNotification,
-                admin_full_name: adminFullName,
-                }), 
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Failed to archive report"
+                );
             }
-        );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                data.error || "Failed to restore report"
+            // Refresh table
+            const reportsResponse = await fetchWithAuth(
+                `${API_URL}/api/lost-reports`
             );
+
+            const reportsData = await reportsResponse.json();
+
+            if (Array.isArray(reportsData)) {
+                onUpdated?.(reportsData);
+            }
+
+            const updatedReport = reportsData.find(
+                report =>
+                    report.lost_report_id ===
+                    selectedItem.lost_report_id
+            );
+
+            if (updatedReport) {
+                setSelectedItem(updatedReport);
+            }
+
+            toast.success(
+                `Successfully marked ${formatReportId(selectedItem.lost_report_id)} as Archived. .`
+            );
+            setOpenArchiveDialog(false);
+
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+        } finally {
+            setIsArchiving(false);
         }
+    };
 
-        // Refresh table
-        const reportsResponse = await fetchWithAuth(
-            `${API_URL}/api/lost-reports`
-        );
+    const handleRestoreReport = async () => {
+        setIsRestoring(true);
 
-        const reportsData = await reportsResponse.json();
 
-        if (Array.isArray(reportsData)) {
-            onUpdated?.(reportsData);
+        try {
+            const response = await fetchWithAuth(
+                `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/restore`,
+                {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        office_id: officeIdNotification,
+                        admin_full_name: adminFullName,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Failed to restore report"
+                );
+            }
+
+            // Refresh table
+            const reportsResponse = await fetchWithAuth(
+                `${API_URL}/api/lost-reports`
+            );
+
+            const reportsData = await reportsResponse.json();
+
+            if (Array.isArray(reportsData)) {
+                onUpdated?.(reportsData);
+            }
+
+            const updatedReport = reportsData.find(
+                report =>
+                    report.lost_report_id ===
+                    selectedItem.lost_report_id
+            );
+
+            if (updatedReport) {
+                setSelectedItem(updatedReport);
+            }
+
+            setOpenRestoreDialog(false);
+
+            toast.success(
+                `Successfully restored ${formatReportId(selectedItem.lost_report_id)}.`
+            );
+
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+        } finally {
+            setIsRestoring(false);
         }
-
-        const updatedReport = reportsData.find(
-            report =>
-                report.lost_report_id ===
-                selectedItem.lost_report_id
-        );
-
-        if (updatedReport) {
-            setSelectedItem(updatedReport);
-        }
-
-        setOpenRestoreDialog(false);
-
-        toast.success(
-            `Successfully restored ${formatReportId(selectedItem.lost_report_id)}.`
-        );
-
-    } catch (err) {
-        console.error(err);
-        toast.error(err.message);
-    } finally {
-        setIsRestoring(false);
-    }
-};
+    };
 
     return (
         <>
@@ -261,7 +263,7 @@ const handleRestoreReport = async () => {
                     <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
                         <p className="text-white font-semibold text-md xl:text-lg pl-2">Report Details</p>
                         <div className="ml-auto pr-6">
-                            <button onClick={handleCloseModal}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                            <button onClick={handleCloseModal} className="cursor-pointer"><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
                         </div>
                     </div>
                     <div className="h-full w-full p-5 flex-1 overflow-y-auto">
@@ -288,21 +290,21 @@ const handleRestoreReport = async () => {
                                                         className="w-full h-full object-contain" />
                                                 </div>
                                                 <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
-                                                        <p className="font-semibold">{selectedItem.found_item_name}</p>
-                                                        <p className="text-[#6B5C42]">{selectedItem.found_item_category_name}</p>
+                                                    <p className="font-semibold">{selectedItem.found_item_name}</p>
+                                                    <p className="text-[#6B5C42]">{selectedItem.found_item_category_name}</p>
                                                 </div>
-                                             
+
                                             </div>
-                                              <div className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
-                                                 onClick={() =>
+                                            <div className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
+                                                onClick={() =>
                                                     navigate(
                                                         `/admin/item_management?itemId=${selectedItem.found_item_id}`
                                                     )
                                                 }
-                                                >
-                                                  <p>View Found Item &nbsp; </p>
-                                                     <i className="fa-solid fa-arrow-right"></i>
-                                              </div>
+                                            >
+                                                <p>View Found Item &nbsp; </p>
+                                                <i className="fa-solid fa-arrow-right"></i>
+                                            </div>
                                         </div>
 
                                     </div>
@@ -408,125 +410,129 @@ const handleRestoreReport = async () => {
                                 </div>
                                 {selectedItem.image_url &&
                                     (
-                                        <div className="mb-5 w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
+                                        <div className="mb-5 w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer relative"
+                                            onClick={() => setSelectedImage(selectedItem?.image_url)}>
                                             <img src={selectedItem.image_url} alt={selectedItem.item_name}
                                                 className="h-full w-full object-contain" />
+                                            <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
+                                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
+                                            </div>
                                         </div>
                                     )
                                 }
 
-                                 {selectedItem.status === 'resolved' && selectedItem.resolved_by_admin_id &&
-                                 (<>
-                                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-3 xl:p-5 border-l-4">
-                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                         <p className="text-[#6B5C42]">Resolved by <span className="font-semibold text-black">{selectedItem.resolved_by_admin_full_name}</span></p>
-                                         <p className="text-[#6B5C42]">Resolved on <span>{formatDateTime(selectedItem.date_resolved)}</span><span></span></p>
-                                    </div>
-                                       
-                                 </div>
-                                 </>)
-                                     
-                                 }
+                                {selectedItem.status === 'resolved' && selectedItem.resolved_by_admin_id &&
+                                    (<>
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                        <div className=" flex  w-full gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-3 xl:p-5 border-l-4">
+                                            <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                                                <p className="text-[#6B5C42]">Resolved by <span className="font-semibold text-black">{selectedItem.resolved_by_admin_full_name}</span></p>
+                                                <p className="text-[#6B5C42]">Resolved on <span>{formatDateTime(selectedItem.date_resolved)}</span><span></span></p>
+                                            </div>
 
-                                 {selectedItem.status === 'cancelled' &&
-                                 (<>
-                                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#F5F5F5] border border-[#DDD9CF] p-3 xl:p-5">
-                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                         <p className="text-[#6B5C42] font-semibold">Report Cancelled</p>
-                                         <p className="text-[#6B5C42]">Cancelled on <span>{formatDateTime(selectedItem.date_cancelled)}</span><span></span></p>
-                                         <p className="text-black ">{selectedItem.cancel_reason}</p>
-                                    </div>
-                                       
-                                 </div>
-                                 </>)
-                                     
-                                 }
+                                        </div>
+                                    </>)
+
+                                }
+
+                                {selectedItem.status === 'cancelled' &&
+                                    (<>
+                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                        <div className=" flex  w-full gap-2 rounded-lg bg-[#F5F5F5] border border-[#DDD9CF] p-3 xl:p-5">
+                                            <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                                                <p className="text-[#6B5C42] font-semibold">Report Cancelled</p>
+                                                <p className="text-[#6B5C42]">Cancelled on <span>{formatDateTime(selectedItem.date_cancelled)}</span><span></span></p>
+                                                <p className="text-black ">{selectedItem.cancel_reason}</p>
+                                            </div>
+
+                                        </div>
+                                    </>)
+
+                                }
 
 
                             </div>
 
                         </div>
                         <div>
-                             <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                           
-                                   {selectedItem.status !== 'archived' &&
-                                   (
+                            <hr className="border-(--color-tertiary) my-5 opacity-30" />
+
+                            {selectedItem.status !== 'archived' &&
+                                (
                                     <>
-                                         <button
-                                        className="w-full h-10 disabled:opacity-40 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
-                                        disabled={selectedItem.status === 'resolved' || selectedItem.status === 'cancelled' || isLoading || isArchiving}
-                                        onClick={() => setResolved(true)}
-
-                                    >
-                                        {isLoading? "Resolving..." : "Mark as Resolved"}
-                                    </button>
-
-                                    <button
-                                        className="w-full h-10 disabled:opacity-40 border border-primary rounded-lg text-primary mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
-                                        disabled={selectedItem.status === 'resolved' || selectedItem.status === 'cancelled' || isLoading || isArchiving}
-                                        onClick={() => setOpenArchiveDialog(true)}
-
-                                    >
-                                        {isArchiving? "Archiving..." : "Archive Report"}
-                                    </button>
-                                    </>
-                                   )
-
-                                   }
-                                    {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
-                                 (<>
-                                 
-                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
-                                    <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                         <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
-                                         <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.archived_date)}</span><span></span></p>
-                                    </div>
-                                       
-                                 </div>
-                                  <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                 </>)
-                                     
-                                 }
-                                   {
-                                    selectedItem.status === 'archived' && 
-                                    (
-                                        <>
                                         <button
-                                                className="w-full h-10 disabled:opacity-40 border bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
-                                                disabled={isRestoring}
-                                                onClick={() => setOpenRestoreDialog(true)}
-                                            >
-                                                {isRestoring ? (
-                                                    "Restoring..."
-                                                ) : (
-                                                    <>
-                                                        <i className="fa-solid fa-arrow-rotate-left mr-2"></i>
-                                                        Restore Listing
-                                                    </>
-                                                )}
-                                            </button>
-                                        </>
-                                    )
-                                   }
-                               
-                                    
-                                    <div className=" text-[10px] xl:text-xs gap-1">
-                                        {selectedItem.status === 'resolved'  &&
-                                            <p className="text-[#6B5C42]">This report has been resolved and no further action needed</p>
-                                        }
-                                        {selectedItem.status === 'cancelled'  &&
-                                            <p className="text-[#6B5C42]">This report has been cancelled and no further action needed</p>
-                                        }
-                                        {selectedItem.status === 'archived'  &&
-                                            <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
-                                        }
-                                        
-                                    </div>
-                            
+                                            className="w-full h-10 disabled:opacity-40 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
+                                            disabled={selectedItem.status === 'resolved' || selectedItem.status === 'cancelled' || isLoading || isArchiving}
+                                            onClick={() => setResolved(true)}
 
-                           
+                                        >
+                                            {isLoading ? "Resolving..." : "Mark as Resolved"}
+                                        </button>
+
+                                        <button
+                                            className="w-full h-10 disabled:opacity-40 border border-primary rounded-lg text-primary mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
+                                            disabled={selectedItem.status === 'resolved' || selectedItem.status === 'cancelled' || isLoading || isArchiving}
+                                            onClick={() => setOpenArchiveDialog(true)}
+
+                                        >
+                                            {isArchiving ? "Archiving..." : "Archive Report"}
+                                        </button>
+                                    </>
+                                )
+
+                            }
+                            {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
+                                (<>
+
+                                    <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
+                                        <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
+                                            <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
+                                            <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.archived_date)}</span><span></span></p>
+                                        </div>
+
+                                    </div>
+                                    <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                </>)
+
+                            }
+                            {
+                                selectedItem.status === 'archived' &&
+                                (
+                                    <>
+                                        <button
+                                            className="w-full h-10 disabled:opacity-40 border bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
+                                            disabled={isRestoring}
+                                            onClick={() => setOpenRestoreDialog(true)}
+                                        >
+                                            {isRestoring ? (
+                                                "Restoring..."
+                                            ) : (
+                                                <>
+                                                    <i className="fa-solid fa-arrow-rotate-left mr-2"></i>
+                                                    Restore Listing
+                                                </>
+                                            )}
+                                        </button>
+                                    </>
+                                )
+                            }
+
+
+                            <div className=" text-[10px] xl:text-xs gap-1">
+                                {selectedItem.status === 'resolved' &&
+                                    <p className="text-[#6B5C42]">This report has been resolved and no further action needed</p>
+                                }
+                                {selectedItem.status === 'cancelled' &&
+                                    <p className="text-[#6B5C42]">This report has been cancelled and no further action needed</p>
+                                }
+                                {selectedItem.status === 'archived' &&
+                                    <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
+                                }
+
+                            </div>
+
+
+
                         </div>
                     </div>
 
@@ -534,120 +540,138 @@ const handleRestoreReport = async () => {
 
             </div>
             {resolved &&
-            (
-                <>
-                    <AdminConfirmDialog
-                        title="Confirm Resolve"
-                        description={`Are you sure you want to mark report ${formatReportId(selectedItem.lost_report_id)} as resolved?`}
-                        cancelText="Cancel"
-                        confirmText="Confirm Resolve"
-                        onClose={() => setResolved(false)}
-                        onConfirm={handleResolvedReport}
-                    />
-                </>
-            )
+                (
+                    <>
+                        <AdminConfirmDialog
+                            title="Confirm Resolve"
+                            description={`Are you sure you want to mark report ${formatReportId(selectedItem.lost_report_id)} as resolved?`}
+                            cancelText="Cancel"
+                            confirmText="Confirm Resolve"
+                            onClose={() => setResolved(false)}
+                            onConfirm={handleResolvedReport}
+                        />
+                    </>
+                )
 
             }
-            {openArchiveDialog && 
-             (
-                <>
-                    
+            {openArchiveDialog &&
+                (
+                    <>
 
-          <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                  <p className="font-semibold">Archived Item</p>
-                  <button onClick={() => setOpenArchiveDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                        <>
+                            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-                </div>
-                <div className="flex flex-col flex-1 p-3 gap-3">
-                  <div className="w-full flex flex-col justify-center items-center">
-                    <Archive size={40} className="text-[#7F8C8D]" />
-                    <p className="text-md font-medium">Archive Item?</p>
-                  </div>
+                                <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                                    <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                        <p className="font-semibold">Archived Item</p>
+                                        <button onClick={() => setOpenArchiveDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
 
-                  <div className="text-sm text-justify">
-                    <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
-                  </div>
-                  <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
-                    <p>Archiving this listing will be recorded in the system under your administrator account.</p>
-                  </div>
-                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                  <div className="flex gap-2">
-                    <button
-                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => setOpenArchiveDialog(false)}
-                    >Cancel</button>
-                    <button
-                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={handleArchiveReport}
-                     disabled={isArchiving || isLoading}
-                    >
-                      {isArchiving ? "Archving.." : "Confirm Archived"}
+                                    </div>
+                                    <div className="flex flex-col flex-1 p-3 gap-3">
+                                        <div className="w-full flex flex-col justify-center items-center">
+                                            <Archive size={40} className="text-[#7F8C8D]" />
+                                            <p className="text-md font-medium">Archive Item?</p>
+                                        </div>
 
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
+                                        <div className="text-sm text-justify">
+                                            <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
+                                        </div>
+                                        <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
+                                            <p>Archiving this listing will be recorded in the system under your administrator account.</p>
+                                        </div>
+                                        <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                                onClick={() => setOpenArchiveDialog(false)}
+                                            >Cancel</button>
+                                            <button
+                                                className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                                onClick={handleArchiveReport}
+                                                disabled={isArchiving || isLoading}
+                                            >
+                                                {isArchiving ? "Archving.." : "Confirm Archived"}
 
-        
-                </>
-             )
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+
+
+                    </>
+                )
 
             }
-             {openRestoreDialog &&
-        (
+            {openRestoreDialog &&
+                (
 
 
-          <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+                    <>
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
-              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                  <p className="font-semibold">Restore Listing</p>
-                  <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
+                            <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                                    <p className="font-semibold">Restore Listing</p>
+                                    <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
 
+                                </div>
+                                <div className="flex flex-col flex-1 p-3 gap-3">
+                                    <div className="w-full flex flex-col justify-center items-center">
+                                        <ArchiveRestore size={40} className="text-[#0288D1]" />
+                                        <p className="text-md font-medium">Restore Listing?</p>
+                                    </div>
+
+                                    <div className="text-sm text-justify">
+                                        <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
+                                    </div>
+
+                                    <hr className="border-(--color-tertiary) my-2 opacity-30" />
+                                    <div className="flex gap-2">
+                                        <button
+                                            className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                            onClick={() => setOpenRestoreDialog(false)}
+                                        >Cancel</button>
+                                        <button
+                                            className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
+                                            onClick={handleRestoreReport}
+                                            disabled={isRestoring}
+                                        >
+                                            {isRestoring ? "Restoring.." : "Confirm Restore"}
+
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+
+
+                )
+
+            }
+
+            {/* Image Modal */}
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
+                    <div className="relative rounded-2xl h-125">
+                        <button
+                            className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <X size={16} />
+                        </button>
+                        <img
+                            src={selectedImage}
+                            alt="Preview"
+                            className="h-full w-full  "
+                        />
+                    </div>
                 </div>
-                <div className="flex flex-col flex-1 p-3 gap-3">
-                  <div className="w-full flex flex-col justify-center items-center">
-                    <ArchiveRestore size={40} className="text-[#0288D1]" />
-                    <p className="text-md font-medium">Restore Listing?</p>
-                  </div>
+            )}
 
-                  <div className="text-sm text-justify">
-                    <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
-                  </div>
-
-                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                  <div className="flex gap-2">
-                    <button
-                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => setOpenRestoreDialog(false)}
-                    >Cancel</button>
-                    <button
-                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={handleRestoreReport}
-                      disabled={isRestoring}
-                    >
-                      {isRestoring ? "Restoring.." : "Confirm Restore"}
-
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-
-
-        )
-
-      }
-
-     
         </>
     )
 }
