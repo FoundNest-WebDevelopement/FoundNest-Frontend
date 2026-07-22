@@ -70,10 +70,6 @@ export default function TransactionManagementModal(
 
             }
 
-
-
-            console.log(data);
-
             // Refresh table
             const recordsResponse = await fetchWithAuth(
                 `${API_URL}/api/claim-records`

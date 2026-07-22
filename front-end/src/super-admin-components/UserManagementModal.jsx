@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import TextArea from "../global-components/TextArea";
 import formatDateTime from "../utils/formatDataTimeNew"
 import { formatActionType } from "../utils/formatActionType";
+import ResetPasswordModal from "./resetPasswordModal";
 
 export default function UserManagementModal(
     {
@@ -21,6 +22,11 @@ export default function UserManagementModal(
     const [isRevoking, setIsRevoking] = useState(false);
     const [isLocking, setIsLocking] = useState(false);
     const [isActivating, setIsActivating] = useState(false);
+
+    //Reset password states 
+    const [openResetPassword, setOpenResetPassword] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+
 
     //user full name
     const fullName = selectedUser.first_name ? selectedUser.first_name + " " + selectedUser.last_name : "N/A";
@@ -389,6 +395,7 @@ export default function UserManagementModal(
 
                                                         isSolid={true}
                                                         label={"Reset Password"}
+                                                        onClick={()=>setOpenResetPassword(true)}
 
                                                     />
                                                 </div>
@@ -421,6 +428,7 @@ export default function UserManagementModal(
                                                         isBorder={true}
                                                         isSolid={false}
                                                         label={"Reset Password"}
+                                                   
 
                                                     />
                                                 </div>
@@ -617,6 +625,13 @@ export default function UserManagementModal(
                     onConfirm={handleExportActivity}
                     disabled={isExporting}
                 />
+            }
+            {openResetPassword &&
+            <ResetPasswordModal
+                user={selectedUser}
+                onClose={()=>setOpenResetPassword(false)}
+            />
+
             }
         </>
     )
