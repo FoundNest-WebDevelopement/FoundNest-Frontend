@@ -70,11 +70,11 @@ export default function Notification() {
                 (
                     <>
                         <PageLabel label="Notifications" />
-                        <div className="bg-(--color-secondary)  min-h-screen px-4">
+                        <div className="bg-(--color-secondary)  min-h-screen px-4 ">
                             {notifications.length == 0 ?
                                 (
                                     <>
-                                        <div className="w-full pt-40 justify-center">
+                                        <div className="w-full pt-40 flex justify-center">
                                             <img src={emptyImage} alt="nothing here yet" className="h-70 " />
                                         </div>
                                     </>

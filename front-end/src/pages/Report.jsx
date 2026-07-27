@@ -284,6 +284,7 @@ export default function Report() {
   const handleSubmit = async () => {
     try {
 
+      setShowSubmitConfirmation(false)
       setIsSubmitting(true);
       const formData = new FormData();
 
@@ -981,7 +982,7 @@ useEffect(() => {
                       <i className="fa-regular fa-pen-to-square text-primary"></i>
                       <p className="text-xs text-primary">Edit Report</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={()=>navigate(`/profile/report-history/${userID}`)}>
                       <p className="text-xs text-primary">Go to my Report History</p>
                       <i className="fa-solid fa-arrow-right text-primary"></i>
                     </div>
@@ -1041,8 +1042,8 @@ useEffect(() => {
 
         }
         {showImageOptions && (
-          <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
-            <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
+          <div className="fixed inset-0 w-full bg-black/20 flex items-end justify-center z-50 ">
+            <div className="bg-white w-full  p-4 rounded-t-xl flex flex-col gap-2 pb-25">
               <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
                 setShowImageOptions(false);
                 cameraInputRef.current?.click();
@@ -1063,9 +1064,9 @@ useEffect(() => {
           </div>
         )}
 
-        {showImageOptions && (
-          <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50 ">
-            <div className="bg-white w-full max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
+        {/* {showImageOptions && (
+          <div className="fixed w-full inset-0 bg-black/20 flex items-end justify-center z-50 ">
+            <div className="bg-white w-screen max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
               <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
                 setShowImageOptions(false);
                 cameraInputRef.current?.click();
@@ -1085,7 +1086,7 @@ useEffect(() => {
               <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
             </div>
           </div>
-        )}
+        )} */}
 
         {showSubmitConfirmation &&
           <AlertDialog 

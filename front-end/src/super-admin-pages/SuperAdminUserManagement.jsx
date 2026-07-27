@@ -5,6 +5,7 @@ import UserManagmentTable from "../super-admin-components/UserMangementTable";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import WebLoading from "../global-components/WebLoading";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 
 
@@ -13,6 +14,12 @@ export default function SuperAdminUserMangement() {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [search, setSearch] = useState("");
+
+    //Redirect states
+    const [searchParams] = useSearchParams();
+    const useLoc     = useLocation();
+
+    const navigatedUserId = searchParams.get("userId");
 
     const FILTERS = [
     { label: "All", value: null },
@@ -23,7 +30,7 @@ export default function SuperAdminUserMangement() {
 
     const [activeFilter, setActiveFilter] = useState(FILTERS[0].value);
 
-    const [selectedUser, setSelecterUser] = useState(null);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     const [openExportActivity, setPpenExportActivity] = useState(false);
 
@@ -47,6 +54,20 @@ export default function SuperAdminUserMangement() {
             });
     }, []);
 
+    useEffect(() => {
+        if (!navigatedUserId || users.length === 0) return;
+
+        const user = users.find(
+            u =>
+                String(u.user_id) ===
+                String(navigatedUserId)
+        );
+
+        if (user) {
+            setSelectedUser(user);
+        }
+    }, [navigatedUserId, users,  useLoc.key]);
+
      const filteredUsers= users?.filter((users) => {
             const query = search.toLowerCase();
 
@@ -69,23 +90,6 @@ const paddedUserId =
             const matchesRole =
             activeFilter === null ||
             users.user_role === activeFilter;
-
-            // const matchesLocation =
-            //     !location ||
-            //     String(records.office_id) === String(location);
-
-            // const matchesStatus =
-            // !status ||
-            // records.claimant_status === (status === "true");
-
-                
-            // const claimDate = new Date(records.claim_date)
-            //     .toISOString()
-            //     .split("T")[0];
-            // const matchesDate =
-            //     !dateClaimed || claimDate === dateClaimed;
-
-
             return (
                 matchesSearch &&
                 matchesRole 
@@ -168,7 +172,7 @@ const paddedUserId =
                     <UserManagmentTable
                         users={filteredUsers}
                         onUpdated={setUsers}
-                        setSelectedUser={setSelecterUser}
+                        setSelectedUser={setSelectedUser}
                         selectedUser={selectedUser}
                     />
 

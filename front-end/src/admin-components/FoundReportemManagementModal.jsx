@@ -935,7 +935,6 @@ export default function FoundReportItemManagementModal({
 
       const reports = await refreshResponse.json();
 
-      console.log(reports);
 
       if (Array.isArray(reports)) {
         onUpdated?.(reports);
@@ -1029,7 +1028,6 @@ export default function FoundReportItemManagementModal({
       const result = await response.json();
 
       setDisposedDetails(result.data);
-      console.log("data", result.data)
     } catch (err) {
       console.error(err);
     } finally {
@@ -1979,7 +1977,6 @@ export default function FoundReportItemManagementModal({
 
                                 // setLinkReport(result);
                                 setSelectedReport(result);
-                                console.log(result);
                                 setLinkModal(true);
                                 setShowSearchResults(false);
                               }}

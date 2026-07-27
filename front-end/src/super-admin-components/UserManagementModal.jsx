@@ -72,9 +72,6 @@ export default function UserManagementModal(
             if (!response.ok) {
                 throw new Error(data.error || "Failed to update role");
             }
-
-
-
             const userResponse = await fetchWithAuth(
                 `${API_URL}/api/users`
             );
@@ -428,6 +425,7 @@ export default function UserManagementModal(
                                                         isBorder={true}
                                                         isSolid={false}
                                                         label={"Reset Password"}
+                                                        onClick={()=>setOpenResetPassword(true)}
                                                    
 
                                                     />
