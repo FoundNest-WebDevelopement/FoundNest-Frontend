@@ -1,14 +1,49 @@
 const API_URL = import.meta.env.VITE_API_URL;
+import { shouldRefreshToken } from "./tokenExpirationChecker";
+
+
+async function refreshAccessToken() {
+  const refreshToken = localStorage.getItem("refreshToken");
+
+  if (!refreshToken) return null;
+
+  const response = await fetch(`${API_URL}/api/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!response.ok) {
+    localStorage.clear();
+    window.location.href = "/login";
+    return null;
+  }
+
+  const { accessToken } = await response.json();
+
+  localStorage.setItem("token", accessToken);
+
+  return accessToken;
+}
 
 export async function fetchWithAuth(url, options = {}) {
   let accessToken = localStorage.getItem("token");
+
+  if (shouldRefreshToken(accessToken)) {
+    accessToken = await refreshAccessToken();
+
+    if (!accessToken) {
+      throw new Error("Unable to refresh token");
+    }
+  }
 
   const headers = {
     ...options.headers,
     Authorization: `Bearer ${accessToken}`,
   };
 
-  // Only set Content-Type for non-FormData requests
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -19,43 +54,18 @@ export async function fetchWithAuth(url, options = {}) {
   });
 
   if (response.status === 401) {
-    const refreshToken = localStorage.getItem("refreshToken");
+    accessToken = await refreshAccessToken();
 
-    if (!refreshToken) {
-      localStorage.clear();
-      window.location.href = "/login";
+    if (!accessToken) {
       return response;
-    }
-
-    const refreshResponse = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (!refreshResponse.ok) {
-      localStorage.clear();
-      window.location.href = "/login";
-      return response;
-    }
-
-    const { accessToken: newAccessToken } = await refreshResponse.json();
-    localStorage.setItem("token", newAccessToken);
-
-    const retryHeaders = {
-      ...options.headers,
-      Authorization: `Bearer ${newAccessToken}`,
-    };
-
-    if (!(options.body instanceof FormData)) {
-      retryHeaders["Content-Type"] = "application/json";
     }
 
     response = await fetch(url, {
       ...options,
-      headers: retryHeaders,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
   }
 
