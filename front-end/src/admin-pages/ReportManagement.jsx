@@ -106,19 +106,23 @@ export default function ReportManagement() {
             });
     }, []);
     useEffect(() => {
+    setIsLoadingReports(true);
 
-        //LOST REPORT FETCH
-        setIsLoadingReports(true)
-        fetchWithAuth(`${API_URL}/api/lost-reports`)
-            .then((res) => res.json())
-            .then((data) => {
-                setReports(data);
-                setIsLoadingReports(false)
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
+    fetchWithAuth(`${API_URL}/api/lost-reports`)
+        .then(async (res) => {
+            const data = await res.json();
+            setReports(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+            console.error(err);
+            setReports([]);
+        })
+        .finally(() => {
+            setIsLoadingReports(false);
+        });
+
+}, []);
+
 
     useEffect(() => {
         if (!navigatedReportId || reports.length === 0) return;

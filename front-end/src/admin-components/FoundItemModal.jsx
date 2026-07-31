@@ -27,6 +27,7 @@ export default function FoundItemModal({
     const API_URL = import.meta.env.VITE_API_URL;
 
     const adminID = localStorage.getItem("admin_id")
+    const superAdminID = localStorage.getItem("super_admin_id")
     const userId = localStorage.getItem("user_id")
     const [selectedFile, setSelectedFile] = useState(null);
     const [image, setImage] = useState(null);
@@ -224,7 +225,11 @@ const handleCancelForm = () => {
                 formData.append("image_url", prefilledImageUrl);
             }
 
-            formData.append("admin_id", adminID);
+            if(adminID){
+                formData.append("admin_id", adminID);
+            }else{
+               formData.append("super_admin_id", superAdminID); 
+            }
             formData.append("item_name", itemName);
             formData.append("category_id", category);
             formData.append("description", description);

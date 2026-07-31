@@ -14,6 +14,11 @@ export default function AdminTopBar({ tabName }) {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const userId = localStorage.getItem("user_id"); 
+    const role = localStorage.getItem("role");
+;
+
+    const officeLocation = localStorage.getItem("office_name") || "Office Admin"
+
     
 
     useEffect(() => {
@@ -121,7 +126,7 @@ const markAllAdminNotificationsAsRead = async () => {
                         </div>
                         <div className="flex flex-col">
                             <p className="text-md font-bold text-(--color-quaternary)">FoundNest</p>
-                            <p className="text-xs text-white ">{localStorage.getItem("office_name") || "Office Admin"}</p>
+                            <p className="text-xs text-white ">{officeLocation}</p>
                         </div>
                     </div>
                     <hr className="border border-white/12 opacity-30" />

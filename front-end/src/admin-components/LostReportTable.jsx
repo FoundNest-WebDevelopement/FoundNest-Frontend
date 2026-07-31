@@ -148,7 +148,7 @@ export default function LostReportTable(
 
                                     <td className="align-middle text-center font-medium">{rpt.found_item_id ? <span>SI-00{rpt.found_item_id}</span> : ""}</td>
 
-                                    <td className="align-middle text-center ">{rpt.user_id ? rpt.reported_by : rpt.owner_name}</td>
+                                    <td className="align-middle text-center ">{rpt.owner_name ? rpt.owner_name : rpt.reported_by}</td>
 
                                     <td className="align-middle text-center">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100

@@ -48,6 +48,11 @@ export default function TransactionManagementModal(
 
     const handleRevertTransaction = async () => {
         setIsReverting(true);
+        const officeId =
+        officeIdNotification &&
+        officeIdNotification !== "undefined"
+            ? officeIdNotification
+            : null;
 
 
         try {
@@ -57,7 +62,7 @@ export default function TransactionManagementModal(
                     method: "PATCH",
                     body: JSON.stringify({
                         claimant_status: false,
-                        office_id: officeIdNotification,
+                        office_id: officeId,
                         admin_full_name: adminFullName,
                     }),
                 }
@@ -277,7 +282,7 @@ export default function TransactionManagementModal(
                                             <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
                                                 <p className="text-xs xl:text-sm font-semibold text-[#C0392B]">Transaction Reverted</p>
                                                 <p className="text-[#6B5C42]">Resolved on <span>{formatDateTime(selectedRecord.date_reverted)}</span><span></span></p>
-                                                <p className="text-[#6B5C42]">Reverted by {selectedRecord.reverted_by_admin_full_name}</p>
+                                                <p className="text-[#6B5C42]">Reverted by {selectedRecord.reverted_by_full_name}</p>
                                             </div>
 
                                         </div>

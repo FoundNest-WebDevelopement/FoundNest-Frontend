@@ -24,6 +24,7 @@ export default function LostReportMangementModal(
 
 ) {
 
+
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
 
@@ -142,12 +143,16 @@ export default function LostReportMangementModal(
 
 
         try {
+             const officeIdTemp = (officeIdNotification && officeIdNotification !== "undefined") 
+                ? officeIdNotification 
+                : null;
+
             const response = await fetchWithAuth(
                 `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/archive`,
                 {
                     method: "PUT",
                     body: JSON.stringify({
-                        office_id: officeIdNotification,
+                        office_id: officeIdTemp,
                         admin_full_name: adminFullName,
                     }),
 
@@ -202,12 +207,17 @@ export default function LostReportMangementModal(
 
 
         try {
+            const officeIdTemp = (officeIdNotification && officeIdNotification !== "undefined") 
+                ? officeIdNotification 
+                : null;
+
+
             const response = await fetchWithAuth(
                 `${API_URL}/api/lost-reports/${selectedItem.lost_report_id}/restore`,
                 {
                     method: "PUT",
                     body: JSON.stringify({
-                        office_id: officeIdNotification,
+                        office_id: officeIdTemp,
                         admin_full_name: adminFullName,
                     }),
                 }
@@ -421,7 +431,7 @@ export default function LostReportMangementModal(
                                     )
                                 }
 
-                                {selectedItem.status === 'resolved' && selectedItem.resolved_by_admin_id &&
+                                {selectedItem.status === 'resolved' && selectedItem.resolved_by_user_id &&
                                     (<>
                                         <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                         <div className=" flex  w-full gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-3 xl:p-5 border-l-4">
@@ -481,7 +491,7 @@ export default function LostReportMangementModal(
                                 )
 
                             }
-                            {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
+                            {selectedItem.status === 'archived' && selectedItem.archived_by_user_id &&
                                 (<>
 
                                     <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">

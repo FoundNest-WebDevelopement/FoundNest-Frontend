@@ -48,7 +48,6 @@ export default function FoundReportItemManagementModal({
   const [originalEditForm, setOriginalEditForm] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const adminId = localStorage.getItem("admin_id");
   const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
 
@@ -138,6 +137,8 @@ export default function FoundReportItemManagementModal({
     setIsReleasing(true);
     setOpenConfirmRelease(false);
     try {
+      
+
       if (!selectedItem?.found_report_id) {
         throw new Error("Please select an item to release.");
       }
@@ -158,14 +159,20 @@ export default function FoundReportItemManagementModal({
       if (!verificationDetails.trim()) {
         throw new Error("Verification details are required.");
       }
-
       const officeId = localStorage.getItem("office_location");
+
+      const officeIdTemp = (officeId && officeId !== "undefined") 
+      ? officeId 
+      : null;
+      
 
       const formData = new FormData();
 
       // Claim Details
       formData.append("claimant_full_name", fullName);
-      formData.append("office_id", officeId);
+      if (officeIdTemp !== null) {
+        formData.append("office_id", officeIdTemp);
+      }
 
       formData.append("claimant_email", claimantEmail);
 
@@ -174,7 +181,7 @@ export default function FoundReportItemManagementModal({
       formData.append("verification_details", verificationDetails);
 
       // Admin Processing Claim
-      formData.append("processed_by_admin_id", adminId);
+      formData.append("processed_by_user_id", userId);
       formData.append("admin_full_name", adminFullName);
       formData.append("user_id", userId);
 
@@ -778,6 +785,10 @@ export default function FoundReportItemManagementModal({
     setOpenConfirmDesiposed(false);
 
     try {
+      const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
+    ? officeIdNotification 
+    : null;
+
       const formData = new FormData();
 
       formData.append(
@@ -796,8 +807,8 @@ export default function FoundReportItemManagementModal({
       );
 
       formData.append(
-        "disposed_by_admin_id",
-        adminId
+        "disposed_by_user_id",
+        userId
       );
 
       formData.append(
@@ -815,10 +826,13 @@ export default function FoundReportItemManagementModal({
         donationDate
       );
 
-      formData.append(
+      if(officeId){
+        formData.append(
         "office_id",
-        officeIdNotification
+        officeId
       );
+      }
+      
       formData.append(
         "admin_full_name",
         adminFullName
@@ -906,6 +920,9 @@ export default function FoundReportItemManagementModal({
 
   //Archive Item
   const handleArchiveReport = async (foundReportId) => {
+    const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
+    ? officeIdNotification 
+    : null;
     setIsArchiving(true);
     try {
       const response = await fetchWithAuth(
@@ -916,7 +933,7 @@ export default function FoundReportItemManagementModal({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            office_id: officeIdNotification,
+            office_id: officeId,
             admin_full_name: adminFullName,
           }),
         }
@@ -956,7 +973,11 @@ export default function FoundReportItemManagementModal({
   };
 
   const handleRestoreReport = async (foundReportId) => {
+    
     try {
+      const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
+    ? officeIdNotification 
+    : null;
       setIsRestoring(true);
       const response = await fetchWithAuth(
         `${API_URL}/api/found-reports/${foundReportId}/restore`,
@@ -966,7 +987,7 @@ export default function FoundReportItemManagementModal({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            office_id: officeIdNotification,
+            office_id: officeId,
             admin_full_name: adminFullName,
           }),
         }
@@ -1414,7 +1435,7 @@ export default function FoundReportItemManagementModal({
                             <div className="flex flex-col text-xs mt-5 flex-1">
                               <p className="text-[#6B5C42]">REPORTED BY</p>
                               <p className="text-black">
-                                {selectedItem.admin_full_name}
+                                {selectedItem.reported_by_full_name}
                               </p>
                             </div>
                             <div className="flex flex-col text-xs mt-5 flex-1">
@@ -1568,7 +1589,7 @@ export default function FoundReportItemManagementModal({
                             )
 
                           }
-                          {selectedItem.status === 'archived' && selectedItem.archived_by_admin_id &&
+                          {selectedItem.status === 'archived' &&
                             (<>
                               <hr className="border-(--color-tertiary) my-5 opacity-30" />
                               <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">

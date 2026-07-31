@@ -146,7 +146,7 @@ export default function ItemManagementTable({
 
                                     <td className="align-middle text-center font-medium">{item.linked_report ? <span>RPT-00{item.linked_report}</span> : ""}</td>
 
-                                    <td className="align-middle text-center ">{item.admin_full_name}</td>
+                                    <td className="align-middle text-center ">{item.reported_by_full_name}</td>
 
                                     <td className="align-middle text-center ">
                                         <button className=" btn-sm btn-square  text-white border-none cursor-pointer transition-transform duration-100

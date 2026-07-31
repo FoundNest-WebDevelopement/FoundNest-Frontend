@@ -31,7 +31,6 @@ export default function LostReportModal(
     const [openCancelReportDialog, setOpenCancelReportDialog] = useState(false);
 
     //MODAL CONST
-    const adminID = localStorage.getItem("admin_id")
     const userId = localStorage.getItem("user_id")
     const AdminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
 
@@ -285,8 +284,7 @@ export default function LostReportModal(
 
             const formData = new FormData();
             formData.append("image", selectedFile);
-            formData.append("admin_id", adminID);
-            formData.append("admin_user_id", userId);
+            formData.append("user_id", userId);
             formData.append("item_name", itemName);
             formData.append("category_id", category);
             formData.append("description", description);

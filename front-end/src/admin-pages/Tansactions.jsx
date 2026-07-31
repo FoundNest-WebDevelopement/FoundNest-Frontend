@@ -76,6 +76,7 @@ export default function Transactions() {
             .then((data) => {
                 setRecords(data);
                 setIsLoadingTxn(false)
+                console.log(data)
             })
             .catch((err) => {
                 console.error(err);
