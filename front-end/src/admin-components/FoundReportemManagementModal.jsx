@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck } from "lucide-react";
+import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck, Handshake } from "lucide-react";
 import QRCodeLib from "qrcode";
 import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
 import { formatActionType } from "../utils/formatActionType.js";
@@ -1026,6 +1026,9 @@ export default function FoundReportItemManagementModal({
     }
   };
 
+  const [claimRecord, setClaimRecord] = useState([]);
+  const [isClaimRecordLoading, setIsClaimRecordLoading] = useState(false);
+
   const [disposedDetails, setDisposedDetails] = useState([]);
   const [isDisposedDetails, setIsDisposedDetails] = useState(false);
   const [openDisposedDetails, setOpenDisposedDetails] = useState(false);
@@ -1056,7 +1059,42 @@ export default function FoundReportItemManagementModal({
     }
   };
 
+  const fetchClaimRecordByFoundId = async () => {
+  if (!selectedItem?.found_report_id) return;
+
+  try {
+    setIsClaimRecordLoading(true);
+
+    const response = await fetchWithAuth(
+      `${API_URL}/api/claim-records/found-report/${selectedItem.found_report_id}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch claim record.");
+    }
+
+    const result = await response.json();
+    console.log(result)
+
+    setClaimRecord(result);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsClaimRecordLoading(false);
+  }
+};
+
+
+
   useEffect(() => {
+    
+    if(selectedItem?.status === "claimed"){
+      fetchClaimRecordByFoundId();
+    }
+    else {
+      setClaimRecord(null);
+    }
     if (selectedItem?.status === "disposed") {
       fetchDisposedDetails();
     } else {
@@ -1125,6 +1163,8 @@ export default function FoundReportItemManagementModal({
                       (
                         <>
 
+                    
+
                           {selectedItem.linked_report &&
                             selectedItem.status === "claimed" && (
                               <div className="flex flex-col gap-2 mb-4">
@@ -1164,8 +1204,8 @@ export default function FoundReportItemManagementModal({
                                       </p>
                                     </div>
                                   </div>
-                                  <div
-                                    className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
+                                  <button
+                                    className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
                                     onClick={() =>
                                       navigate(
                                         `/admin/report_management?reportId=${selectedItem.linked_report}`,
@@ -1174,7 +1214,7 @@ export default function FoundReportItemManagementModal({
                                   >
                                     <p>View Lost Report &nbsp; </p>
                                     <i className="fa-solid fa-arrow-right"></i>
-                                  </div>
+                                  </button>
                                 </div>
                               </div>
                             )}
@@ -1517,6 +1557,68 @@ export default function FoundReportItemManagementModal({
                             </div>
 
                           </div>
+                              {selectedItem.status === "claimed" && !isClaimRecordLoading && (
+                              <div className="flex flex-col gap-2 mb-4 mt-4">
+                                <div className="flex items-center gap-2">
+                                  <Handshake size={15} />
+                                  <p className="text-black font-semibold text-sm">
+                                    TRANSACTION
+                                  </p>
+                                </div>
+                                <div className=" flex flex-col w-full  gap-2 rounded-lg bg-gray-200 text-gray-700 border  p-2 xl:p-4">
+                                  <div className="flex justify-between text-[10px] xl:text-xs">
+                                    <div className="text-black font-semibold  rounded-md p-1 px-2 ">
+                                      <p className="font-bold">
+                                        {formatTXNId(claimRecord?.claim_id)}
+                                      </p>
+                                    </div>
+                                    <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold flex text-center">
+                                      <p>{claimRecord?.claimant_status && "completed" }</p>
+                                    </div>
+                                  </div>
+                                  <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
+                                      <p className="font-semibold">
+                                        Proof of Claim
+                                      </p>
+                                    </div>
+                                  <div className="flex flex-col gap-2">
+                                    {claimRecord?.claimant_photo_url && (
+                                      <div className=" relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer" onClick={() => setSelectedImage(claimRecord?.claimant_photo_url)}>
+                                      <img src={claimRecord.claimant_photo_url} alt={"proof photo"}
+                                        className="h-full w-full object-contain" />
+                                      <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
+                                        <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
+                                      </div>
+                                    </div>
+                                    )}
+                                 <div className="text-xs flex flex-col">
+                                       <div className="flex flex-col flex-1">
+                                        <p className=" text-[#6B5C42]">CLAIMANT NAME</p>
+                                        <p >{claimRecord?.claimant_full_name || "N/A"}</p>
+                                      </div>
+                                    </div>
+                                     <div className="text-[10px] xl:text-xs flex flex-col gap-1">
+                                    <p className="text-[#6B5C42]">Processed by: <span className="text-black font-medium">{claimRecord.processed_by}</span></p>
+                                    <p className="text-[#6B5C42]">Processed on {formatDateTime(claimRecord?.claim_date)}</p>
+                                  </div>
+                                     {/* <p className="text-[#6B5C42]">
+                                        {formatDateTime(claimRecord?.claim_date)}
+                                      </p> */}
+                                  </div>
+                                  <button
+                                    className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium border mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
+                                    onClick={() =>
+                                      navigate(
+                                        `/admin/transactions?claimId=${claimRecord.claim_id}`,
+                                      )
+                                    }
+                                  >
+                                    <p>View Transaction &nbsp; </p>
+                                    <i className="fa-solid fa-arrow-right"></i>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           {disposedDetails &&
                             (
                               <>

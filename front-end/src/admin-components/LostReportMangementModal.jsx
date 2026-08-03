@@ -305,7 +305,7 @@ export default function LostReportMangementModal(
                                                 </div>
 
                                             </div>
-                                            <div className="text-[10px] xl:text-xs flex items-center font-medium underline mt-2 cursor-pointer"
+                                            <button className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
                                                 onClick={() =>
                                                     navigate(
                                                         `/admin/item_management?itemId=${selectedItem.found_item_id}`
@@ -314,7 +314,7 @@ export default function LostReportMangementModal(
                                             >
                                                 <p>View Found Item &nbsp; </p>
                                                 <i className="fa-solid fa-arrow-right"></i>
-                                            </div>
+                                            </button>
                                         </div>
 
                                     </div>

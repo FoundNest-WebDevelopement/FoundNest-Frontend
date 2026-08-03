@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useSearchParams, useLocation } from "react-router-dom";
 import AdminAllLocationDropDown from "../admin-components/AdminAllLocationDropDown"
 import WebLoading from "../global-components/WebLoading"
+import AdminDropDown from "../admin-components/AdminDropdown"
 
 
 
@@ -22,7 +23,7 @@ export default function ReportManagement() {
 
     //API URL
     const API_URL = import.meta.env.VITE_API_URL;
-
+    const userId = localStorage.getItem("user_id");
 
 
     //Redirect states
@@ -40,6 +41,7 @@ export default function ReportManagement() {
     const [locationTemp, setLocationTemp] = useState("");
     const [categoryTemp, setCategoryTemp] = useState("");
     const [statusTemp, setStatusTemp] = useState("open");
+    const [reportTypeTemp, setReportTypeTemp] = useState("All Report");
 
     //LOG LOST REPORT TOGGLE
     const [openLogItem, setOpenLogItem] = useState(false);
@@ -53,6 +55,7 @@ export default function ReportManagement() {
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("open");
+    const [reportType, setReportType] = useState("All Report");
 
     //DROPDOWN LIST
     const statuses = Object.values(LOST_REPORT_STATUS);
@@ -60,6 +63,7 @@ export default function ReportManagement() {
     const [gates, setGates] = useState([]);
     const [sharedSpaces, setSharedSpaces] = useState([]);
     const [locations, setLocations] = useState([]);
+
 
     //REPORTS
     const [reports, setReports] = useState([]);
@@ -93,6 +97,21 @@ export default function ReportManagement() {
             type: "gate",
         })),
     ];
+
+    const REPORT_TYPE = [
+
+
+        {
+            id: "all-report",
+            name: "All Report",
+            type: "unknown",
+        },
+        {
+            id: "own-report",
+            name: "Own Report",
+            type: "unknown",
+        },
+    ]
 
     //CAEGORIES FETCH
     useEffect(() => {
@@ -179,12 +198,14 @@ export default function ReportManagement() {
         setCategory("");
         setStatus("open");
         setDateLost("");
+        setReportType("All Report");
 
         setSearchTemp("");
         setLocationTemp("");
         setCategoryTemp("");
         setStatusTemp("open");
         setDateLostTemp("");
+        setReportTypeTemp("All Report");
     }
 
     // HAMDLE APPLY FILTER
@@ -194,6 +215,8 @@ export default function ReportManagement() {
         setCategory(categoryTemp);
         setStatus(statusTemp);
         setDateLost(dateLostTemp);
+        setReportType(reportTypeTemp);
+        
     }
 
     //FILRTER REPORTS
@@ -246,13 +269,20 @@ export default function ReportManagement() {
         const matchesDate =
             !dateLost || reportDate === dateLost;
 
+        const matchReportType = 
+    !reportType || 
+    reportType === 'All Report' || 
+    (reportType === 'Own Report' && String(report.user_id) === String(userId));
+        
+
 
         return (
             matchesSearch &&
             matchesCategory &&
             matchesLocation &&
             matchesDate &&
-            matchesStatus
+            matchesStatus &&
+            matchReportType  
         );
     });
 
@@ -332,6 +362,9 @@ export default function ReportManagement() {
                         </div>
                         <div className="flex-1">
                             <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
+                        </div>
+                        <div className="flex-1">
+                            <AdminDropDown placeholder="All Location" value={reportTypeTemp} onChange={setReportTypeTemp} options={REPORT_TYPE} />
                         </div>
                         <div className="flex-1">
                             <AdminDateInput value={dateLostTemp} onChange={setDateLostTemp} />
