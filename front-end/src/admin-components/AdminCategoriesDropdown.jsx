@@ -27,9 +27,12 @@ export default function AdminCategoriesDropdown({
         required
       >
 
+        {placeholder &&
         <option  value="">
           {placeholder}
         </option>
+
+        }
 
         {safeOptions.map((option) => (
           <option

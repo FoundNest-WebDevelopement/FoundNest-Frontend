@@ -383,6 +383,10 @@ export default function ReportManagement() {
                         onUpdated={setReports}
                         setSelectedItem={setSelectedItem}
                         selectedItem={selectedItem}
+                        categories={categories}
+                        sharedSpaces={sharedSpaces}
+                        gates={gates}
+                        locations={locations}
                     />
 
                 </div>

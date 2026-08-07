@@ -355,28 +355,24 @@ export default function LostReportModal(
                         <p className="text-xl font-semibold text-white">
                             Add New Report
                         </p>
-
                         <button type="button" onClick={()=>{
                              if (hasUnsavedChanges) {
                                                 setOpenCancelReportDialog(true);
                                             } else {
                                                 handleClose();
                                             }
-                        }}>
+                        }}
+                        disabled={ isAnalyzing || isSubmitting }
+                        >
                             <i className="fa-solid fa-xmark text-xl text-white"></i>
                         </button>
-
                     </div>
-
-
                     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-
                         <div>
                             <p className="font-medium text-sm ">
                                 Item Description
                             </p>
                             <hr className="border-(--color-tertiary) mt-1 mb-4 opacity-30" />
-
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
@@ -413,8 +409,6 @@ export default function LostReportModal(
                             {isAnalyzing && (
                                 <p className="text-xs text-primary mt-2">Analyzing image...</p>
                             )}
-
-
                         </div>
 
                         <AdminTextField
@@ -425,7 +419,6 @@ export default function LostReportModal(
                             reqField={true}
                             disabled={isSubmitting}
                         />
-
                         <AdminCategoriesDropdown
                             title="Category"
                             placeholder="Select Category"
@@ -434,30 +427,22 @@ export default function LostReportModal(
                             options={categories}
                             reqField={true}
                             disabled={isSubmitting}
-
                         />
-
                         <AdminTextArea
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
                             onChange={setDescription}
                             disabled={isSubmitting}
-
-
                         />
-
                         <AdminTextField
                             title="Contents (if Applicable)"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
                             onChange={setContents}
                             disabled={isSubmitting}
-
                         />
                         <div className="dropdown w-full">
-
-
                             <p className="text-sm font-medium mt-2">Location Lost <span className="text-primary">*</span></p>
                             <button
                                 type="button"
@@ -474,7 +459,6 @@ export default function LostReportModal(
                                     <i className={`fa-solid fa-caret-${showDropdown ? "up" : "down "} text-[7px]`}></i>
                                 </div>
                             </button>
-
                             {showDropdown && (
                                 <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg">
 
@@ -511,7 +495,6 @@ export default function LostReportModal(
                                                             )
                                                         }
                                                     />
-
                                                     {building.office_name}
                                                 </label>
                                             ))}
@@ -531,7 +514,6 @@ export default function LostReportModal(
                                     >
                                         Shared Spaces  <i className={`fa-solid fa-caret-${showSharedSpaces ? "up" : "down "} text-[7px]`}></i>
                                     </button>
-
                                     {showSharedSpaces && (
                                         <div className="pl-6 pb-2">
                                             {sharedSpaces?.map((space) => (
@@ -553,13 +535,11 @@ export default function LostReportModal(
                                                             )
                                                         }
                                                     />
-
                                                     {space.shared_space_name}
                                                 </label>
                                             ))}
                                         </div>
                                     )}
-
                                     {/* GATES */}
                                     <button
                                         type="button"
@@ -571,7 +551,6 @@ export default function LostReportModal(
                                     >
                                         Gates <i className={`fa-solid fa-caret-${showGates ? "up" : "down "} text-[7px]`}></i>
                                     </button>
-
                                     {showGates && (
                                         <div className="pl-6 pb-2">
                                             {gates?.map((gate) => (
@@ -599,7 +578,6 @@ export default function LostReportModal(
                                             ))}
                                         </div>
                                     )}
-
                                     {/* CAN'T REMEMBER */}
                                     <div className="border-t mt-2">
                                         <label className="flex items-center gap-2 px-4 py-3 text-sm ">
@@ -614,16 +592,12 @@ export default function LostReportModal(
                                                     )
                                                 }
                                             />
-
                                             Can't Remember
                                         </label>
                                     </div>
-
                                 </div>
                             )}
                         </div>
-
-
                         <AdminTextField
                             title="Specific Location"
                             value={specificLocation}
@@ -709,6 +683,7 @@ export default function LostReportModal(
                     <div className="h-18 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
                         <button
                             type="button"
+                            disabled={ isAnalyzing || isSubmitting }
                             onClick={() => { if (hasUnsavedChanges) {
                                                 setOpenCancelReportDialog(true);
                                             } else {
@@ -750,9 +725,7 @@ export default function LostReportModal(
                         onConfirm={handleSubmit}
                     />
                 )
-
             }
-
             {openCancelReportDialog &&
                 (
                     <AdminConfirmDialog
@@ -764,10 +737,7 @@ export default function LostReportModal(
                         onConfirm={handleClose}
                     />
                 )
-
             }
-
-
         </>
     )
 }

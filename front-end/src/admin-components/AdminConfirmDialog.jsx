@@ -10,7 +10,8 @@ export default function AdminConfirmDialog({
   Icon = Info,
   iconColor = "text-[#4A5568]" ,
   message,
-  disabled
+  disabled,
+  positiveBtnColor = "bg-primary"
   
 }) {
   return (
@@ -20,7 +21,7 @@ export default function AdminConfirmDialog({
         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
           <p className="font-semibold">{title}</p>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={disabled}>
             <i className="fa-solid fa-x text-sm text-white" />
           </button>
         </div>
@@ -44,7 +45,9 @@ export default function AdminConfirmDialog({
           <div className="flex gap-2">
             <button
               type="button"
-              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer"
+              disabled={disabled}
+              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer
+              disabled:opacity-40 disabled:cursor-not-allowed`"
               onClick={onClose}
             >
               {cancelText}
@@ -52,8 +55,8 @@ export default function AdminConfirmDialog({
 
             <button
               type="button"
-              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer
-              disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex-1 h-10 ${positiveBtnColor} rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 cursor-pointer
+              disabled:opacity-40 disabled:cursor-not-allowed`}
               disabled={disabled}
               onClick={onConfirm}
             >

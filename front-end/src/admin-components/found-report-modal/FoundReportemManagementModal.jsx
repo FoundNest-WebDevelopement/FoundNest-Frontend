@@ -1,24 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck, Handshake } from "lucide-react";
 import QRCodeLib from "qrcode";
-import foramtDateTimeNew from "../utils/formatDataTimeNew.js";
-import { formatActionType } from "../utils/formatActionType.js";
-import formatNotificationDate from "../utils/fotmatNotifications.js";
-import AdminTextField from "./AdminTextField.jsx";
-import AdminDateInput from "./AdminDateInput.jsx";
-import AdminTextArea from "./AdminTextArea.jsx";
-import { fetchWithAuth } from "../utils/fetchWithAuth";
+import foramtDateTimeNew from "../../utils/formatDataTimeNew.js";
+import { formatActionType } from "../../utils/formatActionType.js";
+import formatNotificationDate from "../../utils/fotmatNotifications.js";
+import AdminTextField from "../AdminTextField.jsx";
+import AdminDateInput from "../AdminDateInput.jsx";
+import AdminTextArea from "../AdminTextArea.jsx";
+import { fetchWithAuth } from "../../utils/fetchWithAuth.js";
 import { useNavigate } from "react-router-dom";
-import formatDateTime from "../utils/formatDataTimeNew.js";
-import formatDate from "../utils/formatDate.js";
+import formatDateTime from "../../utils/formatDataTimeNew.js";
+import formatDate from "../../utils/formatDate.js";
 import { toast } from "react-toastify";
-import AdminConfirmDialog from "./AdminConfirmDialog.jsx";
+import AdminConfirmDialog from "../AdminConfirmDialog.jsx";
 import {
   DISPOSAL_METHODS,
   DISCARD_REASONS,
-} from "../constants/disposal_constants.js";
-import AdminDonationDropDown from "./AdminDonationDropDown.jsx";
+} from "../../constants/disposal_constants.js";
+import AdminDonationDropDown from "../AdminDonationDropDown.jsx";
+import {
+  claimFoundItem,
+  archiveFoundReport,
+  restoreFoundReport,
+  disposeFoundItem,
+  searchLostReports,
+  getItemHistory,
+  getClaimRecord,
+  getDisposedDetails,
+  analyzeItemImage,
+} from "./services/foundReportModalServices.js";
 
+import { useSaveEditReport } from "./hooks/useSaveEditReport.js";
+import { useRefreshFoundReports } from "./utils/useRefreshFoundReports.js";
 
 export default function FoundReportItemManagementModal({
   selectedItem = [],
@@ -34,6 +47,16 @@ export default function FoundReportItemManagementModal({
 
   const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
   const officeIdNotification = localStorage.getItem("office_location");
+
+  const foundReportId = selectedItem?.found_report_id;
+
+  //hooks
+  const {saveEdit, isSavingEdit} = useSaveEditReport();
+  const { refreshReports } = useRefreshFoundReports({
+    onUpdated,
+    selectedItem,
+    setSelectedItem,
+});
 
   const [linkModal, setLinkModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -137,37 +160,25 @@ export default function FoundReportItemManagementModal({
     setIsReleasing(true);
     setOpenConfirmRelease(false);
     try {
-      
-
-      if (!selectedItem?.found_report_id) {
+      if (!foundReportId) {
         throw new Error("Please select an item to release.");
       }
-
-      // Validation
       if (!fullName.trim()) {
         throw new Error("Claimant full name is required.");
       }
-
       if (!claimantEmail.trim() && !claimantNumber.trim()) {
         throw new Error("Email or Contact Number is required.");
       }
-
       if (!selectedFile) {
         throw new Error("Proof of claim photo is required.");
       }
-
       if (!verificationDetails.trim()) {
         throw new Error("Verification details are required.");
       }
       const officeId = localStorage.getItem("office_location");
-
-      const officeIdTemp = (officeId && officeId !== "undefined") 
-      ? officeId 
-      : null;
-      
+      const officeIdTemp = (officeId && officeId !== "undefined") ? officeId : null;
 
       const formData = new FormData();
-
       // Claim Details
       formData.append("claimant_full_name", fullName);
       if (officeIdTemp !== null) {
@@ -179,59 +190,26 @@ export default function FoundReportItemManagementModal({
       formData.append("claimant_contact_number", claimantNumber);
 
       formData.append("verification_details", verificationDetails);
-
       // Admin Processing Claim
       formData.append("processed_by_user_id", userId);
       formData.append("admin_full_name", adminFullName);
       formData.append("user_id", userId);
-
       // Optional linked report
       if (linkReport) {
         formData.append("lost_report_id", linkReport.lost_report_id);
       }
-
       // Claimant Photo
       formData.append("claimant_photo", selectedFile);
 
-      const response = await fetchWithAuth(
-        `${API_URL}/api/found-reports/${selectedItem.found_report_id}/claim`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to release item.");
-        setIsReleasing(false);
-      }
+      const data = await claimFoundItem(selectedItem.found_report_id, formData)
 
       setClaimId(data.claim.claim_id);
 
       if (data.claim.claim_id) {
         setOpenClaimNavigateDialog(true);
       }
-      // Refresh table
-      const reportsResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`,
-      );
 
-      const reportsData = await reportsResponse.json();
-
-      if (Array.isArray(reportsData)) {
-        onUpdated?.(reportsData);
-      }
-
-      const updatedSelected = reportsData.find(
-        (report) => report.found_report_id === selectedItem.found_report_id,
-      );
-
-      if (updatedSelected) {
-        setSelectedItem(updatedSelected);
-      }
+     await refreshReports();
 
       // Reset form
       resetClaimForm();
@@ -245,12 +223,9 @@ export default function FoundReportItemManagementModal({
 
       console.error(error);
 
-      alert(error.message);
+      toast.error(error.message);
     }
   };
-
-  //HANDLE PAGINATION IN OPEN EDIT
-
   //Item history
   const [itemHistory, setItemHistory] = useState([]);
 
@@ -268,10 +243,6 @@ export default function FoundReportItemManagementModal({
     setEditTab(false);
     setOpenUpdateStatus(false);
   };
-
-
-
-
 
   //OPEN EDIT VARIABLES
   const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
@@ -413,19 +384,7 @@ export default function FoundReportItemManagementModal({
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetchWithAuth(
-        `${API_URL}/api/gemini-item-listing/describe-item`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "AI analysis failed");
-      }
+      const data = await analyzeItemImage(formData);
 
       setEditForm((current) => {
         const matchedCategory = categories.find(
@@ -476,82 +435,41 @@ export default function FoundReportItemManagementModal({
     setItemInfo(true);
   };
 
-  //edit
   const handleSaveEdit = async () => {
+
     setOpenUpdateDialog(false);
+
     if (!selectedItem || !isEditFormValid) {
-      return;
+        return;
     }
-
     try {
-      setIsSaving(true);
 
-      const formData = new FormData();
-      formData.append("item_name", editForm.item_name.trim());
-      formData.append("category_id", editForm.category_id);
-      formData.append("location_found", editForm.location_found.trim());
-      formData.append("specific_location", editForm.specific_location);
-      formData.append(
-        "found_date",
-        `${editForm.found_date} ${editForm.found_time}`,
-      );
-      formData.append("description", editForm.description);
-      formData.append("contents", editForm.contents);
-      formData.append("reported_by", editForm.reported_by);
-      formData.append("additional_notes", editForm.additional_notes);
-      formData.append("office_id", editForm.office_id);
-      formData.append("user_id", userId);
+        await saveEdit({
+            reportId: foundReportId,
+            editForm,
+            editImageFile,
+            userId,
+        });
 
-      if (editImageFile) {
-        formData.append("image", editImageFile);
-      }
-
-      const response = await fetchWithAuth(
-        `${API_URL}/api/found-reports/${selectedItem.found_report_id}`,
-        {
-          method: "PUT",
-          body: formData,
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update found item");
-      }
-
-      const refreshedResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`,
-      );
-      const refreshedReports = await refreshedResponse.json();
-
-      if (Array.isArray(refreshedReports)) {
-        onUpdated?.(refreshedReports);
-
-        const updatedSelected = refreshedReports.find(
-          (report) => report.found_report_id === selectedItem.found_report_id,
-        );
-
-        if (updatedSelected) {
-          setSelectedItem(updatedSelected);
-        }
+        await refreshReports();
 
         setOriginalEditForm({ ...editForm });
 
-      }
+        toast.success(
+            `Successfully updated ${formatItemId(selectedItem.item_id)}`
+        );
 
-      toast.success(`Succesfully updated ${formatItemId(selectedItem.item_id)}`)
+        setEditImageFile(null);
+        setEditImagePreview(null);
+        setIsEditing(false);
 
-
-      setEditImageFile(null);
-      setEditImagePreview(null);
-      setIsEditing(false);
     } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
+
+        console.error(error);
+        toast.error(error.message);
+
     }
-  };
+};
 
   const fetchItemHistory = async (itemId) => {
     setIsLoading(true);
@@ -581,17 +499,9 @@ export default function FoundReportItemManagementModal({
   const handleHiistoryTab = () => {
     setItemInfo(false);
   };
-
   // for claim tab
   const fetchLostReports = async (search) => {
-    const normalizedSearch = search.replace(/^rpt-/i, "").replace(/^0+/, "");
-
-    const response = await fetchWithAuth(
-      `${API_URL}/api/lost-reports/search/rptlink?search=${normalizedSearch}`,
-    );
-
-
-    const data = await response.json();
+    const data = await searchLostReports(search);
     setSearchResults(data);
   };
 
@@ -785,9 +695,7 @@ export default function FoundReportItemManagementModal({
     setOpenConfirmDesiposed(false);
 
     try {
-      const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
-    ? officeIdNotification 
-    : null;
+      const officeId = (officeIdNotification && officeIdNotification !== "undefined") ? officeIdNotification : null;
 
       const formData = new FormData();
 
@@ -852,8 +760,6 @@ export default function FoundReportItemManagementModal({
         );
       }
 
-
-
       if (disposalMethod === "DISPOSED_AS_WASTE") {
         formData.append(
           "discard_reason",
@@ -861,48 +767,15 @@ export default function FoundReportItemManagementModal({
         );
       }
 
-      const response = await fetchWithAuth(
-        `${API_URL}/api/disposed-item`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const data = await disposeFoundItem(formData);
 
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to dispose item."
-        );
-      }
-
-      // Refresh table
-      const reportsResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`
-      );
-
-      const reportsData = await reportsResponse.json();
-
-      if (Array.isArray(reportsData)) {
-        onUpdated?.(reportsData);
-      }
-
-      const updatedSelected = reportsData.find(
-        (report) => report.found_report_id === selectedItem.found_report_id,
-      );
-
-      if (updatedSelected) {
-        setSelectedItem(updatedSelected);
-      }
+      await refreshReports();
 
       resetDisposalForm();
       setDisposalMethod("");
 
       setDisposedTab(false);
       setEditTab(true);
-
 
       toast.success("Item disposed successfully.");
     } catch (error) {
@@ -920,47 +793,16 @@ export default function FoundReportItemManagementModal({
 
   //Archive Item
   const handleArchiveReport = async (foundReportId) => {
-    const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
-    ? officeIdNotification 
-    : null;
+    const officeId = (officeIdNotification && officeIdNotification !== "undefined") ? officeIdNotification : null;
     setIsArchiving(true);
     try {
-      const response = await fetchWithAuth(
-        `${API_URL}/api/found-reports/${foundReportId}/archive`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+
+      const data = await archiveFoundReport(foundReportId, {
             office_id: officeId,
             admin_full_name: adminFullName,
-          }),
-        }
-      );
+          })
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setIsArchiving(false);
-        throw new Error(data.error || "Failed to archive report");
-      }
-
-      const refreshResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`
-      );
-
-      const reports = await refreshResponse.json();
-
-
-      if (Array.isArray(reports)) {
-        onUpdated?.(reports);
-      }
-      const updatedReport = reports.find(
-        report => report.found_report_id === selectedItem.found_report_id
-      );
-
-      setSelectedItem(updatedReport);
+      await refreshReports();
       setOpenArchivedDialog(false);
       toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Archived.`)
       setIsArchiving(false);
@@ -968,51 +810,20 @@ export default function FoundReportItemManagementModal({
       setIsArchiving(false);
       setOpenArchivedDialog(false);
       console.error(error);
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 
   const handleRestoreReport = async (foundReportId) => {
     
     try {
-      const officeId = (officeIdNotification && officeIdNotification !== "undefined") 
-    ? officeIdNotification 
-    : null;
+      const officeId = (officeIdNotification && officeIdNotification !== "undefined") ? officeIdNotification : null;
       setIsRestoring(true);
-      const response = await fetchWithAuth(
-        `${API_URL}/api/found-reports/${foundReportId}/restore`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            office_id: officeId,
-            admin_full_name: adminFullName,
-          }),
-        }
-      );
+    
+      const data = await restoreFoundReport(foundReportId, {office_id: officeId,admin_full_name: adminFullName});
 
-      const data = await response.json();
+      await refreshReports();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to restore report");
-      }
-
-      const refreshResponse = await fetchWithAuth(
-        `${API_URL}/api/found-reports`
-      );
-
-      const reports = await refreshResponse.json();
-
-      if (Array.isArray(reports)) {
-        onUpdated?.(reports);
-      }
-      const updatedReport = reports.find(
-        report => report.found_report_id === selectedItem.found_report_id
-      );
-
-      setSelectedItem(updatedReport);
       setOpenRestoreDialog(false);
       setIsRestoring(false);
       toast.success(`Restored ${formatItemId(selectedItem.item_id)} Succesfully.`)
@@ -1021,12 +832,10 @@ export default function FoundReportItemManagementModal({
       setOpenRestoreDialog(false);
       setIsRestoring(false);
       toast.error(`Failed to Restore ${formatItemId(selectedItem.item_id)}`)
-      console.error(error);
-      alert(error.message);
     }
   };
 
-  const [claimRecord, setClaimRecord] = useState([]);
+  const [claimRecord, setClaimRecord] = useState();
   const [isClaimRecordLoading, setIsClaimRecordLoading] = useState(false);
 
   const [disposedDetails, setDisposedDetails] = useState([]);
@@ -1041,15 +850,11 @@ export default function FoundReportItemManagementModal({
       setIsDisposedDetails(true);
 
 
-      const response = await fetchWithAuth(
-        `${API_URL}/api/disposed-item/${selectedItem.found_report_id}`
-      );
+    
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch disposed item details.");
-      }
 
-      const result = await response.json();
+
+      const result = await getDisposedDetails(selectedItem.found_report_id);
 
       setDisposedDetails(result.data);
     } catch (err) {
@@ -1060,13 +865,13 @@ export default function FoundReportItemManagementModal({
   };
 
   const fetchClaimRecordByFoundId = async () => {
-  if (!selectedItem?.found_report_id) return;
+  if (!foundReportId) return;
 
   try {
     setIsClaimRecordLoading(true);
 
     const response = await fetchWithAuth(
-      `${API_URL}/api/claim-records/found-report/${selectedItem.found_report_id}`
+      `${API_URL}/api/claim-records/found-report/${foundReportId}`
     );
 
     if (!response.ok) {
@@ -1074,7 +879,6 @@ export default function FoundReportItemManagementModal({
     }
 
     const result = await response.json();
-    console.log(result)
 
     setClaimRecord(result);
 
@@ -1084,11 +888,8 @@ export default function FoundReportItemManagementModal({
     setIsClaimRecordLoading(false);
   }
 };
-
-
-
   useEffect(() => {
-    
+  
     if(selectedItem?.status === "claimed"){
       fetchClaimRecordByFoundId();
     }
@@ -1106,7 +907,8 @@ export default function FoundReportItemManagementModal({
     <>
       <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
         <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col overflow-y-scroll ">
-          <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
+          <div className=" flex flex-col  top-0 w-3/10 fixed z-100">
+            <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 z-100">
             <div>
               <p className="font-semibold text-sm text-white xl:text-xl">
                 {" "}
@@ -1130,16 +932,14 @@ export default function FoundReportItemManagementModal({
                 {selectedItem.status === "archived" && "Archived"}
               </p>
             </div>
-            <div className="ml-auto pr-6">
+            <div className="ml-auto pr-5">
               <button onClick={handleCloseDetails} className="cursor-pointer">
                 <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
               </button>
             </div>
+            
           </div>
-
-          {editTab && (
-            <>
-              <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
+            <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 z-50">
                 <button
                   className={`text-[#6B5C42]  text-sm px-5 cursor-pointer
                                     ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
@@ -1156,15 +956,17 @@ export default function FoundReportItemManagementModal({
                   History
                 </button>
               </div>
-              <div className="h-full w-full p-5 pt-15">
+          </div>
+
+          {editTab && (
+            <>
+            
+              <div className="h-full w-full p-5 pt-30">
                 {itemInfo ? (
                   <>
                     {!isDisposedDetails ?
                       (
                         <>
-
-                    
-
                           {selectedItem.linked_report &&
                             selectedItem.status === "claimed" && (
                               <div className="flex flex-col gap-2 mb-4">
@@ -1223,7 +1025,7 @@ export default function FoundReportItemManagementModal({
                               <>
                                 <button
                                   type="button"
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onClick={() => editImageInputRef.current?.click()}
                                   className="w-full h-full disabled:opacity-40 flex flex-col items-center justify-center gap-2 cursor-pointer"
                                 >
@@ -1275,7 +1077,7 @@ export default function FoundReportItemManagementModal({
                               {isEditing ? (
                                 <select
                                   className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   value={editForm.category_id}
                                   onChange={(e) =>
                                     handleEditChange("category_id", e.target.value)
@@ -1309,7 +1111,7 @@ export default function FoundReportItemManagementModal({
                               {isEditing ? (
                                 <input
                                   className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   value={editForm.item_name}
                                   onChange={(e) =>
                                     handleEditChange("item_name", e.target.value)
@@ -1330,7 +1132,7 @@ export default function FoundReportItemManagementModal({
                                 <select
                                   className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                                   value={editForm.location_found}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange("location_found", e.target.value)
                                   }
@@ -1364,7 +1166,7 @@ export default function FoundReportItemManagementModal({
                                     className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
                                     value={editForm.found_date}
                                     max={getTodayDateString()}
-                                    disabled={isSaving}
+                                    disabled={isSavingEdit}
                                     onChange={(e) =>
                                       handleEditDateChange(e.target.value)
                                     }
@@ -1373,7 +1175,7 @@ export default function FoundReportItemManagementModal({
                                     type="time"
                                     className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
                                     value={editForm.found_time}
-                                    disabled={!editDateValid || isSaving}
+                                    disabled={!editDateValid || isSavingEdit}
                                     onChange={(e) =>
                                       handleEditChange("found_time", e.target.value)
                                     }
@@ -1417,7 +1219,7 @@ export default function FoundReportItemManagementModal({
                                 <input
                                   className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                                   value={editForm.specific_location}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange(
                                       "specific_location",
@@ -1439,7 +1241,7 @@ export default function FoundReportItemManagementModal({
                                 <textarea
                                   className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
                                   value={editForm.description}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange("description", e.target.value)
                                   }
@@ -1458,7 +1260,7 @@ export default function FoundReportItemManagementModal({
                                 <input
                                   className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                                   value={editForm.contents}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange("contents", e.target.value)
                                   }
@@ -1494,7 +1296,7 @@ export default function FoundReportItemManagementModal({
                                 <input
                                   className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                                   value={editForm.reported_by}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange("reported_by", e.target.value)
                                   }
@@ -1513,7 +1315,7 @@ export default function FoundReportItemManagementModal({
                                 <textarea
                                   className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
                                   value={editForm.additional_notes}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange(
                                       "additional_notes",
@@ -1536,7 +1338,7 @@ export default function FoundReportItemManagementModal({
                                 <select
                                   className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
                                   value={editForm.office_id}
-                                  disabled={isSaving}
+                                  disabled={isSavingEdit}
                                   onChange={(e) =>
                                     handleEditChange("office_id", e.target.value)
                                   }
@@ -1557,7 +1359,7 @@ export default function FoundReportItemManagementModal({
                             </div>
 
                           </div>
-                              {selectedItem.status === "claimed" && !isClaimRecordLoading && (
+                              {selectedItem.status === "claimed" && !isClaimRecordLoading && claimRecord && (
                               <div className="flex flex-col gap-2 mb-4 mt-4">
                                 <div className="flex items-center gap-2">
                                   <Handshake size={15} />
@@ -1597,19 +1399,16 @@ export default function FoundReportItemManagementModal({
                                         <p >{claimRecord?.claimant_full_name || "N/A"}</p>
                                       </div>
                                     </div>
-                                     <div className="text-[10px] xl:text-xs flex flex-col gap-1">
-                                    <p className="text-[#6B5C42]">Processed by: <span className="text-black font-medium">{claimRecord.processed_by}</span></p>
+                                     <div className="text-[10px] xl:text-xs flex flex-col gap-1 mt-4">
+                                    <p className="text-[#6B5C42]">Processed by: <span className="text-black font-medium">{claimRecord?.processed_by}</span></p>
                                     <p className="text-[#6B5C42]">Processed on {formatDateTime(claimRecord?.claim_date)}</p>
                                   </div>
-                                     {/* <p className="text-[#6B5C42]">
-                                        {formatDateTime(claimRecord?.claim_date)}
-                                      </p> */}
                                   </div>
                                   <button
                                     className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium border mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
                                     onClick={() =>
                                       navigate(
-                                        `/admin/transactions?claimId=${claimRecord.claim_id}`,
+                                        `/admin/transactions?claimId=${claimRecord?.claim_id}`,
                                       )
                                     }
                                   >
@@ -1742,12 +1541,12 @@ export default function FoundReportItemManagementModal({
                                     }
                                   }}
                                 >
-                                  Cance
+                                  Cancel
                                 </button>
                                 <button
                                   type="button"
                                   disabled={
-                                    isSaving ||
+                                    isSavingEdit ||
                                     isAnalyzing ||
                                     !isEditFormValid ||
                                     !hasEditChanges
@@ -1758,7 +1557,7 @@ export default function FoundReportItemManagementModal({
                                     () => setOpenUpdateDialog(true)
                                   }
                                 >
-                                  {isSaving
+                                  {isSavingEdit
                                     ? "Saving..."
                                     : isAnalyzing
                                       ? "Analyzing..."
@@ -2327,6 +2126,7 @@ export default function FoundReportItemManagementModal({
                         title="Reason for Discarding"
                         reqField={true}
                         value={reasonForDiscarding}
+                        disabled={isDisposing}
                         onChange={setReasonForDiscarding}
                         options={DISCARD_REASONS}
                         placeholder={"Select a reason"}
@@ -2334,6 +2134,7 @@ export default function FoundReportItemManagementModal({
                       <AdminDateInput
                         title="Date of Donation"
                         reqField={true}
+                        disabled={isDisposing}
                         value={donationDate}
                         onChange={setDonationDate}
                       />
@@ -2452,7 +2253,6 @@ export default function FoundReportItemManagementModal({
                       <p className="text-[#6B5C42]">Date Lost: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
                     </div>
 
-
                   </div>
                   <div className="text-xs xl:text-sm text-justify">
                     <p >
@@ -2480,25 +2280,19 @@ export default function FoundReportItemManagementModal({
                 <div>
 
                 </div>
-
-
               </div>
             </div>
           </>
         )
-
       }
-
       {imageSelected &&
         (
           <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-
               <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                   <p className="font-semibold">Link Report</p>
                   <button onClick={() => setImageSelected(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-
                 </div>
                 <div className="w-full flex flex-col p-3 gap-2">
                   <div className="w-full h-80 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
@@ -2508,19 +2302,14 @@ export default function FoundReportItemManagementModal({
                       className="w-full h-full object-contain"
                     />
                   </div>
-
                 </div>
-
-
               </div>
             </div>
           </>
         )
-
       }
       {openArchivedDialog &&
         (
-
           <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
@@ -2554,21 +2343,16 @@ export default function FoundReportItemManagementModal({
                       disabled={isArchiving}
                     >
                       {isArchiving ? "Archving.." : "Confirm Archived"}
-
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           </>
-
         )
-
       }
       {openRestoreDialog &&
         (
-
-
           <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
 
@@ -2600,27 +2384,19 @@ export default function FoundReportItemManagementModal({
                       disabled={isRestoring}
                     >
                       {isRestoring ? "Restoring.." : "Confirm Restore"}
-
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           </>
-
-
         )
-
       }
       {openUpdateDialog &&
         (
-
-
-
           <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
               <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
-
                 {/* Header */}
                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                   <p className="font-semibold">Confirm Update</p>
@@ -2635,14 +2411,12 @@ export default function FoundReportItemManagementModal({
                     <Info size={40} className="text-[#4A5568]" />
                     <p className="text-md font-medium mt-2">Update Item?</p>
                   </div>
-
                   {/* Update Message */}
                   <div className="text-sm text-center px-2 text-gray-700">
                     <p>Are you sure you want to save these changes on Item <span className="font-semibold text-black">{formatItemId(selectedItem.item_id)}</span>?.</p>
                   </div>
 
                   <hr className="border-(--color-tertiary) my-2 opacity-30" />
-
                   {/* Buttons */}
                   <div className="flex gap-2">
                     <button
@@ -2653,9 +2427,9 @@ export default function FoundReportItemManagementModal({
                     </button>
                     <button
                       className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={handleSaveEdit}
+                      onClick={()=>handleSaveEdit(foundReportId)}
                     >
-                      {isLoading ? "Updating..." : "Update Item"}
+                      {isSavingEdit ? "Updating..." : "Update Item"}
                     </button>
                   </div>
                 </div>
@@ -2759,11 +2533,7 @@ export default function FoundReportItemManagementModal({
             />
           </div>
         </div>
-
       }
-
-
-
     </>
   );
 }

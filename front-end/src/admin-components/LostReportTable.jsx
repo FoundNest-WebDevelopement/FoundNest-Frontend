@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
-import LostReportMangementModal from "./LostReportMangementModal";
+import LostReportMangementModal from "./lost-report-modal/LostReportMangementModal";
 
 export default function LostReportTable(
     {
@@ -9,6 +9,8 @@ export default function LostReportTable(
         locations = [],
         onUpdated,
         allLocations = [],
+        sharedSpaces = [],
+        gates = [],
         selectedItem,
         setSelectedItem,
     }
@@ -245,6 +247,10 @@ export default function LostReportTable(
                         locations={locations}
                         allLocations={allLocations}
                         onUpdated={onUpdated}
+                        categories={categories}
+                        locations={locations}
+                        sharedSpaces={sharedSpaces}
+                        gates={gates}
                         userId={userId}
                         adminId={adminId} />
                 )
