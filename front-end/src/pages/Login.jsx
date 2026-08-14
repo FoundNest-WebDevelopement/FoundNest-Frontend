@@ -4,6 +4,7 @@ import logowhite from "../assets/logowhite.png";
 import bsulogo from "../assets/bsulogo.png";
 import bsu from "../assets/bsu.jpg";
 import { useState, useEffect } from "react";
+import RoleSelectionModal from "../super-admin-components/RoleSelectionModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -31,6 +32,7 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
 
 
 
@@ -95,7 +97,7 @@ function Login() {
           localStorage.setItem("super_admin_id", data.user.super_admin_id);
           localStorage.setItem("office_location", data.user.office_location);
           localStorage.setItem("office_name", data.user.office_name || "");
-          navigate("/super_admin");
+          setShowRoleSelection(true);
         } else if (data.user.user_role === "admin") {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
@@ -424,6 +426,14 @@ const DesktopLogin = (
     <>
       {DesktopLogin}
       {MobileLogin}
+      {showRoleSelection && (
+          <RoleSelectionModal
+              onClose={() => {
+                  setShowRoleSelection(false);
+                  navigate("/super_admin");
+              }}
+          />
+      )}
     </>
   );
 }
