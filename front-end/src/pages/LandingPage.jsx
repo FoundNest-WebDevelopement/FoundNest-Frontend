@@ -1,9 +1,21 @@
 import { useNavigate } from 'react-router-dom';
 import pana from '../assets/pana.png';
 import logo from '../assets/logowhite.png';
+import { useEffect } from 'react';
 
 function LandingPage() {
+
   const navigate = useNavigate();
+  function checkUser(){
+    let token = localStorage.getItem("token")
+    if(token){
+      navigate('/login')
+    }
+  }
+
+  useEffect(()=>{
+    checkUser();
+  },[])
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -24,7 +36,7 @@ function LandingPage() {
           <img 
             src={logo} 
             alt="FoundNest Logo" 
-            className="w-26 h-21 flex-shrink-0" 
+            className="w-26 h-21 shrink-0" 
           />
           <h1 className="text-white text-xl font-semibold leading-loose">
             Welcome to<br/>FoundNest!
