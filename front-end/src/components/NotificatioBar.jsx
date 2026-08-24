@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import SwitchBackButton from "../global-components/SwitchBackButton";
 
 
 
@@ -52,7 +53,9 @@ export default function NotificationBar() {
         </button>
       </div>
 
-      <div className="navbar-end mx-2">
+      <div className="navbar-end mx-2 flex items-center gap-2">
+        <SwitchBackButton />
+
         <NavLink
           to="/notifications"
           className={({ isActive }) =>

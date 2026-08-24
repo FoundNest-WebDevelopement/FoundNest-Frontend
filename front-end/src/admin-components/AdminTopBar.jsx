@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import SwitchBackButton from "./SwitchBackButton";
+import SwitchBackButton from "../global-components/SwitchBackButton";
 
 export default function AdminTopBar({ tabName }) {
   const API_URL = import.meta.env.VITE_API_URL;
