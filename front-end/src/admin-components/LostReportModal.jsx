@@ -672,7 +672,6 @@ export default function LostReportModal(
                         <AdminTextField
                             title="Logged By"
                             value={AdminFullName}
-                            disabled={true}
                             disabled={isSubmitting}
 
                         />
