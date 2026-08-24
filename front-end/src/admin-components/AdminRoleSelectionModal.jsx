@@ -90,7 +90,7 @@ export default function AdminRoleSelectionModal({ onClose }) {
                     >
                         <UserIcon />
                         <div className="text-left">
-                            <p className="text-sm font-semibold text-[#1A1208]">Login as Guest</p>
+                            <p className="text-sm font-semibold text-[#1A1208]">Login as End User</p>
                             <p className="text-xs text-[#9A8F7C]">Browse and report items</p>
                         </div>
                     </button>
