@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatActionType } from "../utils/formatActionType";
 import WebLoading from "../global-components/WebLoading";
+import ExportModal from "../global-components/ExportModal";
 
 // Maps DB enum values to filter pill labels shown in the UI.
 // NOTE: a few of these (deactivate variants, unlock) don't have their own
@@ -31,6 +32,7 @@ const ACTION_TYPE_FILTERS = [
     { label: "Unlocked User Account", value: "UNLOCK_ACCOUNT" },
     { label: "Reset Password", value: "RESET_PASSWORD" },
     { label: "Exported CSV", value: "EXPORT_CSV" },
+    { label: "Exported PDF", value: "EXPORT_PDF" },
 ];
 
 // Badge color per action type — grouped loosely by "severity"/category
@@ -49,6 +51,7 @@ const ACTION_TYPE_COLORS = {
     LOCK_ACCOUNT: "bg-[#F9ECEC] text-[#C0392B]",
     RESET_PASSWORD: "bg-[#F9ECEC] text-[#C0392B]",
     EXPORT_CSV: "bg-gray-200 text-gray-700",
+    EXPORT_PDF: "bg-gray-200 text-gray-700",
     GENERATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
 };
 
@@ -70,6 +73,8 @@ export default function SuperAdminActionLogs() {
     const [selectedActionTypes, setSelectedActionTypes] = useState([]); // [] means "All"
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     // Applied filters (only updated when "Apply Filters" is clicked)
     const [appliedActionTypes, setAppliedActionTypes] = useState([]);
@@ -170,37 +175,7 @@ export default function SuperAdminActionLogs() {
     const startIndex = (activePage - 1) * itemsPerPage;
     const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
 
-    const handleExport = async () => {
-        try {
-            setIsExporting(true);
-    const response = await fetchWithAuth(
-        `${API_URL}/api/export/action-logs/csv?userId=${superAdminUserId}`,
-        {
-            method: "GET",
-        }
-    );
 
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to export action logs.");
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ACTION_LOGS - ${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast.success("Action logs exported successfully.");
-} catch (error) {
-    console.error(error);
-    toast.error(error.message);
-} finally {
-    setIsExporting(false);
-}
-};
 
 useEffect(() => {
     const updateTableSize = () => {
@@ -260,7 +235,7 @@ useEffect(() => {
 
                 <button
                     type="button"
-                    onClick={handleExport}
+                    onClick={() => setIsExportModalOpen(true)}
                     disabled={isExporting}
                     className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
                         transition-transform duration-100 active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -520,6 +495,15 @@ useEffect(() => {
                     </>
                 )
             }
+            {isExportModalOpen && (
+                <ExportModal
+                    title="Export Action Logs"
+                    endpoint="/api/export/action-logs"
+                    filenamePrefix="ACTION_LOGS"
+                    onClose={() => setIsExportModalOpen(false)}
+                    onUpdate={fetchLogs}
+                />
+            )}
             
         </div>
     );

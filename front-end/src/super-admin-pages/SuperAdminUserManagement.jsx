@@ -6,6 +6,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import WebLoading from "../global-components/WebLoading";
 import { useLocation, useSearchParams } from "react-router-dom";
+import ExportModal from "../global-components/ExportModal";
 
 
 
@@ -32,7 +33,7 @@ export default function SuperAdminUserMangement() {
 
     const [selectedUser, setSelectedUser] = useState(null);
 
-    const [openExportActivity, setPpenExportActivity] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
      const [isExporting, setIsExporting] = useState(null);
 
@@ -41,18 +42,30 @@ export default function SuperAdminUserMangement() {
     const [isLoading, setIsLoading] = useState(false);
 
 
-     useEffect(() => {
+ const fetchUsers = async () => {
+    try {
         setIsLoading(true);
-        fetchWithAuth(`${API_URL}/api/users`)
-            .then((res) => res.json())
-            .then((data) => {
-                setUsers(data);
-                setIsLoading(false);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
+
+        const res = await fetchWithAuth(`${API_URL}/api/users`);
+
+        if (!res.ok) {
+            throw new Error("Failed to fetch users");
+        }
+
+        const data = await res.json();
+
+        setUsers(data);
+    } catch (err) {
+        console.error("Error fetching users:", err);
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+useEffect(() => {
+    fetchUsers();
+}, []);
+
 
     useEffect(() => {
         if (!navigatedUserId || users.length === 0) return;
@@ -96,31 +109,7 @@ const paddedUserId =
             );
     });
 
-    const handleExportCSV = async () => {
-    try {
-        setIsExporting(true);
-        const response = await fetchWithAuth(`${API_URL}/api/export/users`);
 
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || "Failed to export users.");
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `USERS - ${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast.success("User exported successfully.");
-    } catch (error) {
-        console.error(error);
-        toast.error(error.message);
-    }finally{
-        setIsExporting(false);
-    }
-};
 
     
 
@@ -162,7 +151,7 @@ const paddedUserId =
                     </div>
                     <div className="h-full w-fit  flex items-center gap-1 xl:gap-5 shrink-0">
                         <Button icon={Download} label={isExporting? "Exporting..." : "Export Users"} isBorder={true} isShadow={true} isIcon={true}  disabled={isExporting}
-                            onClick={handleExportCSV}
+                            onClick={()=>setIsExportModalOpen(true)}
                              />
                     </div>
                 </div>
@@ -191,23 +180,15 @@ const paddedUserId =
 
                 }
             </div>
-           {/* {openExportActivity &&
-                           <ConfirmDialog
-                               title="Export Activity Log"
-                               Icon={Download}
-                               iconColor="text-primary"
-                               description={
-                                   <>
-                                       Export the activity log for <span className="font-bold">{fullName}</span> ({formatUsrId(selectedUser.user_id)}) as a CSV file?
-                                   </>
-                               }
-                               confirmText={isExporting ? "Exporting..." : "Export"}
-                               cancelText="Cancel"
-                               onClose={() => setOpenExportActivity(false)}
-                               onConfirm={handleExportActivity}
-                               disabled={isExporting}
-                           />
-                       } */}
+           {isExportModalOpen &&
+            <ExportModal
+                title="Export Users"
+                endpoint="/api/export/users"
+                filenamePrefix="USERS"
+                onClose={() => setIsExportModalOpen(false)}
+                onUpdate={fetchUsers}
+            />
+           }
         </>
     );
 }

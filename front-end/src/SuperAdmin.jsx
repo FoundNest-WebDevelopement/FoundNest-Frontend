@@ -9,6 +9,7 @@ import SuperAdminGlobalConfiguration from "./super-admin-pages/SuperAdminGlobalC
 import SuperAdminSystemReports from "./super-admin-pages/SuperAdminSystemReports";
 import SuperAdminActionLogs from "./super-admin-pages/SuperAdminActionLogs";
 import SuperAdminProfile from "./super-admin-pages/SuperAdminProfile";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function SuperAdmin() {
 
@@ -32,6 +33,7 @@ function SuperAdmin() {
                     <Route path="action_logs" element={<SuperAdminActionLogs />} />
                     <Route path="super_admin_profile" element={<SuperAdminProfile />} />
                 </Route>
+                <Route path="*" element={<NotFoundPage />}></Route>
             </Routes>
         </>
     )

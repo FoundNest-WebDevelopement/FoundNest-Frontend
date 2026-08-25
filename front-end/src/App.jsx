@@ -94,7 +94,7 @@ function Layout() {
           <Route path="/super_admin/*" element={<SuperAdmin />} />
         </Route>
 
-        <Route path="/*" element={<NotFoundPage />}></Route>
+        <Route path="*" element={<NotFoundPage />}></Route>
       </Routes>
     </>
   );

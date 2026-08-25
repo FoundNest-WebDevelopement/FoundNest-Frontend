@@ -9,6 +9,7 @@ import Transactions from "./admin-pages/Tansactions";
 import AdminProfile from "./admin-pages/AdminProfile";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import NotFoundPage from "./pages/NotFoundPage";
 
 
 function Admin() {
@@ -30,8 +31,9 @@ function Admin() {
           <Route path="center_profile" element={<CenterProfile/>} />
           <Route path="feedbacks" element={<Feedbacks/>} />
           <Route path="transactions" element={<Transactions/>} />
-          <Route path="admin_profile" element={<AdminProfile/>} />
+          <Route path="admin_profile" element={<AdminProfile/>} />   
         </Route>
+        <Route path="*" element={<NotFoundPage />}></Route>
       </Routes>
       </>
 
