@@ -9,6 +9,7 @@ import TextArea from "../global-components/TextArea";
 import formatDateTime from "../utils/formatDataTimeNew"
 import { formatActionType } from "../utils/formatActionType";
 import ResetPasswordModal from "./resetPasswordModal";
+import ExportModal from "../global-components/ExportModal";
 
 export default function UserManagementModal(
     {
@@ -19,12 +20,15 @@ export default function UserManagementModal(
     }
 ) {
     const API_URL = import.meta.env.VITE_API_URL;
+
+    const userId = selectedUser?.user_id;
     const [isRevoking, setIsRevoking] = useState(false);
     const [isLocking, setIsLocking] = useState(false);
     const [isActivating, setIsActivating] = useState(false);
 
     //Reset password states 
     const [openResetPassword, setOpenResetPassword] = useState(false);
+
     const [isResettingPassword, setIsResettingPassword] = useState(false);
 
 
@@ -608,20 +612,13 @@ export default function UserManagementModal(
 
             }
             {openExportActivity &&
-                <ConfirmDialog
-                    title="Export Activity Log"
-                    Icon={Download}
-                    iconColor="text-primary"
-                    description={
-                        <>
-                            Export the activity log for <span className="font-bold">{fullName}</span> ({formatUsrId(selectedUser.user_id)}) as a CSV file?
-                        </>
-                    }
-                    confirmText={isExporting ? "Exporting..." : "Export"}
-                    cancelText="Cancel"
-                    onClose={() => setOpenExportActivity(false)}
-                    onConfirm={handleExportActivity}
-                    disabled={isExporting}
+                <ExportModal
+                title="Export Action Logs"
+                endpoint="/api/export/action-logs"
+                queryParams={{ userId }}
+                filenamePrefix="ACTION_LOGS"
+                onClose={() => setOpenExportActivity(false)}
+             
                 />
             }
             {openResetPassword &&

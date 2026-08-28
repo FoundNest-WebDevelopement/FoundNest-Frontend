@@ -9,12 +9,15 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import TransactionTable from "../admin-components/TransactionTable"
 import { useSearchParams, useLocation } from "react-router-dom";
 import WebLoading from "../global-components/WebLoading"
+import ExportModal from "../global-components/ExportModal"
 
 
 
 export default function Transactions() {
     //API URL
     const API_URL = import.meta.env.VITE_API_URL;
+
+    const userId = localStorage.getItem("user_id");
     
     //SEARCH PARAMS
     const [searchParams] = useSearchParams();
@@ -28,6 +31,8 @@ export default function Transactions() {
 
         //Record State
     const [selectedRecord, setSelectedRecord] = useState(null);
+
+        const [isExportTransactionOpen, setIsExportTransactionOpen] = useState(false);
 
     //TEMP VARIABLES FILTER STORAGE
     const [searchTemp, setSearchTemp] = useState("");
@@ -69,18 +74,25 @@ export default function Transactions() {
             });
     }, []);
     //  Claim Records  FETCH
-    useEffect(() => {
-        setIsLoadingTxn(true)
-        fetchWithAuth(`${API_URL}/api/claim-records`)
-            .then((res) => res.json())
-            .then((data) => {
-                setRecords(data);
-                setIsLoadingTxn(false)
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
+    const getClaimRecords = async () => {
+    setIsLoadingTxn(true);
+
+    try {
+        const res = await fetchWithAuth(`${API_URL}/api/claim-records`);
+        const data = await res.json();
+
+        setRecords(Array.isArray(data) ? data : []);
+    } catch (err) {
+        console.error("Error fetching claim records:", err);
+        setRecords([]);
+    } finally {
+        setIsLoadingTxn(false);
+    }
+};
+
+useEffect(() => {
+    getClaimRecords();
+}, []);
     //Handle Navigated Transaction
     useEffect(() => {
         if (!navigatedClaimId || records.length === 0) return;
@@ -257,7 +269,7 @@ const paddedClaimId =
                     </div>
                     <div className="h-full w-fit ml-40 xl:ml-60 flex items-center  ">
                                             <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} 
-                                            onClick={handleExportTransactions}
+                                            onClick={()=>setIsExportTransactionOpen(true)}
                                             />
                 
                                         </div>
@@ -305,25 +317,17 @@ const paddedClaimId =
 
                 }
             </div>
-            {/* {openLogItem &&
-                (
-                    <>
-                        <LostReportModal
-                        open={openLogItem}
-                        setOpen={setOpenLogItem}
-                        categories={categories}
-                        locations={locations}
-                        allLocations={allLocations}
-                        sharedSpaces={sharedSpaces}
-                        gates={gates}
-                        setOpen={setOpenLogItem}
-                        onUpdated={setReports}
-                        />
-                    </>
-                )
-
-            } */}
-
+            
+                {isExportTransactionOpen &&
+                                <ExportModal
+                                    title="Export Transactions"
+                                    endpoint="/api/export/transactions"
+                                    filenamePrefix="TRANSACTIONS"
+                                    onClose={() => setIsExportTransactionOpen(false)}
+                                  onUpdate={getClaimRecords}
+                                  queryParams={{userId}}
+                                />
+                            }
         </>
 
     )

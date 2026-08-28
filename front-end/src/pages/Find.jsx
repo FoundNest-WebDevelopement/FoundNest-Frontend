@@ -273,7 +273,7 @@ const locationLabel =
     <>
       <PageLabel label="Search Item" />
       <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col pb-25">
-        {!isLoadingReports &&  spaces && buildings && gates && buildings && categories ?
+        {!isLoadingReports &&  spaces && buildings && gates && buildings && categories && reports.length > 0  ?
           (
             <>
               <div className="flex h-12 bg-white border border-[#DDD9CF]  rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] items-center my-3">

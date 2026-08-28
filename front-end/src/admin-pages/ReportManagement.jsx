@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown"
 import AdminDateInput from "../admin-components/AdminDateInput"
-import AdminLocationDropDown from "../admin-components/AdminLocationDropDown"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
 import { LOST_REPORT_STATUS } from "../constants/lost_item_status";
@@ -14,12 +13,12 @@ import { useSearchParams, useLocation } from "react-router-dom";
 import AdminAllLocationDropDown from "../admin-components/AdminAllLocationDropDown"
 import WebLoading from "../global-components/WebLoading"
 import AdminDropDown from "../admin-components/AdminDropdown"
+import ExportModal from "../global-components/ExportModal"
 
 
 
 export default function ReportManagement() {
 
-    const navigate = useNavigate();
 
     //API URL
     const API_URL = import.meta.env.VITE_API_URL;
@@ -28,7 +27,7 @@ export default function ReportManagement() {
 
     //Redirect states
     const [searchParams] = useSearchParams();
-    const useLoc     = useLocation();
+    const useLoc = useLocation();
 
     const [selectedItem, setSelectedItem] = useState(null);
 
@@ -45,6 +44,7 @@ export default function ReportManagement() {
 
     //LOG LOST REPORT TOGGLE
     const [openLogItem, setOpenLogItem] = useState(false);
+    const [isExportReportOpen, setIsExportReportOpen] = useState(false);
 
     const [isLoadingReports, setIsLoadingReports] = useState(false);
 
@@ -124,23 +124,31 @@ export default function ReportManagement() {
                 console.error(err);
             });
     }, []);
-    useEffect(() => {
-    setIsLoadingReports(true);
 
-    fetchWithAuth(`${API_URL}/api/lost-reports`)
-        .then(async (res) => {
+
+    const getLostReports = async () => {
+        setIsLoadingReports(true);
+
+        try {
+            const res = await fetchWithAuth(`${API_URL}/api/lost-reports`);
+
+            if (!res.ok) {
+                throw new Error("Failed to fetch lost reports");
+            }
+
             const data = await res.json();
             setReports(Array.isArray(data) ? data : []);
-        })
-        .catch((err) => {
-            console.error(err);
+        } catch (err) {
+            console.error("Error fetching lost reports:", err);
             setReports([]);
-        })
-        .finally(() => {
+        } finally {
             setIsLoadingReports(false);
-        });
+        }
+    };
 
-}, []);
+    useEffect(() => {
+        getLostReports();
+    }, []);
 
 
     useEffect(() => {
@@ -155,7 +163,7 @@ export default function ReportManagement() {
         if (report) {
             setSelectedItem(report);
         }
-    }, [navigatedReportId, reports,  useLoc.key]);
+    }, [navigatedReportId, reports, useLoc.key]);
 
     //OFFICES FETCH
     useEffect(() => {
@@ -216,7 +224,7 @@ export default function ReportManagement() {
         setStatus(statusTemp);
         setDateLost(dateLostTemp);
         setReportType(reportTypeTemp);
-        
+
     }
 
     //FILRTER REPORTS
@@ -269,11 +277,11 @@ export default function ReportManagement() {
         const matchesDate =
             !dateLost || reportDate === dateLost;
 
-        const matchReportType = 
-    !reportType || 
-    reportType === 'All Report' || 
-    (reportType === 'Own Report' && String(report.user_id) === String(userId));
-        
+        const matchReportType =
+            !reportType ||
+            reportType === 'All Report' ||
+            (reportType === 'Own Report' && String(report.user_id) === String(userId));
+
 
 
         return (
@@ -282,7 +290,7 @@ export default function ReportManagement() {
             matchesLocation &&
             matchesDate &&
             matchesStatus &&
-            matchReportType  
+            matchReportType
         );
     });
 
@@ -330,76 +338,76 @@ export default function ReportManagement() {
         <>
             <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
 
-              {!isLoadingReports? (
-                <>
-                  <div className="flex h-10 w-full ">
-                    <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            className="input input-bordered w-full"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                {!isLoadingReports ? (
+                    <>
+                        <div className="flex h-10 w-full ">
+                            <div className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                                <input
+                                    type="text"
+                                    placeholder="Search"
+                                    className="input input-bordered w-full"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
 
 
-                        />
-                    </div>
-                    <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-                        <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true}
-                            onClick={handleExportCSV} />
-                        <AdminButton icon={Plus} label="New Report" isSolid={true} isBorder={true} isShadow={true} isIcon={true}
-                            onClick={() => setOpenLogItem(true)} />
-                    </div>
-                </div>
-                <div className="py-1 px-4 border  border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md ">
-
-                    <div className="flex w-full h-full gap-2 items-center justify-center">
-                        <div className="flex-1">
-                            <AdminAllLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={allLocations} hidePlaceholder={false} />
+                                />
+                            </div>
+                            <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
+                                <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true}
+                                    onClick={() => setIsExportReportOpen(true)} />
+                                <AdminButton icon={Plus} label="New Report" isSolid={true} isBorder={true} isShadow={true} isIcon={true}
+                                    onClick={() => setOpenLogItem(true)} />
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
-                        </div>
-                        <div className="flex-1">
-                            <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
-                        </div>
-                        <div className="flex-1">
-                            <AdminDropDown placeholder="All Location" value={reportTypeTemp} onChange={setReportTypeTemp} options={REPORT_TYPE} />
-                        </div>
-                        <div className="flex-1">
-                            <AdminDateInput value={dateLostTemp} onChange={setDateLostTemp} />
-                        </div>
-                        <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
-                            <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
-                            <AdminButton isIcon={false} label="Clear " isBorder={false} isShadow={false} onClick={handleClearFilters} />
-                        </div>
-                    </div>
+                        <div className="py-1 px-4 border  border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md ">
 
-                </div>
-                <div className="w-full min-w-0">
+                            <div className="flex w-full h-full gap-2 items-center justify-center">
+                                <div className="flex-1">
+                                    <AdminAllLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={allLocations} hidePlaceholder={false} />
+                                </div>
+                                <div className="flex-1">
+                                    <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
+                                </div>
+                                <div className="flex-1">
+                                    <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
+                                </div>
+                                <div className="flex-1">
+                                    <AdminDropDown placeholder="All Location" value={reportTypeTemp} onChange={setReportTypeTemp} options={REPORT_TYPE} />
+                                </div>
+                                <div className="flex-1">
+                                    <AdminDateInput value={dateLostTemp} onChange={setDateLostTemp} />
+                                </div>
+                                <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
+                                    <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
+                                    <AdminButton isIcon={false} label="Clear " isBorder={false} isShadow={false} onClick={handleClearFilters} />
+                                </div>
+                            </div>
 
-                    <LostReportTable
-                        reports={filteredReports}
-                        onUpdated={setReports}
-                        setSelectedItem={setSelectedItem}
-                        selectedItem={selectedItem}
-                        categories={categories}
-                        sharedSpaces={sharedSpaces}
-                        gates={gates}
-                        locations={locations}
-                    />
+                        </div>
+                        <div className="w-full min-w-0">
 
-                </div>
-                </>
-              )
-              :
-              (
-                <>
-                    <WebLoading/>
-                </>
-              )
+                            <LostReportTable
+                                reports={filteredReports}
+                                onUpdated={setReports}
+                                setSelectedItem={setSelectedItem}
+                                selectedItem={selectedItem}
+                                categories={categories}
+                                sharedSpaces={sharedSpaces}
+                                gates={gates}
+                                locations={locations}
+                            />
 
-              }
+                        </div>
+                    </>
+                )
+                    :
+                    (
+                        <>
+                            <WebLoading />
+                        </>
+                    )
+
+                }
             </div>
             {openLogItem &&
                 (
@@ -412,17 +420,22 @@ export default function ReportManagement() {
                             allLocations={allLocations}
                             sharedSpaces={sharedSpaces}
                             gates={gates}
-                            setOpen={setOpenLogItem}
                             onUpdated={setReports}
                             setSelectedItem={setSelectedItem}
                         />
                     </>
                 )
-
             }
 
-
-
+            {isExportReportOpen &&
+                <ExportModal
+                    title="Export Lost Reports"
+                    endpoint="/api/export/lost-reports"
+                    filenamePrefix="LOST_REPORTS"
+                    onClose={() => setIsExportReportOpen(false)}
+                  onUpdate={getLostReports}
+                />
+            }
         </>
 
     )

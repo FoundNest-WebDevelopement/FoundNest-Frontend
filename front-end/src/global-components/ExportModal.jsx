@@ -7,7 +7,8 @@ export default function ExportModal({
     endpoint, 
     filenamePrefix = "export", 
     onClose,
-    onUpdate 
+    onUpdate,
+    queryParams = {}
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -46,8 +47,9 @@ export default function ExportModal({
                 start_date: startDate,
                 end_date: endDate,
                 format,
+                ...queryParams,
             });
-
+            console.log('API: ',`${API_URL}${endpoint}?${params.toString()}`)
             // Dynamically uses the endpoint passed via props
             const response = await fetchWithAuth(
                 `${API_URL}${endpoint}?${params.toString()}`

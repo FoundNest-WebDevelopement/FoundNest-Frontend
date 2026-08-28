@@ -13,10 +13,12 @@ import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useSearchParams, useLocation } from "react-router-dom";
 import WebLoading from "../global-components/WebLoading";
+import ExportModal from "../global-components/ExportModal";
 
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
-  const adminId = localStorage.getItem("admin_id");
+
+  const [isExportItemOpen, setIsExportItemOpen] = useState(false);
 
   const [isLoadingItem, setIsLoadingItem] = useState(false);
 
@@ -116,16 +118,32 @@ export default function ItemManagement() {
       .catch((err) => console.error(err));
   }, []);
 
-  useEffect(() => {
-    setIsLoadingItem(true)
-    fetchWithAuth(`${API_URL}/api/found-reports`)
-      .then((res) => res.json())
-      .then((data) => {
-        setReports(data)
-        setIsLoadingItem(false)
-      })
-      .catch((err) => console.error(err));
-  }, []);
+ const fetchFoundReports = async () => {
+    try {
+        setIsLoadingItem(true);
+
+        const response = await fetchWithAuth(
+            `${API_URL}/api/found-reports`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch found reports.");
+        }
+
+        const data = await response.json();
+
+        setReports(data);
+    } catch (err) {
+        console.error("Failed to fetch found reports:", err);
+    } finally {
+        setIsLoadingItem(false);
+    }
+};
+
+useEffect(() => {
+    fetchFoundReports();
+}, []);
+
 
   useEffect(() => {
     if (!navigatedItemId || reports.length === 0) return;
@@ -203,20 +221,6 @@ export default function ItemManagement() {
     }
   };
 
-  // EXPORT CSV
-  const downloadCSV = async () => {
-    const response = await fetchWithAuth(`${API_URL}/api/export/found-reports`);
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "found-reports.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  };
-
   return (
     <>
       <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col items-center gap-3">
@@ -234,7 +238,7 @@ export default function ItemManagement() {
             />
           </div>
           <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-            <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={downloadCSV} />
+            <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={()=>setIsExportItemOpen(true)} />
             <AdminButton icon={ScanLine} label="Find via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRFinder(true)} />
             <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
             <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenLogItem(true)} />
@@ -318,6 +322,16 @@ export default function ItemManagement() {
           onItemFound={handleQRItemFound}
         />
       )}
+      {isExportItemOpen &&
+      <ExportModal
+      title="Export Found Reports"
+      endpoint="/api/export/found-reports"
+      filenamePrefix="FOUND_REPORTS"
+      onClose={() => setIsExportItemOpen(false)}
+      onUpdate={fetchFoundReports}
+      />
+
+      }
     </>
   );
 }

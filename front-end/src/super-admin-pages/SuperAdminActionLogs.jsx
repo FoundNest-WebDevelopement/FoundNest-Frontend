@@ -61,6 +61,8 @@ const getActionTypeColor = (actionType) =>
 export default function SuperAdminActionLogs() {
     const API_URL = import.meta.env.VITE_API_URL;
 
+    const userId = localStorage.getItem("user_id")
+
     const superAdminUserId = localStorage.getItem("user_id");
 
     const [logs, setLogs] = useState([]);
@@ -499,6 +501,7 @@ useEffect(() => {
                 <ExportModal
                     title="Export Action Logs"
                     endpoint="/api/export/action-logs"
+                    queryParams={{ userId }}
                     filenamePrefix="ACTION_LOGS"
                     onClose={() => setIsExportModalOpen(false)}
                     onUpdate={fetchLogs}
