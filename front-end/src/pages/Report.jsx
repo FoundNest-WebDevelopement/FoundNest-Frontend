@@ -28,6 +28,8 @@ export default function Report() {
 
   const navigate = useNavigate();
 
+  const [lostReport, setLostReport] = useState([]);
+
   //locations
   const [gates, setGates] = useState([]);
   const [sharedSpaces, setSharedSpaces] = useState([]);
@@ -38,7 +40,6 @@ export default function Report() {
   const [openCollgeBuilding, setOpenCollgeBuilding] = useState(false);
   const [openSharedSpaces, setOpenSharedSpaces] = useState(false);
   const [openGates, setOpenGates] = useState(false);
-  const [openOthers, setOpenOthers] = useState(false);
   const [dsiableOtherLcoations, setdDisableOtherLcoations] = useState(false);
 
   const { id } = useParams();
@@ -54,13 +55,6 @@ export default function Report() {
     }
   
   }
-
-
-
-
-  
-
-
   const getDropdownLabel = () => {
     if (totalLocations === 0) return "Select Locations";
     if (totalLocations === 1) {
@@ -118,26 +112,20 @@ export default function Report() {
     );
   };
 
-
-
-  //new
   const [createdReportID, setCreatedReportID] = useState(null);
-  const [createdItemID, setCreatedItemID] = useState(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [categoryID, setCategoryID] = useState("");
   const [image, setImage] = useState(null);
+
   const [categories, setCategories] = useState([]);
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
   const [contents, setContents] = useState("");
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
-  const [locationLost, setLocationLost] = useState("");
   const [specificlocation, setSpecificLocation] = useState("");
   const [rawLocations, setRawLocations] = useState([]);
-
-  const [lostReport, setLostReport] = useState();
 
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -155,9 +143,6 @@ export default function Report() {
     categoryID &&
     itemName &&
     description;
-  const isPage2Valid =
-    dateLost &&
-    timeLost;
 
   function isValidPastOrToday(dateStr) {
     if (!dateStr) return false;
@@ -181,12 +166,6 @@ export default function Report() {
     return chosenDateTime <= new Date();
   }
   const fileInputRef = useRef(null);
-  // const handleChange = (e) => {
-  //   const file = e.target.files[0];
-  //   if (file) {
-  //     setImage(URL.createObjectURL(file));
-  //   }
-  // };
 
   const handleCancel = () => {
     setIsCancel(true);
@@ -214,7 +193,6 @@ export default function Report() {
     setNextPage(false);
     setSubmitted(false);
     setIsEdit(true);
-
   }
 
   const handleUpdate = async () => {
@@ -352,6 +330,21 @@ export default function Report() {
     const file = e.target.files[0];
 
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.custom((e) => (
+          <Toast icon={InfoIcon} message="File size exceeds 10MB limit" />
+        ));
+      return;
+    }
+
+    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+        if (!validTypes.includes(file.type)) { 
+          toast.custom((e) => (
+          <Toast icon={InfoIcon} message="Invalid file type"/>
+        ));
+          return;
+        }
 
     setSelectedFile(file);
     setImage(URL.createObjectURL(file));
@@ -509,9 +502,6 @@ useEffect(() => {
     setDateLost(val);
     setTimeLost("");
   };
-  const openFilePicker = () => {
-    fileInputRef.current.click();
-  };
 
   useEffect(() => {
     fetch(`${API_URL}/api/categories`)
@@ -575,11 +565,9 @@ useEffect(() => {
           <>
           <PageLabel label= {id? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
           </>
-
         }
       </div>
       <div className={`${submitted ? "bg-(--color-primary) flex flex-col items-center justify-center" : "bg-(--color-secondary)"}  min-h-screen px-4`}>
-
 
         {!nextPage ?
           (<>
@@ -603,9 +591,6 @@ useEffect(() => {
               />
               ) : (
                 <div className="p-1 border border-dashed rounded-full border-(--color-primary)">
-                  {/* <label onClick={openFilePicker} className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center">
-                    <i className="fa-solid fa-plus text-white"></i>
-                  </label> */}
                   <button
                     type="button"
                     disabled={mode === "view"}
@@ -618,13 +603,6 @@ useEffect(() => {
                   </button>
                 </div>
               )}
-              {/* <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleChange}
-              /> */}
               <input
                 ref={cameraInputRef}
                 type="file"
@@ -645,6 +623,9 @@ useEffect(() => {
                 <>
                   <p className="text-sm text-(--color-tertiary) opacity-70 font-medium mt-2">
                     Upload Item Photo (Optional)
+                  </p>
+                  <p className="text-xs text-(--color-tertiary) opacity-50 font-medium mt-1">
+                    PNG, JPG or WEBP up to 10MB
                   </p>
                   <p className="text-xs text-center text-(--color-tertiary) opacity-70 font-medium mt-4 px-6">
                     *FoundNest AI will help auto-fill details based on your photo.
@@ -667,16 +648,10 @@ useEffect(() => {
               <p className="text-xs">Page 1 out of 2</p>
 
               <div className="flex gap-2">
-                {isEdit && !mode?
+                {isEdit && !mode &&
                   (
                     <>
                       <ButtonNegative label="Cancel" onClick={handleCancel} />
-                    </>
-                  )
-                  :
-                  (
-                    <>
-
                     </>
                   )
                 }
@@ -689,7 +664,7 @@ useEffect(() => {
             <></>
           )
         }
-        {nextPage && !submitted ?
+        {nextPage && !submitted &&
           (
             <>
               <PageLabel2 label="When & Where" />
@@ -740,7 +715,6 @@ useEffect(() => {
                   } ml-2 text-primary shrink-0`}
                 />
               </button>
-
               {openLocations && (
                 <div className="absolute top-full left-0 mt-1 w-full z-50">
                   <div className="border border-primary bg-white rounded-md p-2 flex flex-col gap-2 shadow-lg max-h-[60vh] overflow-y-auto">
@@ -829,7 +803,6 @@ useEffect(() => {
                         </div>
                       )}
                     </div>
-
                     {/* 3. Gates */}
                     <div className="flex flex-col rounded-md">
                       <button
@@ -868,10 +841,7 @@ useEffect(() => {
                       )}
                     </div>
 
-                  
-
                     <hr className="my-1 border-gray-200" />
-
                     {/* 5. Can't Remember Option */}
                     <label
                       className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full transition-colors ${
@@ -945,15 +915,9 @@ useEffect(() => {
                 </div>
               </div>
               <div className="pb-20"></div>
-
             </>)
-          :
-          (
-            <>
-            </>
-          )
         }
-        {submitted && nextPage ?
+        {submitted && nextPage &&
           (
             <>
               <div className="h-fit w-fit px-3 flex flex-col gap-8">
@@ -992,26 +956,13 @@ useEffect(() => {
               </div>
             </>
           )
-          :
-          (
-            <>
-            </>
-          )
-
         }
-        {isLoading ?
+        {isLoading &&
           (
             <>
               <Loading label="Analyzing Image" />
             </>
           )
-          :
-          (
-            <>
-
-            </>
-          )
-
         }
         {isSubmitting &&
           (
@@ -1027,19 +978,12 @@ useEffect(() => {
             </>
           )
         }
-        {isCancel ?
+        {isCancel &&
           (
             <>
               <AlertDialog message="Discard changes? Unsaved edits will be lost." b1Label="Keep Editing" b2Label="Discard" b1OnClick={handleKeepEditing} b2OnClick={handleDiscard} />
             </>
           )
-          :
-          (
-            <>
-
-            </>
-          )
-
         }
         {showImageOptions && (
           <div className="fixed inset-0 w-full bg-black/20 flex items-end justify-center z-50 ">
@@ -1063,31 +1007,6 @@ useEffect(() => {
             </div>
           </div>
         )}
-
-        {/* {showImageOptions && (
-          <div className="fixed w-full inset-0 bg-black/20 flex items-end justify-center z-50 ">
-            <div className="bg-white w-screen max-w-md p-4 rounded-t-xl flex flex-col gap-2 pb-25">
-              <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                cameraInputRef.current?.click();
-              }} />
-              <ButtonPositive label="Choose from Gallery" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                galleryInputRef.current?.click();
-              }} />
-              {image && image !== "REMOVE" &&
-              <ButtonPositive label="Remove Photo" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                setImage("REMOVE");
-                setSelectedFile("REMOVE");
-                
-              }} />
-              }
-              <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
-            </div>
-          </div>
-        )} */}
-
         {showSubmitConfirmation &&
           <AlertDialog 
           message="Please review the information for accuracy before to submission."

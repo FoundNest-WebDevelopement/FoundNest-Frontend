@@ -162,7 +162,7 @@ export default function TransactionManagementModal(
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">LOCATION FOUND</p>
-                                    <p className="text-xs">{selectedRecord.location_found}</p>
+                                    <p className="text-xs">{selectedRecord.location_found || "N/A"}</p>
                                 </div>
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">DATE & TIME FOUND</p>
@@ -173,13 +173,13 @@ export default function TransactionManagementModal(
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">SPECIFIC LOCATION</p>
-                                    <p className="text-xs">{selectedRecord.specific_location}</p>
+                                    <p className="text-xs">{selectedRecord.specific_location || "N/A"}</p>
                                 </div>
                             </div>
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">DESCRIPTION</p>
-                                    <p className="text-xs">{selectedRecord.description}</p>
+                                    <p className="text-xs">{selectedRecord.description || "N/A"}</p>
                                 </div>
                             </div>
                             <div className="flex">
@@ -191,7 +191,7 @@ export default function TransactionManagementModal(
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">REPORTED BY</p>
-                                    <p className="text-xs">{selectedRecord.found_report_reported_by}</p>
+                                    <p className="text-xs">{selectedRecord.found_report_reported_by === ""?  selectedRecord.found_report_reported_by : "N/A"}</p>
                                 </div>
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">DATE LOGGED</p>
@@ -202,7 +202,7 @@ export default function TransactionManagementModal(
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">SURRENDERED BY</p>
-                                    <p className="text-xs">{selectedRecord.reported_by}</p>
+                                    <p className="text-xs">{selectedRecord.reported_by || "N/A"}</p>
                                 </div>
                             </div>
 

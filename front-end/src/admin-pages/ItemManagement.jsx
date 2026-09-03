@@ -18,6 +18,8 @@ import ExportModal from "../global-components/ExportModal";
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const userId = localStorage.getItem("user_id")
+
   const [isExportItemOpen, setIsExportItemOpen] = useState(false);
 
   const [isLoadingItem, setIsLoadingItem] = useState(false);
@@ -140,6 +142,24 @@ export default function ItemManagement() {
     }
 };
 
+const fetchArray = async (url, label) => {
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message || data?.error || `Failed to fetch ${label}`
+    );
+  }
+
+  if (!Array.isArray(data)) {
+    throw new Error(`${label} API did not return an array`);
+  }
+
+  return data;
+};
+
+
 useEffect(() => {
     fetchFoundReports();
 }, []);
@@ -154,25 +174,40 @@ useEffect(() => {
   }, [navigatedItemId, reports, useLoc.key]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/offices`)
-      .then((res) => res.json())
-      .then((data) => setLocations(data))
-      .catch((err) => console.error(err));
-  }, []);
+  fetchArray(`${API_URL}/api/categories`, "categories")
+    .then(setCategories)
+    .catch((err) => {
+      console.error(err);
+      setCategories([]);
+    });
+}, [API_URL]);
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/gates`)
-      .then((res) => res.json())
-      .then((data) => setGates(data))
-      .catch((err) => console.error(err));
-  }, []);
+useEffect(() => {
+  fetchArray(`${API_URL}/api/offices`, "offices")
+    .then(setLocations)
+    .catch((err) => {
+      console.error(err);
+      setLocations([]);
+    });
+}, [API_URL]);
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/shared-spaces`)
-      .then((res) => res.json())
-      .then((data) => setSharedSpaces(data))
-      .catch((err) => console.error(err));
-  }, []);
+useEffect(() => {
+  fetchArray(`${API_URL}/api/gates`, "gates")
+    .then(setGates)
+    .catch((err) => {
+      console.error(err);
+      setGates([]);
+    });
+}, [API_URL]);
+
+useEffect(() => {
+  fetchArray(`${API_URL}/api/shared-spaces`, "shared spaces")
+    .then(setSharedSpaces)
+    .catch((err) => {
+      console.error(err);
+      setSharedSpaces([]);
+    });
+}, [API_URL]);
 
   // HANDLE CLEAR FILTER
   const handleClearFilters = () => {
@@ -238,7 +273,7 @@ useEffect(() => {
             />
           </div>
           <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-            <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} onClick={()=>setIsExportItemOpen(true)} />
+            <AdminButton icon={Download} label="Export Report" isBorder={true} isShadow={true} isIcon={true} onClick={()=>setIsExportItemOpen(true)} />
             <AdminButton icon={ScanLine} label="Find via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRFinder(true)} />
             <AdminButton icon={QrCode} label="Log via QR" isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenQRScan(true)} />
             <AdminButton icon={Plus} label="Log New Item" isSolid={true} isBorder={true} isShadow={true} isIcon={true} onClick={() => setOpenLogItem(true)} />
@@ -329,6 +364,7 @@ useEffect(() => {
       filenamePrefix="FOUND_REPORTS"
       onClose={() => setIsExportItemOpen(false)}
       onUpdate={fetchFoundReports}
+      queryParams={{userId}}
       />
 
       }

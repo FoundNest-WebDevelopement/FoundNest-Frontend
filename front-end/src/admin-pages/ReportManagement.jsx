@@ -295,44 +295,6 @@ export default function ReportManagement() {
     });
 
 
-    const handleExportCSV = async () => {
-        try {
-
-
-            const response = await fetchWithAuth(
-                `${API_URL}/api/lost-reports/export/csv`
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to export CSV");
-            }
-
-            const blob = await response.blob();
-
-            const url = window.URL.createObjectURL(blob);
-
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `lost-reports-${new Date().toISOString().split("T")[0]
-                }.csv`;
-
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error(error);
-            alert("Failed to export CSV");
-        }
-    };
-
-
-
-
-
-
     return (
 
         <>
@@ -353,7 +315,7 @@ export default function ReportManagement() {
                                 />
                             </div>
                             <div className="h-full w-fit ml-10 xl:ml-35 flex items-center gap-1 xl:gap-5">
-                                <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true}
+                                <AdminButton icon={Download} label="Export Report" isBorder={true} isShadow={true} isIcon={true}
                                     onClick={() => setIsExportReportOpen(true)} />
                                 <AdminButton icon={Plus} label="New Report" isSolid={true} isBorder={true} isShadow={true} isIcon={true}
                                     onClick={() => setOpenLogItem(true)} />
@@ -434,6 +396,7 @@ export default function ReportManagement() {
                     filenamePrefix="LOST_REPORTS"
                     onClose={() => setIsExportReportOpen(false)}
                   onUpdate={getLostReports}
+                  queryParams={{userId}}
                 />
             }
         </>

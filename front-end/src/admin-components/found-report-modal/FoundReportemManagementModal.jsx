@@ -1,37 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, X, QrCode, Link2, ArchiveRestore, Archive, Info, CircleCheck, Handshake } from "lucide-react";
-import QRCodeLib from "qrcode";
-import foramtDateTimeNew from "../../utils/formatDataTimeNew.js";
 import { formatActionType } from "../../utils/formatActionType.js";
 import formatNotificationDate from "../../utils/fotmatNotifications.js";
-import AdminTextField from "../AdminTextField.jsx";
-import AdminDateInput from "../AdminDateInput.jsx";
-import AdminTextArea from "../AdminTextArea.jsx";
+
 import { fetchWithAuth } from "../../utils/fetchWithAuth.js";
 import { useNavigate } from "react-router-dom";
-import formatDateTime from "../../utils/formatDataTimeNew.js";
-import formatDate from "../../utils/formatDate.js";
+
 import { toast } from "react-toastify";
 import AdminConfirmDialog from "../AdminConfirmDialog.jsx";
 import {
-  DISPOSAL_METHODS,
-  DISCARD_REASONS,
-} from "../../constants/disposal_constants.js";
-import AdminDonationDropDown from "../AdminDonationDropDown.jsx";
-import {
-  claimFoundItem,
   archiveFoundReport,
   restoreFoundReport,
-  disposeFoundItem,
   searchLostReports,
-  getItemHistory,
-  getClaimRecord,
   getDisposedDetails,
-  analyzeItemImage,
 } from "./services/foundReportModalServices.js";
+
+import FoundReportDetailsTab from "./tabs/FoundReportDetailsTab.jsx"
+import ClaimFoundReportTab from "./tabs/ClaimFoundReportTab.jsx"
+import DisposeFoundReportTab from "./tabs/DisposeFoundReportTab.jsx"
+import EditFoundReportTab from "./tabs/EditFoundReportTab.jsx"
 
 import { useSaveEditReport } from "./hooks/useSaveEditReport.js";
 import { useRefreshFoundReports } from "./utils/useRefreshFoundReports.js";
+import ArchiveDialog from "../ArchiveDialog.jsx";
+import RestoreDialog from "../RestoreDialog.jsx";
+import ScaleImage from "../ScaleImage.jsx";
+
 
 export default function FoundReportItemManagementModal({
   selectedItem = [],
@@ -50,13 +44,16 @@ export default function FoundReportItemManagementModal({
 
   const foundReportId = selectedItem?.found_report_id;
 
+  const [selectedImage, setSelectedImage] = useState();
+  const [searchResults, setSearchResults] = useState();
+
   //hooks
-  const {saveEdit, isSavingEdit} = useSaveEditReport();
+  const { saveEdit, isSavingEdit } = useSaveEditReport();
   const { refreshReports } = useRefreshFoundReports({
     onUpdated,
     selectedItem,
     setSelectedItem,
-});
+  });
 
   const [linkModal, setLinkModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -65,11 +62,7 @@ export default function FoundReportItemManagementModal({
   const [openClaimNavigateDialog, setOpenClaimNavigateDialog] = useState(false);
   const [openRestoreDialog, setOpenRestoreDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
-  const [openCancelUpdate, setOpenCancelUpdate] = useState(false);
-  const [openConfirmRelease, setOpenConfirmRelease] = useState(false);
-  const [openCancelRelease, setOpenCancelRelease] = useState(false);
-  const [originalEditForm, setOriginalEditForm] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
@@ -78,154 +71,31 @@ export default function FoundReportItemManagementModal({
   const [claimTab, setClaimTab] = useState(false);
   const [disposedTab, setDisposedTab] = useState(false);
   const [editTab, setEditTab] = useState(true);
-  const [isPrintingQR, setIsPrintingQR] = useState(false);
 
-  //claim tab variables
 
-  const [identifierToggle, setIdentifierToggle] = useState(false);
-  const [claimantImage, setClaimantImage] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState(null);
-  const [linkReport, setLinkReport] = useState(null);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [fullName, setFullName] = useState("");
-  const [claimantEmail, setClaimantEmail] = useState("");
-  const [claimantNumber, setClaimantNumber] = useState("");
-  const [verificationDetails, setVerificationDetails] = useState("");
 
-  const isValidPhone = /^09\d{9}$/.test(claimantNumber);
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimantEmail);
+
+  const [successData, setSuccessData] = useState(null);
+
+  const handleClaimSuccess = (claimId, claimantFullName) => {
+    setSuccessData({ claimId, fullName: claimantFullName });
+    setClaimTab(false);
+    setEditTab(true);
+    setOpenClaimNavigateDialog(true);
+  };
 
   const formatTXNId = (id) => {
     return `TXN-${String(id).padStart(5, "0")}`;
   };
-
-  const fileInputRef = useRef(null);
-  const resetClaimForm = () => {
-    setClaimantEmail("");
-    setFullName("");
-    setClaimantNumber("");
-    setVerificationDetails("");
-    setClaimantImage(null);
-    setSelectedFile(null);
-    setLinkReport(null);
-    setSearchResults([]);
-    setSearchTerm("");
-    setShowSearchResults(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleClaimantFileChange = async (e) => {
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    const officeId = localStorage.getItem("office_location");
-
-    setSelectedFile(file);
-    setClaimantImage(URL.createObjectURL(file));
-  };
-
-  const isClaimValid =
-    fullName.trim() &&
-    (claimantNumber.trim() || claimantEmail.trim()) &&
-    selectedFile &&
-    verificationDetails.trim();
 
   //format item id
   const formatItemId = (id) => {
     return `SI-${String(id).padStart(5, "0")}`;
   };
 
-  //format report id
-  const formatReportId = (id) => {
-    return `RPT-${String(id).padStart(5, "0")}`;
-  };
-
-  const hasClaimFormChanges =
-    fullName.trim() ||
-    claimantEmail.trim() ||
-    claimantNumber.trim() ||
-    verificationDetails.trim() ||
-    selectedFile ||
-    linkReport;
-
   const [claimId, setClaimId] = useState(null);
-  const [isReleasing, setIsReleasing] = useState(false);
-  const handleItemRelease = async () => {
-    setIsReleasing(true);
-    setOpenConfirmRelease(false);
-    try {
-      if (!foundReportId) {
-        throw new Error("Please select an item to release.");
-      }
-      if (!fullName.trim()) {
-        throw new Error("Claimant full name is required.");
-      }
-      if (!claimantEmail.trim() && !claimantNumber.trim()) {
-        throw new Error("Email or Contact Number is required.");
-      }
-      if (!selectedFile) {
-        throw new Error("Proof of claim photo is required.");
-      }
-      if (!verificationDetails.trim()) {
-        throw new Error("Verification details are required.");
-      }
-      const officeId = localStorage.getItem("office_location");
-      const officeIdTemp = (officeId && officeId !== "undefined") ? officeId : null;
 
-      const formData = new FormData();
-      // Claim Details
-      formData.append("claimant_full_name", fullName);
-      if (officeIdTemp !== null) {
-        formData.append("office_id", officeIdTemp);
-      }
-
-      formData.append("claimant_email", claimantEmail);
-
-      formData.append("claimant_contact_number", claimantNumber);
-
-      formData.append("verification_details", verificationDetails);
-      // Admin Processing Claim
-      formData.append("processed_by_user_id", userId);
-      formData.append("admin_full_name", adminFullName);
-      formData.append("user_id", userId);
-      // Optional linked report
-      if (linkReport) {
-        formData.append("lost_report_id", linkReport.lost_report_id);
-      }
-      // Claimant Photo
-      formData.append("claimant_photo", selectedFile);
-
-      const data = await claimFoundItem(selectedItem.found_report_id, formData)
-
-      setClaimId(data.claim.claim_id);
-
-      if (data.claim.claim_id) {
-        setOpenClaimNavigateDialog(true);
-      }
-
-     await refreshReports();
-
-      // Reset form
-      resetClaimForm();
-      setClaimTab(false);
-      setEditTab(true);
-      setIsReleasing(false);
-
-      toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Claimed.`)
-    } catch (error) {
-      setIsReleasing(false);
-
-      console.error(error);
-
-      toast.error(error.message);
-    }
-  };
   //Item history
   const [itemHistory, setItemHistory] = useState([]);
 
@@ -245,13 +115,11 @@ export default function FoundReportItemManagementModal({
   };
 
   //OPEN EDIT VARIABLES
-  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+  const [editImagePreview, setEditImagePreview] = useState(false);
+  const [originalEditForm, setOriginalEditForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const editImageInputRef = useRef(null);
   const [editImageFile, setEditImageFile] = useState(null);
-  const [editImagePreview, setEditImagePreview] = useState(null);
   const [editForm, setEditForm] = useState({
     item_name: "",
     category_id: "",
@@ -316,14 +184,6 @@ export default function FoundReportItemManagementModal({
     hasRequiredEditFields && editDateValid && editTimeValid,
   );
 
-  //chanhe checker in edit 
-  const hasEditChanges =
-    originalEditForm &&
-    (
-      JSON.stringify(editForm) !== JSON.stringify(originalEditForm) ||
-      editImageFile !== null
-    );
-
   // item info button
   const startEditing = () => {
     if (!selectedItem) return;
@@ -355,73 +215,6 @@ export default function FoundReportItemManagementModal({
     setOpenUpdateStatus(false);
   };
 
-  const handleEditChange = (field, value) => {
-    setEditForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
-  const handleEditDateChange = (value) => {
-    setEditForm((current) => ({
-      ...current,
-      found_date: value,
-      found_time: "",
-    }));
-  };
-
-  const handleEditImageChange = async (e) => {
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    setEditImageFile(file);
-    setEditImagePreview(URL.createObjectURL(file));
-
-    try {
-      setIsAnalyzing(true);
-
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const data = await analyzeItemImage(formData);
-
-      setEditForm((current) => {
-        const matchedCategory = categories.find(
-          (item) =>
-            item.category_name.toLowerCase() === data.category?.toLowerCase(),
-        );
-
-        return {
-          ...current,
-          item_name: data.itemName || current.item_name,
-          description: data.detailedDescription || current.description,
-          contents: data.contents || current.contents,
-          category_id: matchedCategory
-            ? String(matchedCategory.category_id)
-            : current.category_id,
-        };
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  //edit
-  const handleCancelEdit = () => {
-    setOpenCancelUpdate(false);
-    setEditImageFile(null);
-    setEditImagePreview(null);
-
-    if (editImageInputRef.current) {
-      editImageInputRef.current.value = "";
-    }
-
-    setIsEditing(false);
-  };
-
   const handleCloseDetails = () => {
     setSelectedItem(null);
     setItemHistory(false);
@@ -429,9 +222,7 @@ export default function FoundReportItemManagementModal({
     setOpenUpdateStatus(false);
     setEditImageFile(null);
     setEditImagePreview(null);
-    setIsAnalyzing(false);
     setDisposedTab(false);
-    resetClaimForm();
     setItemInfo(true);
   };
 
@@ -440,36 +231,36 @@ export default function FoundReportItemManagementModal({
     setOpenUpdateDialog(false);
 
     if (!selectedItem || !isEditFormValid) {
-        return;
+      return;
     }
     try {
 
-        await saveEdit({
-            reportId: foundReportId,
-            editForm,
-            editImageFile,
-            userId,
-        });
+      await saveEdit({
+        reportId: foundReportId,
+        editForm,
+        editImageFile,
+        userId,
+      });
 
-        await refreshReports();
+      await refreshReports();
 
-        setOriginalEditForm({ ...editForm });
+      setOriginalEditForm({ ...editForm });
 
-        toast.success(
-            `Successfully updated ${formatItemId(selectedItem.item_id)}`
-        );
+      toast.success(
+        `Successfully updated ${formatItemId(selectedItem.item_id)}`
+      );
 
-        setEditImageFile(null);
-        setEditImagePreview(null);
-        setIsEditing(false);
+      setEditImageFile(null);
+      setEditImagePreview(null);
+      setIsEditing(false);
 
     } catch (error) {
 
-        console.error(error);
-        toast.error(error.message);
+      console.error(error);
+      toast.error(error.message);
 
     }
-};
+  };
 
   const fetchItemHistory = async (itemId) => {
     setIsLoading(true);
@@ -498,6 +289,8 @@ export default function FoundReportItemManagementModal({
 
   const handleHiistoryTab = () => {
     setItemInfo(false);
+    setClaimTab(false);
+    setEditTab(true)
   };
   // for claim tab
   const fetchLostReports = async (search) => {
@@ -505,290 +298,10 @@ export default function FoundReportItemManagementModal({
     setSearchResults(data);
   };
 
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    fetchLostReports(searchTerm);
-  }, [searchTerm]);
-
-  //variable for disposal form
-  const [itemWhereabouts, setItemWhereabouts] = useState("");
-  const [donationDate, setDonationDate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [isDisposing, setIsDisposing] = useState(false);
-
-  const [disposalMethod, setDisposalMethod] = useState("");
-  const [disposalProof, setDisposalProof] = useState(null);
-  const [selectedProofFile, setSelectedProofFile] = useState(null);
-
-
-
-  const [reasonForDiscarding, setReasonForDiscarding] = useState("");
-
-  const resetDisposalForm = () => {
-    setItemWhereabouts("");
-    setDonationDate("");
-    setNotes("");
-
-    setReasonForDiscarding("");
-
-    setDisposalProof(null);
-    setSelectedProofFile(null);
-
-    if (fileInputRefDisposalProof.current) {
-      fileInputRefDisposalProof.current.value = "";
-    }
-  };
-
-  const handleDisposalMethodChange = (value) => {
-    if (value !== disposalMethod) {
-      resetDisposalForm();
-    }
-
-    setDisposalMethod(value);
-  };
-
-  const fileInputRefDisposalProof = useRef(null);
-
-  const handleDisposalProofFileChange = async (e) => {
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    const officeId = localStorage.getItem("office_location");
-
-    setSelectedProofFile(file);
-    setDisposalProof(URL.createObjectURL(file));
-  };
-
-
-  const hasDisposalFormChanges =
-    itemWhereabouts.trim() ||
-    donationDate ||
-    notes.trim() ||
-    reasonForDiscarding ||
-    selectedProofFile;
-
-  // Print QR Code
-  const handlePrintQRCode = async () => {
-    setIsPrintingQR(true);
-    try {
-      // Generate QR from the found report's item ID (not owner's pre-registered QR)
-      const qrData = formatItemId(selectedItem.item_id);
-      const qrImageUrl = await QRCodeLib.toDataURL(qrData, {
-        width: 300,
-        margin: 2,
-      });
-
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print QR Code - ${selectedItem.item_name}</title>
-          <style>
-            body {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              margin: 0;
-              font-family: Arial, sans-serif;
-            }
-            .card {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 8px;
-              padding: 24px;
-              border: 1px solid #DDD9CF;
-              border-radius: 16px;
-            }
-            .item-id {
-              font-size: 13px;
-              color: #6B5C42;
-            }
-            .item-name {
-              font-weight: bold;
-              font-size: 18px;
-              color: #4B2D23;
-            }
-            .brand {
-              font-weight: bold;
-              font-size: 12px;
-              color: #990000;
-              margin-top: 8px;
-            }
-            img { width: 220px; height: 220px; }
-          </style>
-        </head>
-        <body onload="window.print()">
-          <div class="card">
-            <p class="item-id">${qrData}</p>
-            <p class="item-name">${selectedItem.item_name}</p>
-            <img src="${qrImageUrl}" alt="QR Code" />
-            <p class="brand">FoundNest</p>
-          </div>
-        </body>
-      </html>
-    `);
-      printWindow.document.close();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsPrintingQR(false);
-    }
-  };
-
-  const [openCancelDisposed, setOpenCancelDisposed] = useState(false);
-  const [openConfirmDesiposed, setOpenConfirmDesiposed] = useState(false);
-
-  const handleCancelDisposed = () => {
-    setDisposalMethod("");
-    resetDisposalForm();
-    setClaimTab(false);
-    setEditTab(true);
-    setDisposedTab(false);
-    setOpenCancelDisposed(false);
-
-  };
-
-  const isValidDisposalDate = (dateStr) => {
-    if (!dateStr) return false;
-
-    const selectedDate = new Date(`${dateStr}T00:00:00`);
-
-    if (isNaN(selectedDate.getTime())) {
-      return false;
-    }
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-    return selectedDate <= today;
-  };
-  const disposalDateValid = isValidDisposalDate(donationDate);
-
-
-  const isDisposalValid =
-    disposalMethod === "DONATED"
-      ? (
-        itemWhereabouts?.trim() &&
-        donationDate &&
-        disposalDateValid &&
-        selectedProofFile
-      )
-      : disposalMethod === "DISPOSED_AS_WASTE"
-        ? (
-          reasonForDiscarding &&
-          donationDate &&
-          disposalDateValid &&
-          selectedProofFile
-        )
-        : false;
-
-  const handleDisposedItem = async () => {
-    setIsDisposing(true);
-    setOpenConfirmDesiposed(false);
-
-    try {
-      const officeId = (officeIdNotification && officeIdNotification !== "undefined") ? officeIdNotification : null;
-
-      const formData = new FormData();
-
-      formData.append(
-        "found_report_id",
-        selectedItem.found_report_id
-      );
-
-      formData.append(
-        "item_id",
-        selectedItem.item_id
-      );
-
-      formData.append(
-        "office_name",
-        selectedItem.office_name
-      );
-
-      formData.append(
-        "disposed_by_user_id",
-        userId
-      );
-
-      formData.append(
-        "disposal_method",
-        disposalMethod
-      );
-
-      formData.append(
-        "additional_notes",
-        notes
-      );
-
-      formData.append(
-        "disposal_date",
-        donationDate
-      );
-
-      if(officeId){
-        formData.append(
-        "office_id",
-        officeId
-      );
-      }
-      
-      formData.append(
-        "admin_full_name",
-        adminFullName
-      );
-
-      if (selectedProofFile) {
-        formData.append(
-          "proof_img",
-          selectedProofFile
-        );
-      }
-
-      if (disposalMethod === "DONATED") {
-        formData.append(
-          "disposal_whereabouts",
-          itemWhereabouts
-        );
-      }
-
-      if (disposalMethod === "DISPOSED_AS_WASTE") {
-        formData.append(
-          "discard_reason",
-          reasonForDiscarding
-        );
-      }
-
-      const data = await disposeFoundItem(formData);
-
-      await refreshReports();
-
-      resetDisposalForm();
-      setDisposalMethod("");
-
-      setDisposedTab(false);
-      setEditTab(true);
-
-      toast.success("Item disposed successfully.");
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message);
-    } finally {
-      setIsDisposing(false);
-    }
-  };
-
   //archive states
   const [isArchiving, setIsArchiving] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
 
 
   //Archive Item
@@ -798,9 +311,9 @@ export default function FoundReportItemManagementModal({
     try {
 
       const data = await archiveFoundReport(foundReportId, {
-            office_id: officeId,
-            admin_full_name: adminFullName,
-          })
+        office_id: officeId,
+        admin_full_name: adminFullName,
+      })
 
       await refreshReports();
       setOpenArchivedDialog(false);
@@ -815,12 +328,12 @@ export default function FoundReportItemManagementModal({
   };
 
   const handleRestoreReport = async (foundReportId) => {
-    
+
     try {
       const officeId = (officeIdNotification && officeIdNotification !== "undefined") ? officeIdNotification : null;
       setIsRestoring(true);
-    
-      const data = await restoreFoundReport(foundReportId, {office_id: officeId,admin_full_name: adminFullName});
+
+      const data = await restoreFoundReport(foundReportId, { office_id: officeId, admin_full_name: adminFullName });
 
       await refreshReports();
 
@@ -837,10 +350,10 @@ export default function FoundReportItemManagementModal({
 
   const [claimRecord, setClaimRecord] = useState();
   const [isClaimRecordLoading, setIsClaimRecordLoading] = useState(false);
+  const [isDisposedDetails, setIsDisposedDetails] = useState(false);
 
   const [disposedDetails, setDisposedDetails] = useState([]);
-  const [isDisposedDetails, setIsDisposedDetails] = useState(false);
-  const [openDisposedDetails, setOpenDisposedDetails] = useState(false);
+
 
 
   const fetchDisposedDetails = async () => {
@@ -848,11 +361,6 @@ export default function FoundReportItemManagementModal({
 
     try {
       setIsDisposedDetails(true);
-
-
-    
-
-
 
       const result = await getDisposedDetails(selectedItem.found_report_id);
 
@@ -865,32 +373,32 @@ export default function FoundReportItemManagementModal({
   };
 
   const fetchClaimRecordByFoundId = async () => {
-  if (!foundReportId) return;
+    if (!foundReportId) return;
 
-  try {
-    setIsClaimRecordLoading(true);
+    try {
+      setIsClaimRecordLoading(true);
 
-    const response = await fetchWithAuth(
-      `${API_URL}/api/claim-records/found-report/${foundReportId}`
-    );
+      const response = await fetchWithAuth(
+        `${API_URL}/api/claim-records/found-report/${foundReportId}`
+      );
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch claim record.");
+      if (!response.ok) {
+        throw new Error("Failed to fetch claim record.");
+      }
+
+      const result = await response.json();
+
+      setClaimRecord(result);
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsClaimRecordLoading(false);
     }
-
-    const result = await response.json();
-
-    setClaimRecord(result);
-
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setIsClaimRecordLoading(false);
-  }
-};
+  };
   useEffect(() => {
-  
-    if(selectedItem?.status === "claimed"){
+
+    if (selectedItem?.status === "claimed") {
       fetchClaimRecordByFoundId();
     }
     else {
@@ -909,774 +417,91 @@ export default function FoundReportItemManagementModal({
         <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col overflow-y-scroll ">
           <div className=" flex flex-col  top-0 w-3/10 fixed z-100">
             <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 z-100">
-            <div>
-              <p className="font-semibold text-sm text-white xl:text-xl">
-                {" "}
-                {selectedItem.item_name}
-              </p>
-            </div>
-            <div
-              className={` border-2   p-1 px-2 rounded-full text-[8px] xl:text-xs 
+              <div>
+                <p className="font-semibold text-sm text-white xl:text-xl">
+                  {" "}
+                  {selectedItem.item_name}
+                </p>
+              </div>
+              <div
+                className={` border-2   p-1 px-2 rounded-full text-[8px] xl:text-xs 
                                         ${selectedItem.status === "unclaimed" && "text-[#6B5C42] border-[#DDD9CF] bg-[#F5F5F5]"} 
                                         ${selectedItem.status === "claimed" && " border-green-700 bg-green-100 text-green-700"} 
                                         ${selectedItem.status === "to_be_disposed" && "text-[#FFA500] border-[#FFA500] bg-[#FFEDCC]"} 
                                         ${selectedItem.status === "disposed" && "text-[#553D25] border-[#553D25] bg-[#DDD1C5]"} 
                                         ${selectedItem.status === 'archived' && "bg-violet-100 text-violet-700 border-violet-700"}
                                        `}
-            >
-              <p className=" ">
-                {selectedItem.status === "claimed" && "Claimed"}
-                {selectedItem.status === "unclaimed" && "Unclaimed"}
-                {selectedItem.status === "to_be_disposed" && "For Disposal"}
-                {selectedItem.status === "disposed" && "Disposed"}
-                {selectedItem.status === "archived" && "Archived"}
-              </p>
-            </div>
-            <div className="ml-auto pr-5">
-              <button onClick={handleCloseDetails} className="cursor-pointer">
-                <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
-              </button>
-            </div>
-            
-          </div>
-            <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 z-50">
-                <button
-                  className={`text-[#6B5C42]  text-sm px-5 cursor-pointer
-                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
-                                     `}
-                  onClick={() => setItemInfo(true)}
-                >
-                  Item Info
-                </button>
-                <button
-                  className={`text-[#6B5C42] text-sm px-5 cursor-pointer
-                                        ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"}`}
-                  onClick={handleHiistoryTab}
-                >
-                  History
+              >
+                <p className=" ">
+                  {selectedItem.status === "claimed" && "Claimed"}
+                  {selectedItem.status === "unclaimed" && "Unclaimed"}
+                  {selectedItem.status === "to_be_disposed" && "For Disposal"}
+                  {selectedItem.status === "disposed" && "Disposed"}
+                  {selectedItem.status === "archived" && "Archived"}
+                </p>
+              </div>
+              <div className="ml-auto pr-5">
+                <button onClick={handleCloseDetails} className="cursor-pointer">
+                  <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
                 </button>
               </div>
+
+            </div>
+            <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 z-50">
+              <button
+                className={`text-[#6B5C42]  text-sm px-5 cursor-pointer
+                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
+                                     `}
+                onClick={() => setItemInfo(true)}
+              >
+                Item Info
+              </button>
+              <button
+                className={`text-[#6B5C42] text-sm px-5 cursor-pointer
+                                        ${!itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"}`}
+                onClick={handleHiistoryTab}
+              >
+                History
+              </button>
+            </div>
           </div>
 
           {editTab && (
             <>
-            
+
               <div className="h-full w-full p-5 pt-30">
                 {itemInfo ? (
                   <>
-                    {!isDisposedDetails ?
+                    {isEditing ?
                       (
                         <>
-                          {selectedItem.linked_report &&
-                            selectedItem.status === "claimed" && (
-                              <div className="flex flex-col gap-2 mb-4">
-                                <div className="flex items-center gap-2">
-                                  <Link2 size={15} />
-                                  <p className="text-black font-semibold text-sm">
-                                    LINKED LOST REPORT
-                                  </p>
-                                </div>
-                                <div className=" flex flex-col w-full  gap-2 rounded-lg bg-[#FFF9E0] border border-(--color-quaternary) p-2 xl:p-4">
-                                  <div className="flex justify-between text-[10px] xl:text-xs">
-                                    <div className="text-black font-semibold  rounded-md p-1 px-2 ">
-                                      <p className="font-bold">
-                                        {formatReportId(selectedItem.linked_report)}
-                                      </p>
-                                    </div>
-                                    <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold flex text-center">
-                                      <p>{selectedItem.lost_report_status}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    {selectedItem.lost_item_image_url && (
-                                      <div className="w-12 h-10 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
-                                        <img
-                                          src={selectedItem.lost_item_image_url}
-                                          alt={selectedItem.lost_item_name}
-                                          className="w-full h-full object-contain"
-                                        />
-                                      </div>
-                                    )}
-                                    <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
-                                      <p className="font-semibold">
-                                        {selectedItem.lost_item_name}
-                                      </p>
-                                      <p className="text-[#6B5C42]">
-                                        {selectedItem.lost_item_category_name}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
-                                    onClick={() =>
-                                      navigate(
-                                        `/admin/report_management?reportId=${selectedItem.linked_report}`,
-                                      )
-                                    }
-                                  >
-                                    <p>View Lost Report &nbsp; </p>
-                                    <i className="fa-solid fa-arrow-right"></i>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          <div className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden cursor-pointer" onClick={() => setSelectedImage(selectedItem?.image_url)}>
-                            {isEditing ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={isSavingEdit}
-                                  onClick={() => editImageInputRef.current?.click()}
-                                  className="w-full h-full disabled:opacity-40 flex flex-col items-center justify-center gap-2 cursor-pointer"
-                                >
-                                  <img
-                                    src={editImagePreview || selectedItem.image_url}
-                                    alt={selectedItem.item_name}
-                                    className="w-full h-full object-contain"
-                                  />
-                                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                                    Click image to replace photo.
-                                  </span>
-                                </button>
-                                <input
-                                  ref={editImageInputRef}
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleEditImageChange}
-                                />
-                              </>
-                            ) : (
-                              <img
-                                src={selectedItem.image_url}
-                                alt={selectedItem.item_name}
-                                className="w-full h-full object-contain"
-                              />
-                            )}
-                            <div className="text-lg rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                              <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
-                            </div>
-                          </div>
-                          {isAnalyzing && (
-                            <span className="text-primary text-[10px] pt-2 py-1  ">
-                              Analyzing image...
-                            </span>
-                          )}
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">ITEM ID</p>
-                              <p className="text-black">
-                                {formatItemId(selectedItem.item_id)}
-                              </p>
-                            </div>
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">
-                                CATEGORY
-                                {isEditing && <span className="text-primary"> *</span>}
-                              </p>
-                              {isEditing ? (
-                                <select
-                                  className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  disabled={isSavingEdit}
-                                  value={editForm.category_id}
-                                  onChange={(e) =>
-                                    handleEditChange("category_id", e.target.value)
-                                  }
-                                >
-                                  <option value="" disabled>
-                                    Select category
-                                  </option>
-                                  {categories.map((category) => (
-                                    <option
-                                      key={category.category_id}
-                                      value={category.category_id}
-                                    >
-                                      {category.category_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <p className="text-black">
-                                  {selectedItem.category_name}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">
-                                ITEM NAME
-                                {isEditing && <span className="text-primary"> *</span>}
-                              </p>
-                              {isEditing ? (
-                                <input
-                                  className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  disabled={isSavingEdit}
-                                  value={editForm.item_name}
-                                  onChange={(e) =>
-                                    handleEditChange("item_name", e.target.value)
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">{selectedItem.item_name}</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className={`flex ${isEditing && "flex-col"}`}>
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">
-                                LOCATION FOUND
-                                {isEditing && <span className="text-primary"> *</span>}
-                              </p>
-                              {isEditing ? (
-                                <select
-                                  className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  value={editForm.location_found}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange("location_found", e.target.value)
-                                  }
-                                  required
-                                >
-                                  <option hidden disabled value={editForm.location_found}>
-                                    {editForm.location_found}
-                                  </option>
-
-                                  {allLocations.map((option, index) => (
-                                    <option key={index} value={option.name}>
-                                      {option.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <p className="text-black">
-                                  {selectedItem.location_found}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">
-                                DATE & TIME FOUND
-                                {isEditing && <span className="text-primary"> *</span>}
-                              </p>
-                              {isEditing ? (
-                                <div className="flex gap-2 mt-1">
-                                  <input
-                                    type="date"
-                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
-                                    value={editForm.found_date}
-                                    max={getTodayDateString()}
-                                    disabled={isSavingEdit}
-                                    onChange={(e) =>
-                                      handleEditDateChange(e.target.value)
-                                    }
-                                  />
-                                  <input
-                                    type="time"
-                                    className="input input-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md"
-                                    value={editForm.found_time}
-                                    disabled={!editDateValid || isSavingEdit}
-                                    onChange={(e) =>
-                                      handleEditChange("found_time", e.target.value)
-                                    }
-                                  />
-                                </div>
-                              ) : (
-                                <p className="text-black">
-                                  {foramtDateTimeNew(selectedItem.found_date)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {isEditing && editForm.found_date && !editDateValid && (
-                            <p className="text-xs text-red-500 mt-1">
-                              Date found cannot be in the future.
-                            </p>
-                          )}
-                          {isEditing && !editDateValid && (
-                            <p className="text-xs text-yellow-500 mt-1">
-                              Enter a valid date before choosing a time.
-                            </p>
-                          )}
-                          {isEditing &&
-                            editDateValid &&
-                            editForm.found_time &&
-                            !editTimeValid && (
-                              <p className="text-xs text-red-500 mt-1">
-                                Time found cannot be in the future.
-                              </p>
-                            )}
-                          {isEditing && !hasRequiredEditFields && (
-                            <p className="text-xs text-red-500 mt-1">
-                              Fill in item name, category, location found, date, and
-                              time.
-                            </p>
-                          )}
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">SPECIFIC LOCATION</p>
-                              {isEditing ? (
-                                <input
-                                  className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  value={editForm.specific_location}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange(
-                                      "specific_location",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">
-                                  {selectedItem.specific_location || "N/A"}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">DESCRIPTION</p>
-                              {isEditing ? (
-                                <textarea
-                                  className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
-                                  value={editForm.description}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange("description", e.target.value)
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">
-                                  {selectedItem.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">CONTENTS</p>
-                              {isEditing ? (
-                                <input
-                                  className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  value={editForm.contents}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange("contents", e.target.value)
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">
-                                  {" "}
-                                  {selectedItem.contents || "N/A"}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">REPORTED BY</p>
-                              <p className="text-black">
-                                {selectedItem.reported_by_full_name}
-                              </p>
-                            </div>
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">DATE LOGGED</p>
-                              <p className="text-black">
-                                {
-                                  formatDateTime(selectedItem.date_reported)
-                                }
-                              </p>
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">SURRENDERED BY</p>
-                              {isEditing ? (
-                                <input
-                                  className="input input-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  value={editForm.reported_by}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange("reported_by", e.target.value)
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">
-                                  {selectedItem.reported_by || "N/A"}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">ADDITIONAL NOTES</p>
-                              {isEditing ? (
-                                <textarea
-                                  className="textarea bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md text-xs"
-                                  value={editForm.additional_notes}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange(
-                                      "additional_notes",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              ) : (
-                                <p className="text-black">
-                                  {" "}
-                                  {selectedItem.additional_notes || "N/A"}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className=" flex">
-                            <div className="flex flex-col text-xs mt-5 flex-1">
-                              <p className="text-[#6B5C42]">CURRENT LCOATION</p>
-                              {isEditing ? (
-                                <select
-                                  className="select select-sm bg-white border border-[#DDD9CF] text-black w-full mt-1 rounded-md"
-                                  value={editForm.office_id}
-                                  disabled={isSavingEdit}
-                                  onChange={(e) =>
-                                    handleEditChange("office_id", e.target.value)
-                                  }
-                                >
-                                  <option value="">No office</option>
-                                  {locations.map((office) => (
-                                    <option
-                                      key={office.office_id}
-                                      value={office.office_id}
-                                    >
-                                      {office.office_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <p className="text-black">{selectedItem.office_name}</p>
-                              )}
-                            </div>
-
-                          </div>
-                              {selectedItem.status === "claimed" && !isClaimRecordLoading && claimRecord && (
-                              <div className="flex flex-col gap-2 mb-4 mt-4">
-                                <div className="flex items-center gap-2">
-                                  <Handshake size={15} />
-                                  <p className="text-black font-semibold text-sm">
-                                    TRANSACTION
-                                  </p>
-                                </div>
-                                <div className=" flex flex-col w-full  gap-2 rounded-lg bg-gray-200 text-gray-700 border  p-2 xl:p-4">
-                                  <div className="flex justify-between text-[10px] xl:text-xs">
-                                    <div className="text-black font-semibold  rounded-md p-1 px-2 ">
-                                      <p className="font-bold">
-                                        {formatTXNId(claimRecord?.claim_id)}
-                                      </p>
-                                    </div>
-                                    <div className="bg-green-100 text-green-700 rounded-xl items-center p-1 px-2 font-semibold flex text-center">
-                                      <p>{claimRecord?.claimant_status && "completed" }</p>
-                                    </div>
-                                  </div>
-                                  <div className=" flex flex-col text-[10px] xl:text-xs justify-center">
-                                      <p className="font-semibold">
-                                        Proof of Claim
-                                      </p>
-                                    </div>
-                                  <div className="flex flex-col gap-2">
-                                    {claimRecord?.claimant_photo_url && (
-                                      <div className=" relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer" onClick={() => setSelectedImage(claimRecord?.claimant_photo_url)}>
-                                      <img src={claimRecord.claimant_photo_url} alt={"proof photo"}
-                                        className="h-full w-full object-contain" />
-                                      <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                                        <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
-                                      </div>
-                                    </div>
-                                    )}
-                                 <div className="text-xs flex flex-col">
-                                       <div className="flex flex-col flex-1">
-                                        <p className=" text-[#6B5C42]">CLAIMANT NAME</p>
-                                        <p >{claimRecord?.claimant_full_name || "N/A"}</p>
-                                      </div>
-                                    </div>
-                                     <div className="text-[10px] xl:text-xs flex flex-col gap-1 mt-4">
-                                    <p className="text-[#6B5C42]">Processed by: <span className="text-black font-medium">{claimRecord?.processed_by}</span></p>
-                                    <p className="text-[#6B5C42]">Processed on {formatDateTime(claimRecord?.claim_date)}</p>
-                                  </div>
-                                  </div>
-                                  <button
-                                    className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium border mt-2 cursor-pointer w-fit py-1 px-2 rounded-md"
-                                    onClick={() =>
-                                      navigate(
-                                        `/admin/transactions?claimId=${claimRecord?.claim_id}`,
-                                      )
-                                    }
-                                  >
-                                    <p>View Transaction &nbsp; </p>
-                                    <i className="fa-solid fa-arrow-right"></i>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          {disposedDetails &&
-                            (
-                              <>
-                                <div className={`w-full gap-3 flex rounded-lg my-2 border-l-3 text-xs p-4 flex-col
-                         ${disposedDetails?.disposal_method === "DONATED" ? "bg-green-100  border-l-green-700  text-green-700 "
-                                    :
-                                    "  bg-gray-200  border-l-gray-700  text-gray-700 "}`}>
-                                  <div className="flex items-center gap-1">
-                                    {disposedDetails?.disposal_method === "DONATED" ?
-                                      <i className="fa-regular fa-heart text-sm "></i>
-                                      :
-                                      <i className="fa-regular fa-trash-can text-sm"></i>
-                                    }
-
-                                    <p className="font-medium ">{disposedDetails?.disposal_method === "DONATED" ? "Donated" : "Disposed as waste"}</p>
-                                  </div>
-                                  <div className="text-[10px] xl:text-xs flex flex-col gap-1">
-                                    <p className="text-[#6B5C42]">Disposed by: <span className="text-black font-medium">{disposedDetails.disposed_by_admin_name}</span></p>
-                                    <p className="text-[#6B5C42]">Disposed on {formatDateTime(disposedDetails.created_at)}</p>
-
-                                  </div>
-                                  <hr className="border-(--color-tertiary)  opacity-30 " />
-                                  <button className="text-left text-primary text-[10px] xl:text-xs cursor-pointer"
-                                    onClick={() => { setOpenDisposedDetails(!openDisposedDetails) }}>
-                                    View Disposal Details <i className={`fa-solid fa-angle-${openDisposedDetails ? "up" : "down"}`}></i>
-                                  </button>
-
-                                </div>
-                                {openDisposedDetails &&
-                                  <div className={`w-full gap-3 flex  flex-col rounded-lg my-2 text-xs p-4
-                         ${disposedDetails?.disposal_method === "DONATED" ? "bg-green-100   text-green-700 "
-                                      :
-                                      "  bg-gray-200  text-gray-700 "}`}>
-                                    <p className="text-[#6B5C42]">PROOF OF DISPOSAL</p>
-                                    <div className=" relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer" onClick={() => setSelectedImage(disposedDetails?.proof_img)}>
-                                      <img src={disposedDetails.proof_img} alt={"proof photo"}
-                                        className="h-full w-full object-contain" />
-                                      <div className="text-md rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                                        <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-col text-black gap-3 text-[10px] xl:text-xs">
-                                      <div className="flex">
-                                        <div className="flex flex-col flex-1">
-                                          <p className=" text-[#6B5C42] ">DISPOSAL METHOD</p>
-                                          <p >{disposedDetails?.disposal_method === "DONATED" ? "For Donation" : "Disposed as waste"}</p>
-                                        </div>
-                                        <div className="flex flex-col flex-1">
-                                          <p className=" text-[#6B5C42]">DATE OF DISPOSAL</p>
-                                          <p >{formatDate(disposedDetails.disposal_date)}</p>
-                                        </div>
-
-                                      </div>
-                                      <div className="flex flex-col flex-1">
-                                        <p className=" text-[#6B5C42]">{disposedDetails?.disposal_method === "DONATED" ? "BENEFICIARY/LOCATION" : "REASON"}</p>
-                                        <p >{disposedDetails?.disposal_method === "DONATED" ? disposedDetails.disposal_whereabouts : formatActionType(disposedDetails.discard_reason)}</p>
-                                      </div>
-                                      <div className="flex flex-col flex-1">
-                                        <p className=" text-[#6B5C42]">ADDITIONAL NOTES</p>
-                                        <p >{disposedDetails.additional_notes || "N/A"}</p>
-                                      </div>
-
-
-                                    </div>
-
-                                  </div>
-
-                                }
-                              </>
-                            )
-
-                          }
-                          {selectedItem.status === 'archived' &&
-                            (<>
-                              <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                              <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
-                                <div className="flex flex-col  text-[10px] xl:text-xs gap-1">
-                                  <p className="text-[#6B5C42]">Archived by <span className="font-semibold text-black">{selectedItem.archived_by_admin_full_name}</span></p>
-                                  <p className="text-[#6B5C42]">Archived on <span>{formatDateTime(selectedItem.date_archived)}</span><span></span></p>
-                                </div>
-
-                              </div>
-                            </>)
-
-                          }
-                          {selectedItem.status === 'archived' &&
-                            (
-                              <>
-                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                <button
-                                  type="button"
-                                  className={`flex gap-3  p-2 rounded-md  items-center cursor-pointer transition-transform duration-100
-                               enabled:active:scale-95 bg-primary text-white w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
-                                  onClick={() => { setOpenRestoreDialog(true) }}
-                                  disabled={isRestoring}
-                                >
-                                  {isRestoring ? "Restoring..." : (
-                                    <>
-                                      <i className="fa-solid fa-arrow-rotate-left"></i> Restore Listing
-                                    </>
-                                  )}
-                                </button>
-                                <div className=" text-[10px] xl:text-xs gap-1">
-                                  <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from the public feed</p>
-                                </div>
-                              </>
-                            )
-
-                          }
-                          <div className="h-fit text-[9px] xl:text-xs  font-medium flex gap-2 xl:gap-3 mt-2 ">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  type="button"
-                                  className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1"
-                                  onClick={() => {
-                                    if (hasEditChanges) {
-                                      setOpenCancelUpdate(true);
-                                    } else {
-                                      handleCancelEdit();
-                                    }
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={
-                                    isSavingEdit ||
-                                    isAnalyzing ||
-                                    !isEditFormValid ||
-                                    !hasEditChanges
-                                  }
-                                  className="h-full border-primary border px-5 py-3 rounded-md bg-primary text-white flex-1 disabled:opacity-50 "
-                                  onClick={
-
-                                    () => setOpenUpdateDialog(true)
-                                  }
-                                >
-                                  {isSavingEdit
-                                    ? "Saving..."
-                                    : isAnalyzing
-                                      ? "Analyzing..."
-                                      : "Save Changes"}
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                {selectedItem.status !== 'archived' &&
-
-                                  <button
-                                    type="button"
-                                    className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform duration-100
-                               enabled:active:scale-95 disabled:cursor-not-allowed"
-                                    onClick={
-                                      startEditing
-
-                                    }
-                                    disabled={
-                                      selectedItem.status === "claimed" ||
-                                      selectedItem.status === "disposed" ||
-                                      isArchiving
-                                    }
-                                  >
-                                    Edit Item Details
-                                  </button>
-                                }
-                              </>
-                            )}
-                            {!isEditing && (
-                              <div className="relative ">
-                                {openUpdateStatus && (
-                                  <div className="absolute bottom-11 h-fit w-45 bg-white border -translate-x-14 xl:-translate-x-5 border-[#DDD9CF] rounded-md">
-                                    <button
-                                      className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                      onClick={() => {
-                                        startClaiming();
-                                        setOpenUpdateStatus(false);
-                                      }}
-                                    >
-                                      <p className="ml-2">Mark as Claimed</p>
-                                    </button>
-                                    {selectedItem.status === "to_be_disposed" && (
-                                      <button
-                                        className="text-xs p-2 border-b border-[#DDD9CF] w-full"
-                                        onClick={() => {
-                                          startDisposing();
-                                          setOpenUpdateStatus(false);
-                                        }}
-                                      >
-                                        <p className="ml-2">Mark as Disposed</p>
-                                      </button>
-                                    )}
-                                    <button
-                                      className="text-xs p-2 border-b border-[#DDD9CF] w-full text-primary"
-                                      onClick={() => {
-                                        setOpenArchivedDialog(true);
-                                        setOpenUpdateStatus(false);
-                                      }}
-                                    >
-                                      <p className="ml-2">Archive</p>
-                                    </button>
-                                  </div>
-                                )}
-                                {!isEditing && selectedItem.status !== "archived" && (
-                                  <button
-                                    className="h-full border-primary py-3  border px-5 rounded-md  bg-primary text-white xl:px-7 disabled:opacity-40
-                              cursor-pointer transition-transform duration-100 enabled:active:scale-95 disabled:cursor-not-allowed"
-                                    onClick={() => {
-                                      setOpenUpdateStatus(!openUpdateStatus);
-                                    }}
-                                    disabled={
-                                      selectedItem.status === "claimed" ||
-                                      selectedItem.status === "disposed" ||
-                                      isArchiving
-                                    }
-                                  >
-                                    Update Status{" "}
-                                    <i
-                                      className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white`}
-                                    ></i>
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <div className="h-10 text-[9px] xl:text-xs mt-2  font-medium flex gap-2 xl:gap-5 ">
-                            {!isEditing && selectedItem.status !== 'archived' && (
-                              <div className="w-full flex flex-col gap-1">
-                                <button
-                                  type="button"
-                                  onClick={handlePrintQRCode}
-                                  className={`flex gap-3 p-2 rounded-md items-center cursor-pointer transition-transform duration-100
-    active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed`}
-                                  disabled={
-                                    selectedItem.status === "claimed" ||
-                                    selectedItem.status === "disposed" ||
-                                    isPrintingQR
-                                  }
-                                >
-                                  <QrCode size="20" />
-                                  <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
-                                </button>
-                                {!selectedItem.qr_code_id && (
-                                  <p className="text-[#6B5C42] text-[10px] text-center">
-                                    This item was not pre-registered with a QR code by
-                                    its owner.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <EditFoundReportTab
+                            selectedItem={selectedItem}
+                            setSelectedItem={setSelectedItem}
+                            categories={categories}
+                            locations={locations}
+                            allLocations={allLocations}
+                            setIsEditing={setIsEditing}
+                            refreshReports={refreshReports}
+                          />
                         </>
                       )
                       :
                       (
-                        <>
-                          <span className="text-[#6B5C42] text-sm">fetching item details...</span>
-                        </>
+                        <FoundReportDetailsTab
+                          selectedItem={selectedItem}
+                          claimRecord={claimRecord}
+                          isClaimRecordLoading={isClaimRecordLoading}
+                          disposedDetails={disposedDetails}
+                          setSelectedImage={setSelectedImage} // Uses the parent's full-screen image preview state
+
+                          // Wiring up the callbacks to the parent's state changes
+                          onEdit={startEditing}
+                          onClaim={startClaiming}
+                          onDispose={startDisposing}
+                          onArchive={() => setOpenArchivedDialog(true)}
+                          onRestore={() => setOpenRestoreDialog(true)}
+                        />
                       )
 
                     }
@@ -1735,556 +560,30 @@ export default function FoundReportItemManagementModal({
             </>
           )}
           {claimTab && (
-            <>
-              <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50">
-                <button
-                  className={`text-[#6B5C42]  text-sm px-5
-                                    ${itemInfo && "bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary)"} 
-                                     `}
-                >
-                  Mark as Claimed
-                </button>
-              </div>
-              <div className="h-full w-full p-5 pt-15">
-                <AdminTextField
-                  title="Claimant Full Name"
-                  reqField={true}
-                  placeholder="Full name of claimant"
-                  value={fullName}
-                  disabled={isReleasing}
-                  onChange={setFullName}
-                />
-                <div className="w-full mt-3 flex flex-col gap-2">
-                  <p className="text-sm font-medium">
-                    BulSU Email / Contact Number{" "}
-                    <span className="text-primary">*</span>
-                  </p>
-                  <div className="w-full h-10 flex ">
-                    <button
-                      className={`flex-1 text-[#6B5C42] rounded-l-lg text-xs font-semibold border border-[#DDD9CF]
-                                                    ${!identifierToggle && "text-white bg-primary border-primary"}`}
-                      onClick={() => {
-                        setIdentifierToggle(false);
-                      }}
-                    >
-                      Email
-                    </button>
-                    <button
-                      className={`flex-1  text-[#6B5C42] rounded-r-lg  text-xs font-semibold border border-[#DDD9CF]
-                                                    ${identifierToggle && "text-white bg-primary border-primary"}`}
-                      onClick={() => {
-                        setIdentifierToggle(true);
-                      }}
-                    >
-                      Contact No.
-                    </button>
-                  </div>
-                  {identifierToggle ? (
-                    <input
-                      type="text"
-                      className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
-                      placeholder="e.g. 09XXXXXXXXX"
-                      value={claimantNumber}
-                      disabled={isReleasing}
-                      onChange={(e) => setClaimantNumber(e.target.value)}
-                    />
-                  ) : (
-                    <input
-                      type="email"
-                      className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full"
-                      placeholder="e.g. juan@gmail.com"
-                      value={claimantEmail}
-                      disabled={isReleasing}
-                      onChange={(e) => setClaimantEmail(e.target.value)}
-                    />
-                  )}
-                  {!isValidEmail && claimantEmail && (
-                    <span className="text-xs text-primary">
-                      Please enter a valid Email
-                    </span>
-                  )}
-                  {!isValidPhone && claimantNumber && (
-                    <span className="text-xs text-primary">
-                      Please enter a valid phone number
-                    </span>
-                  )}
-                  <span className="text-xs text-[#6B5C42]">
-                    At least one identifier is required.
-                  </span>
-                </div>
-                <div className="mt-3">
-                  <p className="text-sm font-medium">
-                    Proof of Claim Photo Upload{" "}
-                    <span className="text-primary">*</span>
-                  </p>
-                  <p className="text-xs text-[#6B5C42]">
-                    Take or upload a photo of the claimant holding or standing
-                    with the claimed item.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isReleasing}
-                    className="relative w-full h-30 disabled:opacity-40 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
-                  >
-                    {claimantImage ? (
-                      <>
-                        <img
-                          src={claimantImage}
-                          alt="Selected found item"
-                          className="h-full w-full object-contain"
-                        />
-                        <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                          Click image to replace photo.
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
-                        <p className="text-[#6B5C42] text-xs">
-                          Click to upload photo.
-                        </p>
-                      </>
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={isReleasing}
-                    onChange={handleClaimantFileChange}
-                  />
-                  <div className="mt-3">
-                    <p className="text-sm font-medium">
-                      Verification Details
-                      <span className="text-primary">*</span>
-                    </p>
-
-                    <p className="text-xs text-[#6B5C42]">
-                      Describe how ownership was verified.
-                    </p>
-
-                    <textarea
-                      className="textarea w-full bg-white border border-[#DDD9CF] rounded-md mt-1"
-                      rows={3}
-                      placeholder="Example: Claimant identified contents inside the wallet and presented a valid school ID."
-                      value={verificationDetails}
-                      disabled={isReleasing}
-                      onChange={(e) => setVerificationDetails(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-col">
-                  <p className="text-sm font-medium">
-                    Link to a Lost Report{" "}
-                    <span className="text-black/40">(Optional)</span>
-                  </p>
-                  <p className="text-[#6B5C42] text-xs">
-                    If the claimant has an existing lost report for this item,
-                    link it here. The report will be automatically marked as
-                    Resolved when the item is released.
-                  </p>
-                  <div className="relative w-full">
-                    {showSearchResults && searchResults?.length > 0 && (
-                      <div className="w-full h-fit border border-[#DDD9CF] rounded-md">
-                        <div className="absolute bottom-full w-full h-fit border border-[#DDD9CF] rounded-md bg-white z-50">
-                          {searchResults.map((result) => (
-                            <button
-                              key={result.lost_report_id}
-                              type="button"
-                              className="w-full text-sm flex p-2  border-b border-b-[#DDD9CF] hover:bg-gray-100"
-                              onMouseDown={() => {
-
-                                // setLinkReport(result);
-                                setSelectedReport(result);
-                                setLinkModal(true);
-                                setShowSearchResults(false);
-                              }}
-                            >
-                              <p className="flex-1 text-left">
-                                {formatReportId(result.lost_report_id)}
-                              </p>
-
-                              <p className="flex-1 text-left">
-                                {result.item_name}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {linkReport && (
-
-                      <div className="w-full h-fit border border-(--color-quaternary) rounded-md mt-1">
-                        <div className="w-full text-sm  flex bg-(--color-quaternary)/20  p-2 border-b border-b-[#DDD9CF]">
-                          <p className="flex-1 overflow-x-auto min-w-0 truncate">
-                            {formatReportId(linkReport.lost_report_id)}
-                          </p>
-                          <p className="flex-1 min-w-0 truncate">
-                            {linkReport.item_name}
-                          </p>
-                          <button
-                            onClick={() => {
-                              setLinkReport(null);
-                            }}
-                          >
-                            <i className="fa-solid fa-trash-can text-primary"></i>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className="flex flex-1 border border-[#DDD9CF]  rounded-md shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]
-                                                            items-center mt-2"
-                    >
-                      <i className="fa-solid fa-magnifying-glass text-primary ml-2"></i>
-                      <input
-                        type="text"
-                        placeholder="Search"
-                        className="input input-bordered flex-1"
-                        disabled={isReleasing}
-                        onFocus={() => setShowSearchResults(true)}
-                        onBlur={() => {
-                          setTimeout(() => {
-                            setShowSearchResults(false);
-                          }, 200);
-                        }}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                <div className="w-full h-10  flex gap-2 text-xs">
-                  <button
-                    className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                    onClick={() => {
-                      if (hasClaimFormChanges) {
-                        setOpenCancelRelease(true);
-                      } else {
-                        setClaimTab(false);
-                        setEditTab(true);
-                      }
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={
-                      !isClaimValid ||
-                      isReleasing ||
-                      (!isValidEmail && claimantEmail) ||
-                      (!isValidPhone && claimantNumber)
-                    }
-                    onClick={
-                      // handleItemRelease
-                      () => setOpenConfirmRelease(true)
-                    }
-                    className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 `}
-                  >
-                    {isReleasing ? "Releasing..." : "Confirm Release"}
-                  </button>
-                </div>
-                <div className="h-5"></div>
-              </div>
-            </>
+            <ClaimFoundReportTab
+              selectedItem={selectedItem}
+              refreshReports={refreshReports}
+              onCancel={() => {
+                setClaimTab(false);
+                setEditTab(true);
+              }}
+              onSuccess={handleClaimSuccess}
+              setClaimId={setClaimId}
+            />
           )}
           {disposedTab && (
-            <>
-              <div className="h-10 w-full bg-[#F5F5F5] flex shrink-0 fixed mt-15 z-50 ">
-                <button
-                  className={` text-sm px-5
-                                    bg-primary text-white font-semibold border-b-2 border-b-(--color-quaternary) 
-                                     `}
-                >
-                  Mark as Disposed
-                </button>
-              </div>
-              <div className="flex-1 w-full p-5 pt-15 flex flex-col">
-                <div className="flex flex-col gap-2 mb-5">
-                  <p className="text-md font-medium">Confirm Disposal</p>
-                  <p className="text-xs text-justify">
-                    This item will be marked for donation. Please provide the
-                    donation details before confirming.
-                  </p>
-                </div>
-                <AdminDonationDropDown
-                  title="Disposal Method"
-                  disabled={isDisposing}
-                  placeholder="Select Disposal Method"
-                  value={disposalMethod}
-                  onChange={handleDisposalMethodChange}
-                  options={DISPOSAL_METHODS}
-                  reqField
-                />
-                {disposalMethod == 'DONATED' &&
-                  (
-                    <>
-                      <AdminTextField
-                        title="Beneficiary/Location"
-                        reqField={true}
-                        disabled={isDisposing}
-                        value={itemWhereabouts}
-                        onChange={setItemWhereabouts}
-                      />
-                      <AdminDateInput
-                        title="Date of Donation"
-                        reqField={true}
-                        value={donationDate}
-                        disabled={isDisposing}
-                        onChange={setDonationDate}
-                      />
-                      {donationDate && !disposalDateValid && (
-                        <p className="text-xs text-primary">
-                          Disposal date cannot be in the future.
-                        </p>
-                      )}
-                      <p className="text-sm font-medium mt-2">
-                        Proof of Donation Photo Upload{" "}
-                        <span className="text-primary">*</span>
-                      </p>
-                      <p className="text-xs text-[#6B5C42]">
-                        Take or upload a photo of the signed acknowledgement form or
-                        the actual turnover of the item to the beneficiary.
-                      </p>
-                      <button
-                        type="button"
-                        disabled={isDisposing}
-                        onClick={() => fileInputRefDisposalProof.current?.click()}
-                        className="relative disabled:opacity-40 w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
-                      >
-                        {disposalProof ? (
-                          <>
-                            <img
-                              src={disposalProof}
-                              alt="Selected found item"
-                              className="h-full w-full object-contain"
-                            />
-                            <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                              Click image to replace photo.
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
-                            <p className="text-[#6B5C42] text-xs">
-                              Click to upload photo.
-                            </p>
-                          </>
-                        )}
-                      </button>
-                      <input
-                        ref={fileInputRefDisposalProof}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleDisposalProofFileChange}
-                      />
-                      <AdminTextArea
-                        title="Additional Notes"
-                        reqField={true}
-                        disabled={isDisposing}
-                        value={notes}
-                        onChange={setNotes}
-                      />
-                      <hr className="border-(--color-tertiary) my-4 opacity-30" />
-                      <div className="w-full h-10  flex gap-2 text-xs mt-auto">
-                        <button
-                          className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                          onClick={() => {
-                            if (hasDisposalFormChanges) {
-                              setOpenCancelDisposed(true);
-                            } else {
-                              handleCancelDisposed();
-                            }
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!isDisposalValid || isDisposing}
-                          onClick={() => setOpenConfirmDesiposed(true)}
-                          className={`flex-1 h-full bg-primary  font-medium text-white rounded-md disabled:opacity-40`}
-                        >
-                          {isDisposing ? "Disposing..." : "Confirm Disposal"}
-                        </button>
-                      </div>
-                    </>
-                  )
-
-                }
-                {disposalMethod == 'DISPOSED_AS_WASTE' &&
-                  (
-                    <>
-                      <AdminDonationDropDown
-                        title="Reason for Discarding"
-                        reqField={true}
-                        value={reasonForDiscarding}
-                        disabled={isDisposing}
-                        onChange={setReasonForDiscarding}
-                        options={DISCARD_REASONS}
-                        placeholder={"Select a reason"}
-                      />
-                      <AdminDateInput
-                        title="Date of Donation"
-                        reqField={true}
-                        disabled={isDisposing}
-                        value={donationDate}
-                        onChange={setDonationDate}
-                      />
-                      {donationDate && !disposalDateValid && (
-                        <p className="text-xs text-primary">
-                          Disposal date cannot be in the future.
-                        </p>
-                      )}
-                      <p className="text-sm font-medium mt-2">
-                        Proof of Donation Photo Upload{" "}
-                        <span className="text-primary">*</span>
-                      </p>
-                      <p className="text-xs text-[#6B5C42]">
-                        Take or upload a photo of the signed acknowledgement form or
-                        the actual turnover of the item to the beneficiary.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRefDisposalProof.current?.click()}
-                        className="relative w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
-                      >
-                        {disposalProof ? (
-                          <>
-                            <img
-                              src={disposalProof}
-                              alt="Selected found item"
-                              className="h-full w-full object-contain"
-                            />
-                            <span className="absolute bottom-2  left-1/2 -translate-x-1/2 bg-white/90 text-primary text-[10px] px-2 py-1 rounded-md border border-[#DDD9CF]">
-                              Click image to replace photo.
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <i className="fa-regular fa-camera text-(--color-quaternary) text-2xl"></i>
-                            <p className="text-[#6B5C42] text-xs">
-                              Click to upload photo.
-                            </p>
-                          </>
-                        )}
-                      </button>
-                      <input
-                        ref={fileInputRefDisposalProof}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleDisposalProofFileChange}
-                      />
-
-
-
-                      <AdminTextArea
-                        title="Additional Notes"
-                        reqField={true}
-                        value={notes}
-                        onChange={setNotes}
-                      />
-                      <hr className="border-(--color-tertiary) my-4 opacity-30" />
-                      <div className="w-full h-10  flex gap-2 text-xs mt-auto">
-                        <button
-                          className={`px-2 h-full bg-white border border-primary text-primary  font-medium rounded-md`}
-                          onClick={() => {
-                            if (hasDisposalFormChanges) {
-                              setOpenCancelDisposed(true);
-                            } else {
-                              handleCancelDisposed();
-                            }
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!isDisposalValid || isDisposing}
-                          onClick={() => setOpenConfirmDesiposed(true)}
-                          className={`flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40`}
-                        >
-                          {isDisposing ? "Disposing..." : "Confirm Disposal"}
-                        </button>
-                      </div>
-                    </>
-                  )
-
-                }
-
-              </div>
-            </>
+            <DisposeFoundReportTab
+              selectedItem={selectedItem}
+              refreshReports={refreshReports}
+              onCancel={() => {
+                setDisposedTab(false);
+                setEditTab(true);
+              }}
+            />
           )}
         </div>
       </div>
 
-      {linkModal && selectedReport &&
-        (
-          <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-
-              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                  <p className="font-semibold">Link Report</p>
-                  <button onClick={() => setLinkModal(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-
-                </div>
-                <div className="w-full flex flex-col p-3 gap-2">
-                  <div className="w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF]">
-                    <img
-                      src={selectedReport.image_url}
-                      alt={selectedReport.item_name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className=" flex  w-full gap-2 rounded-lg bg-[#FCEBEB] p-3 xl:p-5 ">
-                    <div className="flex flex-col  text-xs xl:text-sm gap-2">
-                      <p className="text-sm xl:text-lg font-semibold text-[#6B5C42]">{formatReportId(selectedReport.lost_report_id)}</p>
-                      <p className="text-[#6B5C42]">Item Name: <span className="text-black">{selectedReport.item_name}</span></p>
-                      <p className="text-[#6B5C42]">Reported by: <span className="text-black">{selectedReport.owner_name || selectedReport.reported_by}</span></p>
-                      <p className="text-[#6B5C42]">Date Lost: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
-                    </div>
-
-                  </div>
-                  <div className="text-xs xl:text-sm text-justify">
-                    <p >
-                      Linking this report will connect this case to the found item and update the status to ‘<span className="font-semibold">Resolved</span>’. Please verify that the details and item match before proceeding.
-                    </p>
-                  </div>
-                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                  <div className="flex gap-2">
-                    <button
-                      className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => { setLinkModal(false); setSelectedReport(null) }}
-                    >No</button>
-                    <button
-                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => {
-                        setLinkReport(selectedReport);
-                        setLinkModal(false);
-                        setSelectedReport(null);
-                      }}
-                      disabled={isLoading}
-                    >{isLoading ? "Lingking.." : "Confirm Link"}</button>
-                  </div>
-
-                </div>
-                <div>
-
-                </div>
-              </div>
-            </div>
-          </>
-        )
-      }
       {imageSelected &&
         (
           <>
@@ -2308,88 +607,23 @@ export default function FoundReportItemManagementModal({
           </>
         )
       }
-      {openArchivedDialog &&
-        (
-          <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-
-              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                  <p className="font-semibold">Archived Item</p>
-                  <button onClick={() => setOpenArchivedDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-
-                </div>
-                <div className="flex flex-col flex-1 p-3 gap-3">
-                  <div className="w-full flex flex-col justify-center items-center">
-                    <Archive size={40} className="text-[#7F8C8D]" />
-                    <p className="text-md font-medium">Archive Item?</p>
-                  </div>
-
-                  <div className="text-sm text-justify">
-                    <p>Archiving this item will immediately hide it from the public feed and update its status to <span className="font-semibold">'Archived'.</span> The record will remain stored in the system and<span className="font-semibold"> an be restored at any time.</span>.</p>
-                  </div>
-                  <div className="w-full h-full flex items-center text-xs flex-1 text-[#6B5C42] italic">
-                    <p>Archiving this listing will be recorded in the system under your administrator account.</p>
-                  </div>
-                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                  <div className="flex gap-2">
-                    <button
-                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => setOpenArchivedDialog(false)}
-                    >Cancel</button>
-                    <button
-                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => handleArchiveReport(selectedItem.found_report_id)}
-                      disabled={isArchiving}
-                    >
-                      {isArchiving ? "Archving.." : "Confirm Archived"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )
-      }
+      {openArchivedDialog && (
+  <ArchiveDialog
+    open={openArchivedDialog}
+    onClose={() => setOpenArchivedDialog(false)}
+    onConfirm={() => handleArchiveReport(selectedItem.found_report_id)}
+    isArchiving={isArchiving}
+  />
+)}
       {openRestoreDialog &&
         (
-          <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+          <RestoreDialog
+            open={openRestoreDialog}
+            onClose={() => setOpenRestoreDialog(false)}
+            isRestoring={isRestoring}
+            onConfirm={() => handleRestoreReport(selectedItem.found_report_id)}
 
-              <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
-                <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                  <p className="font-semibold">Restore Listing</p>
-                  <button onClick={() => setOpenRestoreDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
-
-                </div>
-                <div className="flex flex-col flex-1 p-3 gap-3">
-                  <div className="w-full flex flex-col justify-center items-center">
-                    <ArchiveRestore size={40} className="text-[#0288D1]" />
-                    <p className="text-md font-medium">Restore Listing?</p>
-                  </div>
-
-                  <div className="text-sm text-justify">
-                    <p>This will change its status back to <span className="font-semibold">‘Unclaimed’ </span> and make it visible again in the active item listings.</p>
-                  </div>
-
-                  <hr className="border-(--color-tertiary) my-2 opacity-30" />
-                  <div className="flex gap-2">
-                    <button
-                      className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => setOpenRestoreDialog(false)}
-                    >Cancel</button>
-                    <button
-                      className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={() => handleRestoreReport(selectedItem.found_report_id)}
-                      disabled={isRestoring}
-                    >
-                      {isRestoring ? "Restoring.." : "Confirm Restore"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
+          />
         )
       }
       {openUpdateDialog &&
@@ -2427,7 +661,7 @@ export default function FoundReportItemManagementModal({
                     </button>
                     <button
                       className="w-full h-10 flex-1 disabled:opacity-40 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95"
-                      onClick={()=>handleSaveEdit(foundReportId)}
+                      onClick={() => handleSaveEdit(foundReportId)}
                     >
                       {isSavingEdit ? "Updating..." : "Update Item"}
                     </button>
@@ -2437,38 +671,6 @@ export default function FoundReportItemManagementModal({
             </div>
           </>
         )
-      }
-      {openCancelUpdate &&
-        <AdminConfirmDialog
-          description={"Any edits you’ve made to this item will be lost. The listing will keep its original details."}
-          onClose={() => setOpenCancelUpdate(false)}
-          onConfirm={handleCancelEdit}
-        />
-      }
-      {openConfirmRelease &&
-        <AdminConfirmDialog
-          title="Confirm Release"
-          description={`Confirm release for ${formatItemId(selectedItem.item_id)}`}
-          cancelText="Cancel"
-          confirmText="Confirm Release"
-          onClose={() => setOpenConfirmRelease(false)}
-          onConfirm={handleItemRelease}
-        />
-      }
-      {openCancelRelease &&
-        <AdminConfirmDialog
-          description={`Cancel the release of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
-          onClose={() => {
-            setOpenCancelRelease(false)
-          }
-          }
-          onConfirm={() => {
-            setClaimTab(false);
-            setEditTab(true);
-            resetClaimForm();
-            setOpenCancelRelease(false)
-          }}
-        />
       }
 
       {openClaimNavigateDialog &&
@@ -2492,47 +694,12 @@ export default function FoundReportItemManagementModal({
 
         />
       }
-      {openCancelDisposed &&
-        <AdminConfirmDialog
-          description={`Cancel the DIsposal of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
-          onClose={() => {
-            setOpenCancelDisposed(false)
-          }
-          }
-          onConfirm={
-            handleCancelDisposed}
-        />
-      }
-      {openConfirmDesiposed &&
-        <AdminConfirmDialog
-          description={`Are you sure you want to permanently dispose of this item ${formatItemId(selectedItem.item_id)}? This action cannot be undone and will officially close its record.`}
-          onClose={() => {
-            setOpenConfirmDesiposed(false)
-          }
-          }
-          onConfirm={
-            handleDisposedItem}
-          confirmText="Confirm Disposal"
-          cancelText="Cancel"
-        />
-      }
 
       {selectedImage &&
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
-          <div className="relative rounded-2xl h-125">
-            <button
-              className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
-              onClick={() => setSelectedImage(null)}
-            >
-              <X size={16} />
-            </button>
-            <img
-              src={selectedImage}
-              alt="Preview"
-              className="h-full w-full  "
-            />
-          </div>
-        </div>
+        <ScaleImage
+          selectedImage={selectedImage}
+          setSelectedImage={setSelectedImage}
+        />
       }
     </>
   );

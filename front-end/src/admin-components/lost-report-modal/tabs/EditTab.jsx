@@ -48,56 +48,62 @@ export default function EditTab({
         }
     }
 
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        const preview = URL.createObjectURL(file);
+     if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit")
+      return;
+    }
+    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid file type");
+      return;
+    }
 
-        setSelectedFile(file);
-        setImage(preview);
-        try {
-            setIsAnalyzing(true);
+    if (image && image.startsWith("blob:")) {
+        URL.revokeObjectURL(image);
+    }
 
-            const formData = new FormData();
-            formData.append("image", file);
+    const preview = URL.createObjectURL(file);
 
-            const response = await fetchWithAuth(
-                `${API_URL}/api/gemini-item-listing/describe-item`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
-            );
+    setSelectedFile(file);
+    setImage(preview);
+    try {
+        setIsAnalyzing(true);
+        const formDataObj = new FormData();
+        formDataObj.append("image", file);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error);
+        const response = await fetchWithAuth(
+            `${API_URL}/api/gemini-item-listing/describe-item`,
+            {
+                method: "POST",
+                body: formDataObj,
             }
+        );
 
-            const matchedCategory = categories.find(
-                (category) =>
-                    category.category_name.toLowerCase() ===
-                    data.category?.toLowerCase()
-            );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
 
-            setFormData(prev => ({
-                ...prev,
-                item_name: data.itemName || prev.item_name,
-                description: data.detailedDescription || prev.description,
-                contents: data.contents || prev.contents,
-                category_id: matchedCategory
-                    ? String(matchedCategory.category_id)
-                    : prev.category_id,
-            }));
+        const matchedCategory = categories.find(
+            (cat) => cat.category_name.toLowerCase() === data.category?.toLowerCase()
+        );
 
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
+        setFormData(prev => ({
+            ...prev,
+            item_name: data.itemName || prev.item_name,
+            description: data.detailedDescription || prev.description,
+            contents: data.contents || prev.contents,
+            category_id: matchedCategory ? String(matchedCategory.category_id) : prev.category_id,
+        }));
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to analyze image with AI.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+};
 
     const [formData, setFormData] = useState({
         item_name: "",
@@ -287,6 +293,9 @@ export default function EditTab({
                             }
 
                         </div>
+                        <p className="text-xs text-(--color-tertiary) opacity-50 font-medium mt-1 mb-2">
+                                            PNG, JPG or WEBP up to 10MB
+                                        </p>
                         <input
                             ref={fileInputRef}
                             type="file"

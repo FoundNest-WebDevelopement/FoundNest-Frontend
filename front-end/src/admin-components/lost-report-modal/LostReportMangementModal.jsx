@@ -267,7 +267,8 @@ export default function LostReportMangementModal(
                         :
                         (
                             <>
-                              <div className="h-full w-full p-5 flex-1 overflow-y-auto">
+                             <div className="w-full p-5 flex-1 min-h-0 overflow-y-auto flex flex-col">
+
                         {selectedItem.found_report_id &&
                             (
                                 <>
@@ -446,25 +447,27 @@ export default function LostReportMangementModal(
                                         </div>
                                     </>)
                                 }
-                            </div>
                         </div>
-                        <div>
-                            <div>
+                        
+                        </div>
+                        <div className="mt-auto">
+                            <div >
                             </div>
-                            <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
                             {selectedItem.status !== 'archived' && selectedItem.status !== 'resolved' &&
-                                <div className="relative flex w-full h-10 my-5 gap-2 text-[10px] xl:text-xs">
+                                <div className="relative flex w-full h-10 my-5 gap-2 text-[10px] xl:text-xs ">
                                     {openUpdateStatus && (
-                                        <div className="absolute bottom-11 right-5  h-fit w-45 bg-white border translate-x-14 xl:translate-x-5 border-[#DDD9CF] rounded-md">
+                                        <div className="absolute bottom-12 right-0 h-fit w-45 bg-white border border-[#DDD9CF] shadow-lg rounded-md z-50 animate-in fade-in slide-in-from-bottom-2">
+                                            
                                             <button
-                                                className="text-xs p-2 border-b border-[#DDD9CF] w-full"
+                                                className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
                                                 onClick={() => setResolved(true)}
                                             >
                                                 <p className="ml-2">Mark as Resolved</p>
                                             </button>
                                             {selectedItem.status === "to_be_disposed" && (
                                                 <button
-                                                    className="text-xs p-2 border-b border-[#DDD9CF] w-full"
+                                                   className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
                                                     onClick={() => {
                                                         startDisposing();
                                                         setOpenUpdateStatus(false);
@@ -474,10 +477,10 @@ export default function LostReportMangementModal(
                                                 </button>
                                             )}
                                             <button
-                                                className="text-xs p-2 border-b border-[#DDD9CF] w-full text-primary"
+                                                className="text-xs p-3 w-full text-left text-red-600 hover:bg-red-50 transition rounded-b-md"
                                                 onClick={() => setOpenArchiveDialog(true)}
                                             >
-                                                <p className="ml-2">Archive</p>
+                                                <p className="ml-2">Archive Report</p>
                                             </button>
                                         </div>
                                     )}
@@ -509,6 +512,7 @@ export default function LostReportMangementModal(
 
                                 </div>
                             }
+                            </div>
                             {selectedItem.status === 'archived' && selectedItem.archived_by_user_id &&
                                 (<>
                                     <div className=" flex  w-full gap-2 rounded-lg bg-[#EDE9FE] border border-[#7008E7] p-3 xl:p-5 border-l-4">
@@ -554,7 +558,6 @@ export default function LostReportMangementModal(
                                     <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
                                 }
                             </div>
-                        </div>
                     </div>
                             </>
                         )

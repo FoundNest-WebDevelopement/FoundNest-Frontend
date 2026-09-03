@@ -223,29 +223,6 @@ const paddedClaimId =
             );
     });
 
-    //HANDLE EXPORT CSV
-    const handleExportTransactions = async () => {
-  const token = localStorage.getItem("token");
-
-  const response = await fetchWithAuth(
-    `${API_URL}/api/export/transactions/csv`
-  );
-
-  const blob = await response.blob();
-
-  const url = window.URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "transactions.csv";
-  document.body.appendChild(a);
-  a.click();
-
-  a.remove();
-  window.URL.revokeObjectURL(url);
-};
-
-
     return (
 
         <>
@@ -268,7 +245,7 @@ const paddedClaimId =
                         
                     </div>
                     <div className="h-full w-fit ml-40 xl:ml-60 flex items-center  ">
-                                            <AdminButton icon={Download} label="Export CSV" isBorder={true} isShadow={true} isIcon={true} 
+                                            <AdminButton icon={Download} label="Export Transactions" isBorder={true} isShadow={true} isIcon={true} 
                                             onClick={()=>setIsExportTransactionOpen(true)}
                                             />
                 

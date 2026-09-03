@@ -224,6 +224,17 @@ export default function LostReportModal(
 
         if (!file) return;
 
+        if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit")
+      return;
+    }
+    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid file type");
+      return;
+    }
+
+
         setSelectedFile(file);
         setImage(URL.createObjectURL(file));
 
@@ -377,7 +388,7 @@ export default function LostReportModal(
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isSubmitting}
-                                className="relative w-full disabled:cursor-not-allowed h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                                className="relative cursor-pointer w-full disabled:cursor-not-allowed h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                             >
                                 {image ? (
                                     <>
@@ -394,6 +405,9 @@ export default function LostReportModal(
                                     <>
                                         <i className="fa-regular fa-camera text-(--color-quaternary) text-4xl"></i>
                                         <p className="text-[#6B5C42] text-md">Click to upload photo. <span className="">(Optional)</span></p>
+                                        <p className="text-xs text-(--color-tertiary) opacity-50 font-medium mb-1">
+                                            PNG, JPG or WEBP up to 10MB
+                                        </p>
                                         <p className="text-[#9C8570] text-sm">*FoundNest AI will help auto-fill details based on your photo.</p>
                                     </>
                                 )}
@@ -675,9 +689,6 @@ export default function LostReportModal(
                             disabled={isSubmitting}
 
                         />
-
-
-
                     </div>
                     <div className="h-18 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
                         <button
