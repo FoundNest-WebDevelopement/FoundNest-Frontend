@@ -698,7 +698,7 @@ useEffect(() => {
             <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
             <div className="relative w-full mt-2">
               <button
-                className={`w-full p-3 text-xs disabled:opacity-80 transition-transform duration-100 ease-out enabled:active:scale-90${
+                className={`w-full p-3 text-xs disabled:opacity-80 transition-transform duration-100 ease-out ${
                   openLocations ? " border-primary text-black border" : " "
                 } 
                 ${totalLocations === 0? "text-[#4B2D23]/50" : "text-black"}

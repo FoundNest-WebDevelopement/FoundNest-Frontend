@@ -54,7 +54,7 @@ export default function Find() {
   useEffect(() => {
 
     setIsLoadingReports(true);
-    fetchWithAuth(`${API_URL}/api/found-reports`
+    fetchWithAuth(`${API_URL}/api/found-reports/public`
       ,  
     )
       .then((res) => res.json())

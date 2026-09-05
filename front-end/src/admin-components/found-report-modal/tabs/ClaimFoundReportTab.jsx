@@ -248,7 +248,7 @@ export default function ClaimFoundReportTab({
 
             {/* Link Report Modal */}
             {linkModal && selectedReport && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1020]">
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
                     <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
                         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                             <p className="font-semibold">Link Report</p>

@@ -49,7 +49,6 @@ export default function ExportModal({
                 format,
                 ...queryParams,
             });
-            console.log('API: ',`${API_URL}${endpoint}?${params.toString()}`)
             // Dynamically uses the endpoint passed via props
             const response = await fetchWithAuth(
                 `${API_URL}${endpoint}?${params.toString()}`
