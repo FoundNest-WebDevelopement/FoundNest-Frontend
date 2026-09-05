@@ -14,11 +14,14 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useSearchParams, useLocation } from "react-router-dom";
 import WebLoading from "../global-components/WebLoading";
 import ExportModal from "../global-components/ExportModal";
+import { toast } from "react-toastify";
 
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
 
-  const userId = localStorage.getItem("user_id")
+  const userId = localStorage.getItem("user_id");
+
+  const officeId = localStorage.getItem("office_location");
 
   const [isExportItemOpen, setIsExportItemOpen] = useState(false);
 
@@ -64,14 +67,14 @@ export default function ItemManagement() {
   // TEMP VARIABLES FILTER STORAGE
   const [searchTemp, setSearchTemp] = useState("");
   const [dateFoundTemp, setDateFoundTemp] = useState("");
-  const [locationTemp, setLocationTemp] = useState("");
+  const [locationTemp, setLocationTemp] = useState(officeId);
   const [categoryTemp, setCategoryTemp] = useState("");
   const [statusTemp, setStatusTemp] = useState("unclaimed");
 
   // SEARCH AND FILTER VARIABLES
   const [search, setSearch] = useState("");
   const [dateFound, setDateFound] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(officeId);
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("unclaimed");
 
@@ -162,7 +165,10 @@ const fetchArray = async (url, label) => {
 
 useEffect(() => {
     fetchFoundReports();
+    
 }, []);
+
+
 
 
   useEffect(() => {
@@ -252,7 +258,7 @@ useEffect(() => {
     if (report) {
       setSelectedItem(report);
     } else {
-      alert(`Item SI-${String(itemId).padStart(5, "0")} not found in the system.`);
+      toast.error(`Item SI-${String(itemId).padStart(5, "0")} not found in the system.`);
     }
   };
 

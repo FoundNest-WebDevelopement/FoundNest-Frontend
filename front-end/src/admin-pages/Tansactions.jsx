@@ -81,6 +81,8 @@ export default function Transactions() {
         const res = await fetchWithAuth(`${API_URL}/api/claim-records`);
         const data = await res.json();
 
+        console.log(data)
+
         setRecords(Array.isArray(data) ? data : []);
     } catch (err) {
         console.error("Error fetching claim records:", err);

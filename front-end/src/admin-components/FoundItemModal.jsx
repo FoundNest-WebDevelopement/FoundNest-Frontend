@@ -27,6 +27,7 @@ export default function FoundItemModal({
     const API_URL = import.meta.env.VITE_API_URL;
 
     const adminID = localStorage.getItem("admin_id")
+    const officeId = localStorage.getItem("office_location");
     const superAdminID = localStorage.getItem("super_admin_id")
     const userId = localStorage.getItem("user_id")
     const [selectedFile, setSelectedFile] = useState(null);
@@ -40,7 +41,7 @@ export default function FoundItemModal({
     const [timeFound, setTimeFound] = useState("");
     const [surrenderedBy, setSurrenderedBy] = useState("");
     const [additionalNotes, setAdditionalNotes] = useState("");
-    const [currentLocation, setCurrentLocation] = useState("");
+    const [currentLocation, setCurrentLocation] = useState(officeId);
     const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -472,7 +473,7 @@ const selectedCurrentLocation = locations.find(
                             onChange={setCurrentLocation}
                             options={locations}
                             reqField={true}
-                            disableField={isSubmitting}
+                            disableField={true}
                         />
                     </div>
 
