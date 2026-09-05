@@ -354,6 +354,7 @@ export default function EditFoundReportTab({
                             <AdminDateInput
                                 title="Date Found"
                                 reqField={true}
+                                max={getTodayDateString()}
                                 value={formData.found_date}
                                 onChange={(value) => handleChange("found_date", value)}
                             />
