@@ -5,11 +5,10 @@ import Report from "./pages/Report";
 import Find from "./pages/Find";
 import Profile from "./pages/Profile";
 import Notification from "./pages/Notification";
-import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
 import FoundItemDetails from "./pages/FoundItemDetails";
 import NotificationDetails from "./pages/NotificationDetails";
@@ -25,20 +24,12 @@ import NotFoundPage from "./pages/NotFoundPage";
 import UserLayout from "./layout/UserLayout";
 
 
-// hide the dock and notif from landingpage, log, reg page
 function Layout() {
-  const location = useLocation();
-  const hideNav =
-    ["/", "/login", "/register", "/forgot-password"].includes(
-      location.pathname
-    ) ||
-    location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/super_admin");
   return (
     <>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 

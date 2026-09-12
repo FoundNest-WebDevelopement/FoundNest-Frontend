@@ -6,6 +6,18 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+function disposeScanner(instance) {
+  const clearScannerUi = () => {
+    instance.clear().catch(() => {});
+  };
+
+  try {
+    instance.stop().then(clearScannerUi).catch(clearScannerUi);
+  } catch {
+    clearScannerUi();
+  }
+}
+
 // Icons
 const RegisterIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +113,6 @@ export default function QRItem({ onBack }) {
   const [loading, setLoading] = useState(false);
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
-  const isStartedRef = useRef(false);
 
   const isFormValid =
     form.ownerName.trim() !== "" &&
@@ -252,19 +263,18 @@ export default function QRItem({ onBack }) {
   useEffect(() => {
     if (page !== "scan" || !scannerRef.current) return;
 
+    let cancelled = false;
+    scannerRef.current.replaceChildren();
     const html5Qrcode = new Html5Qrcode("qr-reader");
     html5QrRef.current = html5Qrcode;
-    isStartedRef.current = false;
 
     html5Qrcode
       .start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
+        { fps: 10 },
         (decodedText) => {
-          if (isStartedRef.current) {
-            html5Qrcode.stop().catch(() => {});
-            isStartedRef.current = false;
-          }
+          disposeScanner(html5Qrcode);
+          html5QrRef.current = null;
           try {
             setScanResult(JSON.parse(decodedText));
           } catch {
@@ -275,15 +285,17 @@ export default function QRItem({ onBack }) {
         () => {}
       )
       .then(() => {
-        isStartedRef.current = true;
+        // Effect was cleaned up while the camera was still starting up.
+        if (cancelled) {
+          disposeScanner(html5Qrcode);
+          html5QrRef.current = null;
+        }
       })
       .catch(() => {});
 
     return () => {
-      if (isStartedRef.current) {
-        html5Qrcode.stop().catch(() => {});
-        isStartedRef.current = false;
-      }
+      cancelled = true;
+      disposeScanner(html5Qrcode);
       html5QrRef.current = null;
     };
   }, [page]);
@@ -782,18 +794,17 @@ export default function QRItem({ onBack }) {
         <BackHeader
           title="Scan An Item"
           onBackPress={() => {
-            if (html5QrRef.current && isStartedRef.current) {
-              html5QrRef.current.stop().catch(() => {});
-              isStartedRef.current = false;
+            if (html5QrRef.current) {
+              disposeScanner(html5QrRef.current);
+              html5QrRef.current = null;
             }
-            html5QrRef.current = null;
             setPage("main");
           }}
         />
         <div className="flex-1 flex items-center justify-center relative">
           <div id="qr-reader" ref={scannerRef} className="w-full" />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-56 h-56 relative">
+            <div className="w-56 h-56 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>

@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
+function disposeScanner(instance) {
+  const clearScannerUi = () => {
+    instance.clear().catch(() => {});
+  };
+
+  try {
+    instance.stop().then(clearScannerUi).catch(clearScannerUi);
+  } catch {
+    clearScannerUi();
+  }
+}
+
 export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
 
   const [screen, setScreen] = useState("scanning"); // "scanning" | "detected" | "error"
@@ -9,47 +21,17 @@ export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
 
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
-  const isStartedRef = useRef(false);
 
-  useEffect(() => {
-    if (!open || screen !== "scanning") return;
-
-    const timer = setTimeout(() => {
-      const element = document.getElementById("item-finder-qr-reader");
-      if (!element) return;
-
-      const html5Qrcode = new Html5Qrcode("item-finder-qr-reader");
-      html5QrRef.current = html5Qrcode;
-      isStartedRef.current = false;
-
-      html5Qrcode
-        .start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
-          (decodedText) => {
-            if (isStartedRef.current) {
-              html5Qrcode.stop().catch(() => {});
-              isStartedRef.current = false;
-            }
-            handleQRDetected(decodedText);
-          },
-          () => {}
-        )
-        .then(() => {
-          isStartedRef.current = true;
-        })
-        .catch(() => {});
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      if (isStartedRef.current && html5QrRef.current) {
-        html5QrRef.current.stop().catch(() => {});
-        isStartedRef.current = false;
-      }
+  const handleClose = () => {
+    if (html5QrRef.current) {
+      disposeScanner(html5QrRef.current);
       html5QrRef.current = null;
-    };
-  }, [open, screen]);
+    }
+    setScreen("scanning");
+    setScannedText("");
+    setError("");
+    setOpen(false);
+  };
 
   const handleQRDetected = (decodedText) => {
     setScannedText(decodedText);
@@ -84,17 +66,49 @@ export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
     setScreen("scanning");
   };
 
-  const handleClose = () => {
-    if (html5QrRef.current && isStartedRef.current) {
-      html5QrRef.current.stop().catch(() => {});
-      isStartedRef.current = false;
-    }
-    html5QrRef.current = null;
-    setScreen("scanning");
-    setScannedText("");
-    setError("");
-    setOpen(false);
-  };
+  useEffect(() => {
+    if (!open || screen !== "scanning") return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      const element = document.getElementById("item-finder-qr-reader");
+      if (!element) return;
+      element.replaceChildren();
+
+      const html5Qrcode = new Html5Qrcode("item-finder-qr-reader");
+      html5QrRef.current = html5Qrcode;
+
+      html5Qrcode
+        .start(
+          { facingMode: "environment" },
+          { fps: 10 },
+          (decodedText) => {
+            disposeScanner(html5Qrcode);
+            html5QrRef.current = null;
+            handleQRDetected(decodedText);
+          },
+          () => {}
+        )
+        .then(() => {
+          // Effect was cleaned up while the camera was still starting up.
+          if (cancelled) {
+            disposeScanner(html5Qrcode);
+            html5QrRef.current = null;
+          }
+        })
+        .catch(() => {});
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (html5QrRef.current) {
+        disposeScanner(html5QrRef.current);
+        html5QrRef.current = null;
+      }
+    };
+  }, [open, screen]);
 
   return (
     <dialog className={`modal ${open ? "modal-open" : ""}`}>
@@ -120,15 +134,16 @@ export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
               <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ height: "280px" }}>
                 <div id="item-finder-qr-reader" ref={scannerRef} className="w-full h-full" />
 
-                {/* Corner brackets overlay */}
+                {/* Custom viewfinder; no qrbox is passed to html5-qrcode. */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-48 h-48 relative">
+                  <div className="w-48 h-48 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
                   </div>
                 </div>
+
               </div>
 
               <p className="text-sm text-center text-[#4B2D23]">
@@ -174,18 +189,20 @@ export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
 
         {/* FOOTER BUTTONS */}
         <div className="h-16 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={handleScanAgain}
-            className="flex items-center gap-2 font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
-          >
-            <i className="fa-solid fa-rotate-right text-xs"></i>
-            Scan Again
-          </button>
+          {screen !== "scanning" && (
+            <button
+              type="button"
+              onClick={handleScanAgain}
+              className="flex items-center gap-2 font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
+            >
+              <i className="fa-solid fa-rotate-right text-xs"></i>
+              Scan Again
+            </button>
+          )}
           <button
             type="button"
             onClick={handleClose}
-            className="font-medium text-sm text-white bg-primary px-4 py-2 rounded-md"
+            className="font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
           >
             Close
           </button>
