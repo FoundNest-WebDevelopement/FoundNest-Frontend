@@ -7,6 +7,7 @@ import SuperAdminDashboard from "./super-admin-pages/SuperAdminDashboard";
 import SuperAdminUserMangement from "./super-admin-pages/SuperAdminUserManagement";
 import SuperAdminGlobalConfiguration from "./super-admin-pages/SuperAdminGlobalConfiguration";
 import SuperAdminSystemReports from "./super-admin-pages/SuperAdminSystemReports";
+import SuperAdminSystemReportDetail from "./super-admin-pages/SuperAdminSystemReportDetail";
 import SuperAdminActionLogs from "./super-admin-pages/SuperAdminActionLogs";
 import SuperAdminProfile from "./super-admin-pages/SuperAdminProfile";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -30,6 +31,7 @@ function SuperAdmin() {
                     <Route path="user_management" element={<SuperAdminUserMangement />} />
                     <Route path="global_configuration" element={<SuperAdminGlobalConfiguration />} />
                     <Route path="system_reports" element={<SuperAdminSystemReports />} />
+                    <Route path="system_reports/:officeId" element={<SuperAdminSystemReportDetail />} />
                     <Route path="action_logs" element={<SuperAdminActionLogs />} />
                     <Route path="super_admin_profile" element={<SuperAdminProfile />} />
                 </Route>
