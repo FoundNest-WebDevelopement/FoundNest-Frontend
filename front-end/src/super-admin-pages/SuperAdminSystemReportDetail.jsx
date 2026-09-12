@@ -77,19 +77,14 @@ export default function SuperAdminSystemReportDetail() {
     const [dateTo, setDateTo] = useState("");
     const [selectedAdmin, setSelectedAdmin] = useState("all");
 
-    const [appliedActivityTypes, setAppliedActivityTypes] = useState([]);
-    const [appliedDateFrom, setAppliedDateFrom] = useState("");
-    const [appliedDateTo, setAppliedDateTo] = useState("");
-    const [appliedAdmin, setAppliedAdmin] = useState("all");
-
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
     const hasActiveFilters =
-        appliedActivityTypes.length > 0 ||
-        appliedDateFrom !== "" ||
-        appliedDateTo !== "" ||
-        appliedAdmin !== "all";
+        selectedActivityTypes.length > 0 ||
+        dateFrom !== "" ||
+        dateTo !== "" ||
+        selectedAdmin !== "all";
 
     useEffect(() => {
         const fetchOverview = async () => {
@@ -126,10 +121,10 @@ export default function SuperAdminSystemReportDetail() {
             });
 
             if (search.trim()) params.set("search", search.trim());
-            if (appliedActivityTypes.length > 0) params.set("activity", appliedActivityTypes.join(","));
-            if (appliedDateFrom) params.set("date_from", appliedDateFrom);
-            if (appliedDateTo) params.set("date_to", appliedDateTo);
-            if (appliedAdmin !== "all") params.set("admin_id", appliedAdmin);
+            if (selectedActivityTypes.length > 0) params.set("activity", selectedActivityTypes.join(","));
+            if (dateFrom) params.set("date_from", dateFrom);
+            if (dateTo) params.set("date_to", dateTo);
+            if (selectedAdmin !== "all") params.set("admin_id", selectedAdmin);
 
             const response = await fetchWithAuth(`${API_URL}/api/system-reports/office/${officeId}/logs?${params.toString()}`);
             const data = await response.json();
@@ -151,9 +146,11 @@ export default function SuperAdminSystemReportDetail() {
     useEffect(() => {
         fetchLogs();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [officeId, currentPage, search, appliedActivityTypes, appliedDateFrom, appliedDateTo, appliedAdmin]);
+    }, [officeId, currentPage, search, selectedActivityTypes, dateFrom, dateTo, selectedAdmin]);
 
     const toggleActivityType = (value) => {
+        setCurrentPage(1);
+
         if (value === "ALL") {
             setSelectedActivityTypes([]);
             return;
@@ -164,23 +161,11 @@ export default function SuperAdminSystemReportDetail() {
         );
     };
 
-    const handleApplyFilters = () => {
-        setAppliedActivityTypes(selectedActivityTypes);
-        setAppliedDateFrom(dateFrom);
-        setAppliedDateTo(dateTo);
-        setAppliedAdmin(selectedAdmin);
-        setCurrentPage(1);
-    };
-
     const handleClearFilters = () => {
         setSelectedActivityTypes([]);
         setDateFrom("");
         setDateTo("");
         setSelectedAdmin("all");
-        setAppliedActivityTypes([]);
-        setAppliedDateFrom("");
-        setAppliedDateTo("");
-        setAppliedAdmin("all");
         setCurrentPage(1);
     };
 
@@ -190,10 +175,10 @@ export default function SuperAdminSystemReportDetail() {
 
             const params = new URLSearchParams();
             if (search.trim()) params.set("search", search.trim());
-            if (appliedActivityTypes.length > 0) params.set("activity", appliedActivityTypes.join(","));
-            if (appliedDateFrom) params.set("date_from", appliedDateFrom);
-            if (appliedDateTo) params.set("date_to", appliedDateTo);
-            if (appliedAdmin !== "all") params.set("admin_id", appliedAdmin);
+            if (selectedActivityTypes.length > 0) params.set("activity", selectedActivityTypes.join(","));
+            if (dateFrom) params.set("date_from", dateFrom);
+            if (dateTo) params.set("date_to", dateTo);
+            if (selectedAdmin !== "all") params.set("admin_id", selectedAdmin);
 
             const response = await fetchWithAuth(`${API_URL}/api/system-reports/office/${officeId}/export?${params.toString()}`);
 
@@ -344,13 +329,19 @@ export default function SuperAdminSystemReportDetail() {
                             <input
                                 type="date"
                                 value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
+                                onChange={(e) => {
+                                    setDateFrom(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
                             <input
                                 type="date"
                                 value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
+                                onChange={(e) => {
+                                    setDateTo(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
                         </div>
@@ -360,7 +351,10 @@ export default function SuperAdminSystemReportDetail() {
                         <p className="text-sm font-semibold text-[#1A1208]">Admin Personnel</p>
                         <select
                             value={selectedAdmin}
-                            onChange={(e) => setSelectedAdmin(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedAdmin(e.target.value);
+                                setCurrentPage(1);
+                            }}
                             className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary bg-white"
                         >
                             <option value="all">All Admins</option>
@@ -377,18 +371,10 @@ export default function SuperAdminSystemReportDetail() {
                     <div className="flex items-center gap-4">
                         <button
                             type="button"
-                            onClick={handleApplyFilters}
-                            className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                                transition-transform duration-100 active:scale-95"
-                        >
-                            Apply Filters
-                        </button>
-                        <button
-                            type="button"
                             onClick={handleClearFilters}
                             className="text-primary text-sm font-medium"
                         >
-                            Clear
+                            Clear Filters
                         </button>
                     </div>
                 </div>
