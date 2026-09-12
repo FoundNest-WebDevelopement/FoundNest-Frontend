@@ -139,8 +139,10 @@ export default function SuperAdminActionLogs() {
         setAppliedDateFrom(dateFrom);
         setAppliedDateTo(dateTo);
         setCurrentPage(1);
-        setIsFilterOpen(false);
     };
+    useEffect(()=>{
+    handleApplyFilters();
+    },[dateFrom, selectedActionTypes, dateTo])
 
     const handleClearFilters = () => {
         setSelectedActionTypes([]);
@@ -310,19 +312,12 @@ useEffect(() => {
                     <div className="flex items-center gap-4">
                         <button
                             type="button"
-                            onClick={handleApplyFilters}
+                            onClick={handleClearFilters}
                             className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
                                 transition-transform duration-100 active:scale-95"
                         >
-                            Apply Filters
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleClearFilters}
-                            className="text-primary text-sm font-medium"
-                        >
-                            Clear
-                        </button>
+                            Clear Filters
+                        </button>                 
                     </div>
                 </div>
             )}

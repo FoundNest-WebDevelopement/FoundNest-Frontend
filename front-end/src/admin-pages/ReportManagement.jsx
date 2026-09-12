@@ -33,15 +33,6 @@ export default function ReportManagement() {
 
     const navigatedReportId = searchParams.get("reportId");
 
-
-    //TEMP VARIABLES FILTER STORAGE
-    const [searchTemp, setSearchTemp] = useState("");
-    const [dateLostTemp, setDateLostTemp] = useState("");
-    const [locationTemp, setLocationTemp] = useState("");
-    const [categoryTemp, setCategoryTemp] = useState("");
-    const [statusTemp, setStatusTemp] = useState("open");
-    const [reportTypeTemp, setReportTypeTemp] = useState("All Report");
-
     //LOG LOST REPORT TOGGLE
     const [openLogItem, setOpenLogItem] = useState(false);
     const [isExportReportOpen, setIsExportReportOpen] = useState(false);
@@ -207,25 +198,9 @@ export default function ReportManagement() {
         setStatus("open");
         setDateLost("");
         setReportType("All Report");
-
-        setSearchTemp("");
-        setLocationTemp("");
-        setCategoryTemp("");
-        setStatusTemp("open");
-        setDateLostTemp("");
-        setReportTypeTemp("All Report");
     }
 
-    // HAMDLE APPLY FILTER
-    const handleApplyFilters = () => {
-        setSearch(searchTemp);
-        setLocation(locationTemp);
-        setCategory(categoryTemp);
-        setStatus(statusTemp);
-        setDateLost(dateLostTemp);
-        setReportType(reportTypeTemp);
 
-    }
 
     //FILRTER REPORTS
     const filteredReports = reports.filter((report) => {
@@ -325,23 +300,23 @@ export default function ReportManagement() {
 
                             <div className="flex w-full h-full gap-2 items-center justify-center">
                                 <div className="flex-1">
-                                    <AdminAllLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={allLocations} hidePlaceholder={false} />
+                                    <AdminAllLocationDropDown placeholder="All Locations" value={location} onChange={setLocation} options={allLocations} hidePlaceholder={false} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
+                                    <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
+                                    <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminDropDown placeholder="All Location" value={reportTypeTemp} onChange={setReportTypeTemp} options={REPORT_TYPE} />
+                                    <AdminDropDown placeholder="All Location" value={reportType} onChange={setReportType} options={REPORT_TYPE} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminDateInput value={dateLostTemp} onChange={setDateLostTemp} />
+                                    <AdminDateInput value={dateLost} onChange={setDateLost} />
                                 </div>
                                 <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
-                                    <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
-                                    <AdminButton isIcon={false} label="Clear " isBorder={false} isShadow={false} onClick={handleClearFilters} />
+            
+                                    <AdminButton isIcon={false} isSolid={true} label="Clear Filters" isBorder={false} isShadow={false} onClick={handleClearFilters} />
                                 </div>
                             </div>
 

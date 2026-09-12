@@ -115,7 +115,7 @@ export default function SuperAdminGlobalConfiguration() {
             if(!response.ok){
                 throw new Error(data.message || "Failed to fetch categories")
             }
-            console.log(data);
+
 
 
             setCategories(data);

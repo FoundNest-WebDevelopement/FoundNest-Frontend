@@ -32,17 +32,8 @@ export default function Transactions() {
         //Record State
     const [selectedRecord, setSelectedRecord] = useState(null);
 
-        const [isExportTransactionOpen, setIsExportTransactionOpen] = useState(false);
-
-    //TEMP VARIABLES FILTER STORAGE
-    const [searchTemp, setSearchTemp] = useState("");
-    const [dateClaimedTemp, setDateClaimedTemp] = useState("");
-    const [locationTemp, setLocationTemp] = useState("");
-    const [categoryTemp, setCategoryTemp] = useState("");
-    const [statusTemp, setStatusTemp] = useState("true");
-
+    const [isExportTransactionOpen, setIsExportTransactionOpen] = useState(false);
     //LOG LOST REPORT TOGGLE
-    const [openLogItem, setOpenLogItem] = useState(false);
 
     const [isLoadingTxn, setIsLoadingTxn] = useState(false);
 
@@ -53,11 +44,10 @@ export default function Transactions() {
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("true");
 
+    const [locations, setLocations] = useState();
+
     //DROPDOWN LIST
     const [categories, setCategories] = useState([]);
-    const [gates, setGates] = useState([]);
-    const [sharedSpaces, setSharedSpaces] = useState([]);
-    const [locations, setLocations] = useState([]);
 
     //CLAIM RECORDS
     const [records, setRecords] = useState([]);
@@ -81,7 +71,7 @@ export default function Transactions() {
         const res = await fetchWithAuth(`${API_URL}/api/claim-records`);
         const data = await res.json();
 
-        console.log(data)
+
 
         setRecords(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -120,28 +110,8 @@ useEffect(() => {
                 console.error(err);
             });
     }, []);
-    //GATES FETCH
-    useEffect(() => {
-        fetch(`${API_URL}/api/gates`)
-            .then((res) => res.json())
-            .then((data) => {
-                setGates(data);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
-    //SHARED SPACES FETCH
-    useEffect(() => {
-        fetch(`${API_URL}/api/shared-spaces`)
-            .then((res) => res.json())
-            .then((data) => {
-                setSharedSpaces(data);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
+
+
 
     // HAMDLE CLEAR FILTER
     const handleClearFilters = () => {
@@ -150,21 +120,6 @@ useEffect(() => {
         setCategory("");
         setStatus("");
         setDateClaimed("");
-
-        setSearchTemp("");
-        setLocationTemp("");
-        setCategoryTemp("");
-        setStatusTemp("true");
-        setDateClaimedTemp("");
-    }
-
-    // HAMDLE APPLY FILTER
-    const handleApplyFilters = () => {
-        setSearch(searchTemp);
-        setLocation(locationTemp);
-        setCategory(categoryTemp);
-        setStatus(statusTemp);
-        setDateClaimed(dateClaimedTemp);
     }
 
       //CAEGORIES FETCH
@@ -258,18 +213,17 @@ const paddedClaimId =
 
                     <div className="flex w-full h-full gap-2 items-center justify-center">
                            <div className="flex-1">
-                            <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses}/>
+                            <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses}/>
                         </div>
                         <div className="flex-1">
-                            <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
+                            <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
                         </div>
                      
                         <div className="flex-1">
-                            <AdminDateInput value={dateClaimedTemp} onChange={setDateClaimedTemp} />
+                            <AdminDateInput value={dateClaimed} onChange={setDateClaimed} />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
-                            <AdminButton isIcon={false} isSolid={true} label="Apply Filters " isBorder={true} isShadow={true} onClick={handleApplyFilters} />
-                            <AdminButton isIcon={false} label="Clear " isBorder={false} isShadow={false} onClick={handleClearFilters} />
+                            <AdminButton isIcon={false} isSolid={true} label="Clear Filters " isBorder={false} isShadow={false} onClick={handleClearFilters} />
                         </div>
                     </div>
 

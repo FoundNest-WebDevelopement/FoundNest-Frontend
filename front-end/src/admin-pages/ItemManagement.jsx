@@ -64,12 +64,6 @@ export default function ItemManagement() {
     })),
   ];
 
-  // TEMP VARIABLES FILTER STORAGE
-  const [searchTemp, setSearchTemp] = useState("");
-  const [dateFoundTemp, setDateFoundTemp] = useState("");
-  const [locationTemp, setLocationTemp] = useState(officeId);
-  const [categoryTemp, setCategoryTemp] = useState("");
-  const [statusTemp, setStatusTemp] = useState("unclaimed");
 
   // SEARCH AND FILTER VARIABLES
   const [search, setSearch] = useState("");
@@ -78,12 +72,16 @@ export default function ItemManagement() {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("unclaimed");
 
+
+
   // SEARCH AND FILTER FUNCTION
   const filteredReports = reports.filter((report) => {
     const query = search.toLowerCase();
 
     const formattedItemId = `SI-${String(report.item_id).padStart(5, "0")}`;
     const paddedItemId = String(report.item_id).padStart(5, "0");
+
+       
 
     const matchesSearch =
       !query ||
@@ -100,8 +98,15 @@ export default function ItemManagement() {
 
     const matchesLocation =
       !location || String(report.office_id) === String(location);
+ const matchesStatus =
+  !status ||
+  status.toLowerCase() === "all status"
+    ? true
+    : status.toLowerCase() === "for disposal"
+      ? report.status === "to_be_disposed"
+      : report.status?.toLowerCase() === status.toLowerCase();
 
-    const matchesStatus = !status || report.status === status.toLocaleLowerCase();
+   
 
     const reportDate = new Date(report.found_date).toISOString().split("T")[0];
     const matchesDate = !dateFound || reportDate === dateFound;
@@ -218,30 +223,10 @@ useEffect(() => {
   // HANDLE CLEAR FILTER
   const handleClearFilters = () => {
     setSearch("");
-    setLocation("");
+    setLocation(officeId);
     setCategory("");
     setStatus("unclaimed");
     setDateFound("");
-    setSearchTemp("");
-    setLocationTemp("");
-    setCategoryTemp("");
-    setStatusTemp("unclaimed");
-    setDateFoundTemp("");
-  };
-
-  // HANDLE APPLY FILTER
-  const handleApplyFilters = () => {
-    setSearch(searchTemp);
-    setLocation(locationTemp);
-    setCategory(categoryTemp);
-
-    if (statusTemp.toLocaleLowerCase() === 'for disposal') {
-      setStatus("to_be_disposed");
-    } else {
-      setStatus(statusTemp);
-    }
-
-    setDateFound(dateFoundTemp);
   };
 
   // HANDLE QR SCAN USE DATA (for log via QR)
@@ -289,20 +274,19 @@ useEffect(() => {
         <div className="py-1 px-4 border border-[#DDD9CF] w-full shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-md">
           <div className="flex w-full h-full gap-2 items-center justify-center">
             <div className="flex-1">
-              <AdminLocationDropDown placeholder="All Locations" value={locationTemp} onChange={setLocationTemp} options={locations} />
+              <AdminLocationDropDown placeholder="All Locations" value={location} onChange={setLocation} options={locations} />
             </div>
             <div className="flex-1">
-              <AdminCategoriesDropdown placeholder="All Categories" value={categoryTemp} onChange={setCategoryTemp} options={categories} />
+              <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
             </div>
             <div className="flex-1">
-              <AdminStatusDropDown placeholder="All Status" value={statusTemp} onChange={setStatusTemp} options={statuses} />
+              <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
             </div>
             <div className="flex-1">
-              <AdminDateInput value={dateFoundTemp} onChange={setDateFoundTemp} />
+              <AdminDateInput value={dateFound} onChange={setDateFound} />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
-              <AdminButton isIcon={false} isSolid={true} label="Apply Filters" isBorder={true} isShadow={true} onClick={handleApplyFilters} />
-              <AdminButton isIcon={false} label="Clear" isBorder={false} isShadow={false} onClick={handleClearFilters} />
+              <AdminButton isIcon={false} label="Clear Filters" isSolid={true} isBorder={false} isShadow={false} onClick={handleClearFilters} />
             </div>
           </div>
         </div>

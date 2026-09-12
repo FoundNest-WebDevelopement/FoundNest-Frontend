@@ -415,7 +415,7 @@ const DesktopLogin = (
         </button>
 
         {error && (
-          <div className="fixed bottom-8 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
+          <div className="fixed bottom-8 left-4 right-4 z-2000 bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
             <span className="text-white text-sm">ℹ️</span>
             <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">{error}</p>
           </div>
