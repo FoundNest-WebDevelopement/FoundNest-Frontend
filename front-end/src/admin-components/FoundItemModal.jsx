@@ -9,8 +9,9 @@ import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { toast } from "react-toastify";
-import { Info } from "lucide-react";
+import { Astroid } from "lucide-react";
 import AdminConfirmDialog from "./AdminConfirmDialog";
+import AdminButton from "./AdminButton";
 
 
 export default function FoundItemModal({
@@ -165,56 +166,80 @@ const handleCancelForm = () => {
         }
     };
 
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size exceeds 10MB limit")
-      return;
+    if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
     }
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+    const validTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ];
+
     if (!validTypes.includes(file.type)) {
-      toast.error("Invalid file type");
-      return;
+        toast.error("Invalid file type");
+        return;
     }
 
-        setSelectedFile(file);
-        setImage(URL.createObjectURL(file));
-        setPrefilledImageUrl(null);
+    setSelectedFile(file);
+    setImage(URL.createObjectURL(file));
+    setPrefilledImageUrl(null);
+};
 
-        try {
-            setIsAnalyzing(true);
-            const formData = new FormData();
-            formData.append("image", file);
-            const response = await fetchWithAuth(
-                `${API_URL}/api/gemini-item-listing/describe-item`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
-            );
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || "AI analysis failed");
+const analyzeFile = async () => {
+    if (!selectedFile) {
+        toast.error("Please select an image first");
+        return;
+    }
+
+    try {
+        setIsAnalyzing(true);
+
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+
+        const response = await fetchWithAuth(
+            `${API_URL}/api/gemini-item-listing/describe-item`,
+            {
+                method: "POST",
+                body: formData,
             }
-            setItemName(data.itemName || "");
-            setDescription(data.detailedDescription || "");
-            setContents(data.contents || "");
-            const matchedCategory = categories.find(
-                (item) =>
-                    item.category_name.toLowerCase() ===
-                    data.category?.toLowerCase()
-            );
-            if (matchedCategory) {
-                setCategory(String(matchedCategory.category_id));
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsAnalyzing(false);
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "AI analysis failed");
         }
-    };
+
+        setItemName(data.itemName || "");
+        setDescription(data.detailedDescription || "");
+        setContents(data.contents || "");
+
+        const matchedCategory = categories.find(
+            (item) =>
+                item.category_name.toLowerCase() ===
+                data.category?.toLowerCase()
+        );
+
+        if (matchedCategory) {
+            setCategory(String(matchedCategory.category_id));
+        }
+    } catch (error) {
+        console.error(error);
+        toast.error(error.message || "AI analysis failed");
+    } finally {
+        setIsAnalyzing(false);
+    }
+};
+
+
 
     const handleDateChange = (value) => {
         setDateFound(value);
@@ -297,15 +322,6 @@ const handleCancelForm = () => {
         }
     };
 
-    const selectedCategory = categories.find(
-  c => String(c.category_id) === String(category)
-);
-
-const selectedCurrentLocation = locations.find(
-  location =>
-    String(location.office_id) === String(currentLocation)
-);
-
     return (
         <>
             <dialog className={`modal ${open ? "modal-open" : ""}`}>
@@ -367,9 +383,13 @@ const selectedCurrentLocation = locations.find(
                                 className="hidden"
                                 onChange={handleFileChange}
                             />
-                            {isAnalyzing && (
-                                <p className="text-xs text-primary mt-2">Analyzing image...</p>
-                            )}
+                            {image && fileInputRef  &&
+                            <div className="mt-2">
+                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing} onClick={analyzeFile}/>
+                            </div>
+                          
+
+                            }
                         </div>
 
                         <AdminTextField
@@ -378,7 +398,7 @@ const selectedCurrentLocation = locations.find(
                             value={itemName}
                             onChange={setItemName}
                             reqField={true}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminCategoriesDropdown
                             title="Category"
@@ -387,22 +407,25 @@ const selectedCurrentLocation = locations.find(
                             onChange={setCategory}
                             options={categories}
                             reqField={true}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminTextArea
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                             onChange={setDescription}
                         />
                         <AdminTextField
                             title="Contents"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                             onChange={setContents}
                         />
+                          {isAnalyzing && (
+                                <p className="text-xs text-primary mt-2">Analyzing image...</p>
+                            )}
                         <AdminAllLocationDropDown
                             title="Location Found"
                             value={locationFound}

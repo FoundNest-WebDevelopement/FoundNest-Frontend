@@ -6,13 +6,15 @@ export default function AdminButton({
   isIcon,
   isBorder,
   isShadow,
+  disabled,
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       className={`flex gap-3  p-2 rounded-md  items-center font-medium cursor-pointer transition-transform duration-100
-     enabled:active:scale-95 
+     enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-40
         ${isSolid? "bg-primary text-white" : "text-[#1A1208]"}
         ${isBorder? "border border-primary" : ""}
         ${isShadow? "shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]" : ""}`}
