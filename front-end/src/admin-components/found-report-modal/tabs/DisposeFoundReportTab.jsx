@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 // Constants & Services
@@ -11,6 +11,9 @@ import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import AdminTextArea from "../../AdminTextArea.jsx";
 
 export default function DisposeFoundReportTab({
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     selectedItem,
     onCancel, // Function to go back to the details tab
     refreshReports
@@ -59,7 +62,11 @@ export default function DisposeFoundReportTab({
                 ? reasonForDiscarding && donationDate && disposalDateValid && selectedProofFile
                 : false;
 
-    const hasDisposalFormChanges = itemWhereabouts.trim() || donationDate || notes.trim() || reasonForDiscarding || selectedProofFile;
+
+    useEffect(()=>{
+        setHasChanges(itemWhereabouts.trim() || donationDate || notes.trim() || reasonForDiscarding || selectedProofFile)
+        setDiscardMessage(`Cancel the disposal of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`)
+    },[itemWhereabouts, donationDate, notes, reasonForDiscarding, selectedProofFile])
 
     // --- HANDLERS ---
     const resetDisposalForm = () => {
@@ -100,6 +107,7 @@ export default function DisposeFoundReportTab({
     };
 
     const handleCancelDisposed = () => {
+        setHasChanges(false)
         setDisposalMethod("");
         resetDisposalForm();
         setOpenCancelDisposed(false);
@@ -159,7 +167,7 @@ export default function DisposeFoundReportTab({
                 </button>
             </div>
             
-            <div className="flex-1 w-full p-5 pt-20 flex flex-col overflow-y-auto">
+            <div className="flex-1 w-full p-5 pt-20 flex flex-col overflow-y-auto *:shrink-0">
                 <div className="flex flex-col gap-2 mb-5 mt-10">
                     <p className="text-md font-medium">Confirm Disposal</p>
                     <p className="text-xs text-justify">
@@ -280,12 +288,11 @@ export default function DisposeFoundReportTab({
                         </button>
                     </>
                 )}
-                <p className="text-xs text-[#6B5C42] opacity-70 font-medium mt-1 mb-2 text-center">
-                            PNG, JPG or WEBP up to 10MB
-                </p>
+              
 
                 {/* HIDDEN INPUT FOR BOTH METHODS */}
                 {(disposalMethod === 'DONATED' || disposalMethod === 'DISPOSED_AS_WASTE') && (
+                  <>
                     <input
                         ref={fileInputRefDisposalProof}
                         type="file"
@@ -293,6 +300,10 @@ export default function DisposeFoundReportTab({
                         className="hidden"
                         onChange={handleDisposalProofFileChange}
                     />
+                      <p className="text-xs text-[#6B5C42] opacity-70 font-medium mt-1 mb-2 text-center">
+                            PNG, JPG or WEBP up to 10MB
+                </p>
+                  </>
                 )}
 
                 {disposalMethod && (
@@ -308,14 +319,15 @@ export default function DisposeFoundReportTab({
                          <hr className="border-(--color-tertiary) my-4 opacity-30" />
                         <div className="w-full h-10 flex gap-2 text-xs ">
                             <button
-                                className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95"
+                                className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                 onClick={() => {
-                                    if (hasDisposalFormChanges) {
+                                    if (hasChanges) {
                                         setOpenCancelDisposed(true);
                                     } else {
                                         handleCancelDisposed();
                                     }
                                 }}
+                                disabled={isDisposing}
                             >
                                 Cancel
                             </button>
@@ -337,6 +349,7 @@ export default function DisposeFoundReportTab({
             {openCancelDisposed && (
                 <AdminConfirmDialog
                     description={`Cancel the disposal of ${formatItemId(selectedItem.item_id)}? The information you've entered on this form will not be saved.`}
+                    confirmText="Discard Changes"
                     onClose={() => setOpenCancelDisposed(false)}
                     onConfirm={handleCancelDisposed}
                 />

@@ -299,8 +299,7 @@ const analyzeFile = async () => {
         if (matchedCategory) {
             setCategory(String(matchedCategory.category_id));
         }
-
-        toast.success("Image analyzed successfully.");
+        
     } catch (error) {
         console.error("Image analysis error:", error);
         toast.error(error.message || "Failed to analyze image with AI.");
@@ -414,7 +413,7 @@ const handleRemoveImage = () => {
                         <p className="text-xl font-semibold text-white">
                             Add New Report
                         </p>
-                        <button type="button" onClick={()=>{
+                        <button type="button" className="disabled:opacity-40 disabled:cursor-not-allowed" onClick={()=>{
                              if (hasUnsavedChanges) {
                                                 setOpenCancelReportDialog(true);
                                             } else {
@@ -742,7 +741,7 @@ const handleRemoveImage = () => {
                         <AdminTextField
                             title="Logged By"
                             value={AdminFullName}
-                            disabled={isSubmitting}
+                            disabled={true}
 
                         />
                     </div>
@@ -755,7 +754,7 @@ const handleRemoveImage = () => {
                                             } else {
                                                 handleClose();
                                             }}}
-                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md"
+                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>

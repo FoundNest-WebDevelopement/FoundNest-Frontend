@@ -333,7 +333,7 @@ const analyzeFile = async () => {
                         <p className="text-xl font-semibold text-white">
                             Log New Found Item
                         </p>
-                        <button type="button" onClick={handleCancelForm}>
+                        <button type="button" disabled={isSubmitting} onClick={handleCancelForm} className="disabled:opacity-40 disabled:cursor-not-allowed">
                             <i className="fa-solid fa-xmark text-xl text-white"></i>
                         </button>
                     </div>
@@ -348,8 +348,8 @@ const analyzeFile = async () => {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                disabled={isSubmitting}
-                                className="relative cursor-pointer disabled:opacity-40 w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
+                                disabled={isSubmitting || isAnalyzing}
+                                className="relative cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 w-full h-30 border border-dashed border-(--color-quaternary) bg-[#F5F5F5] rounded-lg mt-1 flex flex-col justify-center items-center gap-1 overflow-hidden"
                             >
                                 {image ? (
                                     <>
@@ -385,7 +385,7 @@ const analyzeFile = async () => {
                             />
                             {image && fileInputRef  &&
                             <div className="mt-2">
-                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing} onClick={analyzeFile}/>
+                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting} onClick={analyzeFile}/>
                             </div>
                           
 
@@ -504,7 +504,8 @@ const analyzeFile = async () => {
                         <button
                             type="button"
                             onClick={handleCancelForm}
-                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md"
+                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={isSubmitting}
                         >
                             Cancel
                         </button>
@@ -545,7 +546,7 @@ const analyzeFile = async () => {
                                     <hr className="border-(--color-tertiary) my-2 opacity-30" />
                                     <div className="flex gap-2">
                                     <button
-                                        className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95"
+                                        className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                         onClick={() => {setOpenListConfirmation(false)}}
                                     >Cancel</button>
                                     <button

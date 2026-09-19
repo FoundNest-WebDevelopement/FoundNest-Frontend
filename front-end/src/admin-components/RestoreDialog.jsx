@@ -14,7 +14,7 @@ export default function RestoreDialog({
         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
           <p className="font-semibold">Restore Listing</p>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={isRestoring} className="disabled:opacity-40 disabled:cursor-not-allowed">
             <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
           </button>
         </div>
@@ -37,8 +37,10 @@ export default function RestoreDialog({
 
           <div className="flex gap-2">
             <button
-              className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+              className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95
+               disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={onClose}
+              disabled={isRestoring} 
             >
               Cancel
             </button>

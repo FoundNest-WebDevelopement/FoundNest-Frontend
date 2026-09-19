@@ -14,6 +14,9 @@ import { Upload, CircleMinus, Image, Astroid } from "lucide-react"
 import { toast } from "react-toastify";
 import { updateLostReport, getLostReports } from "../services/LostReportModalService";
 export default function EditTab({
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     selectedItem,
     setSelectedItem,
     categories = [],
@@ -23,7 +26,6 @@ export default function EditTab({
     onUpdated,
     setEditTab,
 }) {
-    console.log(selectedItem)
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [isSaving, setIsSaving] = useState(false);
@@ -36,7 +38,6 @@ export default function EditTab({
     const fileInputRef = useRef(null);
 
     const [originalFormData, setOriginalFormData] = useState({});
-    const [hasChanges, setHasChanges] = useState(false);
     const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
 
@@ -144,14 +145,17 @@ const analyzeFile = async () => {
 
 
     const [formData, setFormData] = useState({
-        item_name: "",
-        category_id: "",
-        description: "",
-        contents: "",
-        lost_date: "",
-        location_lost: [],
-        specific_location: "",
-    });
+    item_name: "",
+    category_id: "",
+    description: "",
+    contents: "",
+    lost_date: "",
+    location_lost: [],
+    specific_location: "",
+    owner_name: "",
+    email: "",
+    contact_number: "",
+});
 
     const handleRemovePicture = () => {
     if (image?.startsWith("blob:")) {
@@ -175,6 +179,9 @@ const analyzeFile = async () => {
 
 
     useEffect(() => {
+
+        setDiscardMessage("You have unsaved changes. Are you sure you want to discard them?")
+
         if (!selectedItem) return;
 
         setImage(selectedItem?.image_url);
@@ -298,10 +305,6 @@ const analyzeFile = async () => {
         formData.contact_number.trim() !== ""
     );
 
-    useEffect(() => {
-        console.log(formData.lost_date);
-    }, [formData.lost_date]);
-
     const isValidPhone = /^09\d{9}$/.test(
         formData.contact_number
     );
@@ -397,7 +400,7 @@ const analyzeFile = async () => {
                     <AdminTextField
                         title="Item Name"
                         reqField={true}
-                        value={formData?.item_name}
+                        value={formData?.item_name ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -410,7 +413,7 @@ const analyzeFile = async () => {
                     <AdminCategoriesDropdown
                         title="Category"
                         reqField={true}
-                        value={formData.category_id}
+                        value={formData.category_id ?? ""}
                         options={categories}
                         onChange={(value) =>
                             setFormData(prev => ({
@@ -423,7 +426,7 @@ const analyzeFile = async () => {
 
                     <AdminTextArea
                         title="Description"
-                        value={formData.description}
+                        value={formData.description ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -435,7 +438,7 @@ const analyzeFile = async () => {
 
                     <AdminTextArea
                         title="Contents"
-                        value={formData.contents}
+                        value={formData.contents ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -486,7 +489,7 @@ const analyzeFile = async () => {
                     {/* Locations */}
 
                     <AdminLocationMultiSelect
-                        value={formData.location_lost}
+                        value={formData.location_lost ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -503,7 +506,7 @@ const analyzeFile = async () => {
 
                     <AdminTextField
                         title="Specific Location"
-                        value={formData.specific_location}
+                        value={formData.specific_location ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -514,7 +517,7 @@ const analyzeFile = async () => {
 
                     <AdminTextField
                         title="Item Owner Name"
-                        value={formData.owner_name}
+                        value={formData.owner_name ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -526,8 +529,8 @@ const analyzeFile = async () => {
                     <AdminTextField
                         title="Email"
                         reqField={true}
-                        name="specific_location"
-                        value={formData?.email}
+                        name="email"
+                        value={formData?.email ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -542,7 +545,7 @@ const analyzeFile = async () => {
                         title="Contact Number"
                         reqField={true}
                         name="specific_location"
-                        value={formData?.contact_number}
+                        value={formData?.contact_number ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -589,6 +592,7 @@ const analyzeFile = async () => {
                     confirmText="Discard Changes"
                     onClose={() => setOpenDiscardDialog(false)}
                     onConfirm={() => {
+                        setHasChanges(false)
                         setOpenDiscardDialog(false);
                         setEditTab(false);
                     }}

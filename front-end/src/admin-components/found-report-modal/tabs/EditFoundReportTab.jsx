@@ -20,6 +20,9 @@ import AdminTextField from "../../AdminTextField.jsx";
 export default function EditFoundReportTab({
     selectedItem,
     setSelectedItem,
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     categories = [],
     locations = [], // Used for current office location
     allLocations = [], // Used for location found
@@ -28,15 +31,14 @@ export default function EditFoundReportTab({
     refreshReports
 }) {
     const userId = localStorage.getItem("user_id");
-
+    
     // Hooks
     const { saveEdit, isSavingEdit } = useSaveEditReport();
 
     // UI & Loading States
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
+    const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
 
     // Image States
     const fileInputRef = useRef(null);
@@ -93,8 +95,9 @@ export default function EditFoundReportTab({
 
     // === INITIALIZATION ===
     useEffect(() => {
+        setDiscardMessage("You have unsaved changes. Are you sure you want to discard them? The listing will keep its original details.");
         if (!selectedItem) return;
-
+        
         setImage(selectedItem?.image_url);
         setSelectedFile(null);
 
@@ -490,6 +493,7 @@ const analyzeFile = async () => {
                     onConfirm={() => {
                         setOpenDiscardDialog(false);
                         setIsEditing(false);
+                        setHasChanges(false);
                     }}
                 />
             )}
