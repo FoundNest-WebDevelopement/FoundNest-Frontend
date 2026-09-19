@@ -10,24 +10,26 @@ const createMarkerIcon = (label) =>
   new L.DivIcon({
     className: "",
     html: `
-    <div style="display:flex; flex-direction:column; align-items:center;">
+    <div style="position:absolute; transform:translate(-50%, -100%); display:flex; flex-direction:column; align-items:center;">
       <div style="background:#990000; color:white; font-size:10px; font-weight:600; padding:3px 8px; border-radius:20px; white-space:nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
         ${label}
       </div>
       <div style="width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:10px solid #990000; margin-top:-1px;"></div>
     </div>
   `,
-    iconAnchor: [50, 42],
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
   });
 
 const bulsuIcon = new L.DivIcon({
   className: "",
   html: `
-    <div style="background:white; color:#990000; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1.5px solid #990000;">
+    <div style="position:absolute; transform:translate(-50%, -50%); background:white; color:#990000; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1.5px solid #990000;">
       Bulacan State University Main Campus
     </div>
   `,
-  iconAnchor: [130, 10],
+  iconSize: [0, 0],
+  iconAnchor: [0, 0],
 });
 
 function MapClickHandler({ onMapClick }) {
@@ -48,9 +50,12 @@ export default function Map() {
   const [myReview, setMyReview] = useState(null);
   const [toast, setToast] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [officeSearch, setOfficeSearch] = useState("");
   const [selectedLabel, setSelectedLabel] = useState("Search for a Drop-off location...");
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const [showDeleteReviewModal, setShowDeleteReviewModal] = useState(false);
+  const [deletingReview, setDeletingReview] = useState(false);
 
   // Fetch offices from backend
   useEffect(() => {
@@ -158,6 +163,34 @@ const handlePostReview = async () => {
     }
 };
 
+  const hasReviewChanges = myReview
+    ? rating !== myReview.rating || reviewText !== (myReview.review_text || "")
+    : true;
+
+  const handleDeleteReview = async () => {
+    if (!myReview) return;
+    setDeletingReview(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/reviews/${myReview.review_id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ user_id }),
+      });
+      if (res.ok) {
+        setToast("Review deleted.");
+        setTimeout(() => setToast(null), 3000);
+        setMyReview(null);
+        setRating(0);
+        setReviewText("");
+        fetchReviews(selectedOffice.office_id);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingReview(false);
+      setShowDeleteReviewModal(false);
+    }
+  };
+
   const getAverageRating = () => {
     if (reviews.length === 0) return "0.0";
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
@@ -193,7 +226,10 @@ const handlePostReview = async () => {
       <div className="absolute top-17 left-0 right-0 z-[1000] px-3">
         <div className="relative">
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={() => {
+              setDropdownOpen(!dropdownOpen);
+              setOfficeSearch("");
+            }}
             className="w-full px-4 py-2 rounded-lg bg-white shadow-md text-sm text-gray-600 border border-gray-200 outline-none flex justify-between items-center"
           >
             <span className="truncate">{selectedLabel}</span>
@@ -201,20 +237,47 @@ const handlePostReview = async () => {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-[1001]">
-              {offices.map((office) => (
-                <button
-                  key={office.office_id}
-                  onClick={() => {
-                    handleMarkerClick(office);
-                    setSelectedLabel(office.office_name);
-                    setDropdownOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-100 last:border-none"
-                >
-                  {office.office_name}
-                </button>
-              ))}
+            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-[1001] overflow-hidden">
+              <div className="p-2 border-b border-gray-100">
+                <input
+                  type="text"
+                  autoFocus
+                  value={officeSearch}
+                  onChange={(e) => setOfficeSearch(e.target.value)}
+                  placeholder="Search centers..."
+                  className="w-full px-3 py-2 rounded-md bg-gray-50 border border-gray-200 text-sm text-gray-700 outline-none focus:border-[#990000]"
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                {offices
+                  .filter((office) =>
+                    office.office_name
+                      .toLowerCase()
+                      .includes(officeSearch.trim().toLowerCase())
+                  )
+                  .map((office) => (
+                    <button
+                      key={office.office_id}
+                      onClick={() => {
+                        handleMarkerClick(office);
+                        setSelectedLabel(office.office_name);
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-100 last:border-none"
+                    >
+                      {office.office_name}
+                    </button>
+                  ))}
+                {offices.filter((office) =>
+                  office.office_name
+                    .toLowerCase()
+                    .includes(officeSearch.trim().toLowerCase())
+                ).length === 0 && (
+                  <p className="px-4 py-3 text-sm text-gray-400 text-center">
+                    No centers found.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -224,12 +287,15 @@ const handlePostReview = async () => {
       <MapContainer
         center={[14.8574, 120.8146]}
         zoom={17}
+        minZoom={16}
+        maxZoom={19}
         className="h-full w-full z-0"
         zoomControl={false}
       >
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="Tiles © Esri"
+          maxZoom={19}
         />
         <MapClickHandler onMapClick={handleClose} />
 
@@ -362,21 +428,32 @@ const handlePostReview = async () => {
               className="w-full border border-gray-300 rounded-lg p-3 text-xs text-gray-600 outline-none resize-none h-24"
             />
 
-            <button
-              onClick={handlePostReview}
-              className="w-full py-3 rounded-full text-sm font-semibold mt-2"
-              style={{
-                backgroundColor: rating > 0 ? "#990000" : "rgba(75, 45, 35, 0.3)",
-                color: "white",
-                cursor: rating > 0 ? "pointer" : "default",
-              }}
-            >
-              {myReview ? "Update Review" : "Post"}
-            </button>
+            {myReview && !hasReviewChanges ? (
+              <button
+                onClick={() => setShowDeleteReviewModal(true)}
+                className="w-full py-3 rounded-full text-sm font-semibold mt-2 border-2"
+                style={{ borderColor: "#990000", color: "#990000", cursor: "pointer" }}
+              >
+                Delete Review
+              </button>
+            ) : (
+              <button
+                onClick={handlePostReview}
+                disabled={rating === 0}
+                className="w-full py-3 rounded-full text-sm font-semibold mt-2"
+                style={{
+                  backgroundColor: rating > 0 ? "#990000" : "rgba(75, 45, 35, 0.3)",
+                  color: "white",
+                  cursor: rating > 0 ? "pointer" : "default",
+                }}
+              >
+                {myReview ? "Update Review" : "Post"}
+              </button>
+            )}
           </div>
 
           {/* Reviews List */}
-          <div className="px-4 pt-4">
+          <div className="px-4 pt-4 pb-8">
             {loadingReviews ? (
               <div className="flex justify-center py-4">
                 <div className="w-8 h-8 border-4 border-[#990000] border-t-transparent rounded-full animate-spin"></div>
@@ -413,10 +490,50 @@ const handlePostReview = async () => {
                       ))}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{review.review_text}</p>
+
+                    {review.response_text && (
+                      <div className="mt-2 ml-1 pl-3 border-l-2 border-[#990000] bg-[#FFF3E0] rounded-r-lg py-2 pr-2">
+                        <p className="text-xs font-semibold text-[#990000]">
+                          Reply from {selectedOffice.office_name}
+                          {review.responded_by_name?.trim() ? ` · ${review.responded_by_name}` : ""}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">{review.response_text}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Review Confirmation */}
+      {showDeleteReviewModal && (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
+          <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
+            <div className="px-6 py-6">
+              <p className="text-[#4B2D23] font-bold text-base text-center">
+                Delete your review? This cannot be undone.
+              </p>
+            </div>
+            <div className="flex border-t border-gray-200">
+              <button
+                onClick={() => setShowDeleteReviewModal(false)}
+                disabled={deletingReview}
+                className="flex-1 py-4 text-sm font-semibold text-[#4B2D23] border-r border-gray-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteReview}
+                disabled={deletingReview}
+                className="flex-1 py-4 text-sm font-semibold text-white disabled:opacity-50"
+                style={{ backgroundColor: "#990000" }}
+              >
+                {deletingReview ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

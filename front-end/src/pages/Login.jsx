@@ -205,101 +205,110 @@ const DesktopLogin = (
           </div>
         </div>
 
-        {/* Email */}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError("");
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
           }}
-          className="w-full border border-[#d8d8d8] bg-white outline-none"
-          style={{
-            height: "52px",
-            padding: "0 15px",
-            fontSize: "15px",
-            marginBottom: "18px",
-          }}
-        />
-
-        {/* Password */}
-        <div className="relative mb-5">
+        >
+          {/* Email */}
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
+            type="email"
+            placeholder="Email"
+            value={email}
             onChange={(e) => {
-              setPassword(e.target.value);
+              setEmail(e.target.value);
               setError("");
             }}
             className="w-full border border-[#d8d8d8] bg-white outline-none"
             style={{
               height: "52px",
-              paddingLeft: "15px",
-              paddingRight: "45px",
+              padding: "0 15px",
               fontSize: "15px",
+              marginBottom: "18px",
             }}
           />
 
-          <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2"
-          >
-            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        </div>
-
-        {/* Remember Me + Forgot Password */}
-        <div className="flex items-center justify-between mb-6">
-          <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer">
+          {/* Password */}
+          <div className="relative mb-5">
             <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              className="w-full border border-[#d8d8d8] bg-white outline-none"
               style={{
-                width: "14px",
-                height: "14px",
-                accentColor: "#990000",
-                cursor: "pointer",
+                height: "52px",
+                paddingLeft: "15px",
+                paddingRight: "45px",
+                fontSize: "15px",
               }}
             />
-            Remember me
-          </label>
 
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2"
+            >
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
+
+          {/* Remember Me + Forgot Password */}
+          <div className="flex items-center justify-between mb-6">
+            <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{
+                  width: "14px",
+                  height: "14px",
+                  accentColor: "#990000",
+                  cursor: "pointer",
+                }}
+              />
+              Remember me
+            </label>
+
+            <button
+              type="button"
+              onClick={() => navigate("/forgot-password")}
+              className="text-[#990000] text-sm font-medium hover:underline"
+              style={{ cursor: "pointer" }}
+            >
+              Forgot password?
+            </button>
+          </div>
+
+          {/* Login Button */}
           <button
-            onClick={() => navigate("/forgot-password")}
-            className="text-[#990000] text-sm font-medium hover:underline"
-            style={{ cursor: "pointer" }}
+            type="submit"
+            disabled={loading || !isLoginValid}
+            className="w-full text-sm font-semibold transition-all active:scale-95"
+            style={{
+              height: "48px",
+              backgroundColor: isLoginValid
+                ? "#990000"
+                : "rgba(153,0,0,.30)",
+              color: "white",
+              cursor: isLoginValid ? "pointer" : "default",
+              boxShadow: "0 4px 10px rgba(0,0,0,.18)",
+            }}
           >
-            Forgot password?
+            {loading ? "Logging in..." : "Log In"}
           </button>
-        </div>
 
-        {/* Login Button */}
-        <button
-          onClick={handleLogin}
-          disabled={loading || !isLoginValid}
-          className="w-full text-sm font-semibold transition-all active:scale-95"
-          style={{
-            height: "48px",
-            backgroundColor: isLoginValid
-              ? "#990000"
-              : "rgba(153,0,0,.30)",
-            color: "white",
-            cursor: isLoginValid ? "pointer" : "default",
-            boxShadow: "0 4px 10px rgba(0,0,0,.18)",
-          }}
-        >
-          {loading ? "Logging in..." : "Log In"}
-        </button>
-
-        {/* Error */}
-        {error && (
-          <p className="text-xs text-red-500 text-center mt-4">
-            {error}
-          </p>
-        )}
+          {/* Error */}
+          {error && (
+            <p className="text-xs text-red-500 text-center mt-4">
+              {error}
+            </p>
+          )}
+        </form>
       </div>
 
       {/* Right — Brand Card */}
@@ -357,7 +366,14 @@ const DesktopLogin = (
         <img src={rafiki} alt="Login Illustration" className="w-4/5 h-4/5 object-contain object-center" />
       </div>
 
-      <div className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3" style={{ minHeight: "45%" }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}
+        className="bg-[#990000] rounded-t-4xl px-6 py-6 flex flex-col gap-3"
+        style={{ minHeight: "45%" }}
+      >
         <h1 className="text-white text-2xl font-semibold text-center">Log In</h1>
 
         <input
@@ -376,7 +392,7 @@ const DesktopLogin = (
             onChange={(e) => { setPassword(e.target.value); setError(""); }}
             className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
           />
-          <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
             {showPassword ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         </div>
@@ -391,13 +407,13 @@ const DesktopLogin = (
             />
             Remember me
           </label>
-          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs" style={{ cursor: "pointer" }}>
+          <button type="button" onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs" style={{ cursor: "pointer" }}>
             Forgot password?
           </button>
         </div>
 
         <button
-          onClick={handleLogin}
+          type="submit"
           disabled={loading}
           style={{
             backgroundColor: isLoginValid ? "#FFEFEF" : "rgba(255, 243, 224, 0.7)",
@@ -421,7 +437,7 @@ const DesktopLogin = (
             <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">{error}</p>
           </div>
         )}
-      </div>
+      </form>
     </div>
   );
 

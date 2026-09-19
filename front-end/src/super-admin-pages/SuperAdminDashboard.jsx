@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2 } from "lucide-react";
+import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2, Gift } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -126,7 +126,7 @@ if (isLoading || !stats || !counters) {
             </p>
 
             {/* STAT CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
                 <StatCard
                     icon={Package}
                     iconBg="bg-[#FBEFD8]"
@@ -162,6 +162,15 @@ if (isLoading || !stats || !counters) {
                     value={stats.unclaimed_30_days}
                     subtext="To be donated"
                     subtextColor="text-[#C0392B]"
+                />
+                <StatCard
+                    icon={Gift}
+                    iconBg="bg-[#E3EAF7]"
+                    iconColor="text-blue-700"
+                    label="Donated Items"
+                    value={stats.donated_items}
+                    subtext="Given to charity"
+                    subtextColor="text-blue-700"
                 />
             </div>
 

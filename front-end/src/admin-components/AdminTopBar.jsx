@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SwitchBackButton from "../global-components/SwitchBackButton";
+import SwitchToUserButton from "../global-components/SwitchToUserButton";
 
 export default function AdminTopBar({ tabName }) {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -163,7 +164,8 @@ export default function AdminTopBar({ tabName }) {
                 />
               )}
             </div>
-            <SwitchBackButton /> {/* ← added here */}
+            <SwitchBackButton />
+            <SwitchToUserButton />
             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
               <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
               <p className="text-sm text-[#1A1208]">{fullName}</p>
