@@ -166,7 +166,7 @@ const renderValue = (value) => {
         <>
 
             <div inert={howToClaim}>
-             <PageLabelWithReturn label="Item Details" onClick={() => {}} onClick={handleReturn}/>
+             <PageLabelWithReturn label="Item Details" onClick={handleReturn}/>
               <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col ">
                 {report?
                     (<>
@@ -200,7 +200,7 @@ const renderValue = (value) => {
                         </div>
                         <div>
                                              <p >Current Location</p>
-                        <p className="font-medium">{report.office_name}</p>
+                        <p className="font-medium">{report.office_name }</p>
                         </div>
                     </div>
                     <HorizontalBreak/>
