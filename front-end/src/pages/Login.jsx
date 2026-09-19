@@ -270,6 +270,7 @@ const DesktopLogin = (
           <button
             onClick={() => navigate("/forgot-password")}
             className="text-[#990000] text-sm font-medium hover:underline"
+            style={{ cursor: "pointer" }}
           >
             Forgot password?
           </button>
@@ -390,7 +391,7 @@ const DesktopLogin = (
             />
             Remember me
           </label>
-          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs">
+          <button onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs" style={{ cursor: "pointer" }}>
             Forgot password?
           </button>
         </div>

@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
+function disposeScanner(instance) {
+  const clearScannerUi = () => {
+    instance.clear().catch(() => {});
+  };
+
+  try {
+    instance.stop().then(clearScannerUi).catch(clearScannerUi);
+  } catch {
+    clearScannerUi();
+  }
+}
+
 export default function QRScanModal({ open, setOpen, onUseData }) {
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -10,90 +22,93 @@ export default function QRScanModal({ open, setOpen, onUseData }) {
 
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
-  const isStartedRef = useRef(false);
+
+  const handleQRDetected = async (decodedText) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/api/qr-items/scan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ qr_data: decodedText }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.found) {
+        // Parse the qr_data JSON string
+        let parsedQrData = {};
+        try {
+          parsedQrData = JSON.parse(data.item.qr_data);
+        } catch {
+          parsedQrData = {};
+        }
+
+        setQrResult({
+          ...data.item,
+          ownerName: parsedQrData.ownerName || "",
+          studentNumber: parsedQrData.studentNumber || "",
+          courseSection: parsedQrData.courseSection || "",
+          contactNumber: parsedQrData.contactNumber || "",
+        });
+        setScreen("detected");
+      } else {
+        setError(data.message || "QR code not found.");
+        setScreen("detected");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setScreen("detected");
+    }
+  };
 
   // Start scanner when modal opens and screen is scanning
-useEffect(() => {
-  if (!open || screen !== "scanning") return;
+  useEffect(() => {
+    if (!open || screen !== "scanning") return;
 
-  // Wait for DOM to be ready
-  const timer = setTimeout(() => {
-    const element = document.getElementById("admin-qr-reader");
-    if (!element) return;
+    let cancelled = false;
+    // Wait for DOM to be ready
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      const element = document.getElementById("admin-qr-reader");
+      if (!element) return;
+      element.replaceChildren();
 
-    const html5Qrcode = new Html5Qrcode("admin-qr-reader");
-    html5QrRef.current = html5Qrcode;
-    isStartedRef.current = false;
+      const html5Qrcode = new Html5Qrcode("admin-qr-reader");
+      html5QrRef.current = html5Qrcode;
 
-    html5Qrcode
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        async (decodedText) => {
-          if (isStartedRef.current) {
-            html5Qrcode.stop().catch(() => {});
-            isStartedRef.current = false;
+      html5Qrcode
+        .start(
+          { facingMode: "environment" },
+          { fps: 10 },
+          async (decodedText) => {
+            disposeScanner(html5Qrcode);
+            html5QrRef.current = null;
+            await handleQRDetected(decodedText);
+          },
+          () => {}
+        )
+        .then(() => {
+          // Effect was cleaned up while the camera was still starting up.
+          if (cancelled) {
+            disposeScanner(html5Qrcode);
+            html5QrRef.current = null;
           }
-          await handleQRDetected(decodedText);
-        },
-        () => {}
-      )
-      .then(() => {
-        isStartedRef.current = true;
-      })
-      .catch(() => {});
-  }, 300);
+        })
+        .catch(() => {});
+    }, 300);
 
-  return () => {
-    clearTimeout(timer);
-    if (isStartedRef.current && html5QrRef.current) {
-      html5QrRef.current.stop().catch(() => {});
-      isStartedRef.current = false;
-    }
-    html5QrRef.current = null;
-  };
-}, [open, screen]);
-
-const handleQRDetected = async (decodedText) => {
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/api/qr-items/scan`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ qr_data: decodedText }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.found) {
-      // Parse the qr_data JSON string
-      let parsedQrData = {};
-      try {
-        parsedQrData = JSON.parse(data.item.qr_data);
-      } catch {
-        parsedQrData = {};
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (html5QrRef.current) {
+        disposeScanner(html5QrRef.current);
+        html5QrRef.current = null;
       }
-
-      setQrResult({
-        ...data.item,
-        ownerName: parsedQrData.ownerName || "",
-        studentNumber: parsedQrData.studentNumber || "",
-        courseSection: parsedQrData.courseSection || "",
-        contactNumber: parsedQrData.contactNumber || "",
-      });
-      setScreen("detected");
-    } else {
-      setError(data.message || "QR code not found.");
-      setScreen("detected");
-    }
-  } catch (err) {
-    setError("Something went wrong. Please try again.");
-    setScreen("detected");
-  }
-};
+    };
+  }, [open, screen]);
 
   const handleScanAgain = () => {
     setQrResult(null);
@@ -110,11 +125,10 @@ const handleQRDetected = async (decodedText) => {
   };
 
   const handleClose = () => {
-    if (html5QrRef.current && isStartedRef.current) {
-      html5QrRef.current.stop().catch(() => {});
-      isStartedRef.current = false;
+    if (html5QrRef.current) {
+      disposeScanner(html5QrRef.current);
+      html5QrRef.current = null;
     }
-    html5QrRef.current = null;
     setScreen("scanning");
     setQrResult(null);
     setError("");
@@ -145,15 +159,16 @@ const handleQRDetected = async (decodedText) => {
               <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ height: "280px" }}>
                 <div id="admin-qr-reader" ref={scannerRef} className="w-full h-full" />
 
-                {/* Corner brackets overlay */}
+                {/* Custom viewfinder; no qrbox is passed to html5-qrcode. */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-48 h-48 relative">
+                  <div className="w-48 h-48 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
                   </div>
                 </div>
+
               </div>
 
               <p className="text-sm text-center text-[#4B2D23]">
@@ -229,13 +244,22 @@ const handleQRDetected = async (decodedText) => {
 
         {/* FOOTER BUTTONS */}
         <div className="h-16 w-full border-t border-[#DDD9CF] flex items-center justify-end px-6 gap-3 shrink-0">
+          {screen === "detected" && (
+            <button
+              type="button"
+              onClick={handleScanAgain}
+              className="flex items-center gap-2 font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
+            >
+              <i className="fa-solid fa-rotate-right text-xs"></i>
+              Scan Again
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleScanAgain}
-            className="flex items-center gap-2 font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
+            onClick={handleClose}
+            className="font-medium text-sm text-primary border border-primary px-4 py-2 rounded-md"
           >
-            <i className="fa-solid fa-rotate-right text-xs"></i>
-            Scan Again
+            Close
           </button>
           {screen === "detected" && !error && (
             <button

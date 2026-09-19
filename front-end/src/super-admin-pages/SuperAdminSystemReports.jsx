@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, Plus, Package, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -22,6 +23,7 @@ function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtex
 
 export default function SuperAdminSystemReports() {
     const API_URL = import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
 
     const [stats, setStats] = useState(null);
     const [centers, setCenters] = useState([]);
@@ -71,7 +73,6 @@ if (isLoading || !stats) {
 
     return (
         <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex flex-col gap-6">
-            <h1 className="text-2xl font-bold text-[#1A1208]">System Reports</h1>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <StatCard
@@ -152,7 +153,8 @@ if (isLoading || !stats) {
                                 {paginatedCenters.map((center, index) => (
                                     <tr
                                         key={center.office_id}
-                                        className={index % 2 === 0 ? "bg-white" : "bg-[#F5F5F5]"}
+                                        onClick={() => navigate(`/super_admin/system_reports/${center.office_id}`)}
+                                        className={`cursor-pointer ${index % 2 === 0 ? "bg-white" : "bg-[#F5F5F5]"}`}
                                     >
                                         <td className="text-left align-middle font-semibold text-primary underline">
                                             {center.office_name}
