@@ -10,10 +10,13 @@ import ScaleImage from "../../ScaleImage";
 import AdminDateInput from "../../AdminDateInput";
 import AdminHourInput from "../../AdminHourInput";
 import AdminConfirmDialog from "../../AdminConfirmDialog";
-import { Upload, CircleMinus, Image } from "lucide-react"
+import { Upload, CircleMinus, Image, Astroid } from "lucide-react"
 import { toast } from "react-toastify";
 import { updateLostReport, getLostReports } from "../services/LostReportModalService";
 export default function EditTab({
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     selectedItem,
     setSelectedItem,
     categories = [],
@@ -23,7 +26,6 @@ export default function EditTab({
     onUpdated,
     setEditTab,
 }) {
-    console.log(selectedItem)
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [isSaving, setIsSaving] = useState(false);
@@ -36,7 +38,6 @@ export default function EditTab({
     const fileInputRef = useRef(null);
 
     const [originalFormData, setOriginalFormData] = useState({});
-    const [hasChanges, setHasChanges] = useState(false);
     const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
 
@@ -48,21 +49,28 @@ export default function EditTab({
         }
     }
 
-const handleFileChange = async (e) => {
+const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-     if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size exceeds 10MB limit")
-      return;
-    }
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Invalid file type");
-      return;
+    if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
     }
 
-    if (image && image.startsWith("blob:")) {
+    const validTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ];
+
+    if (!validTypes.includes(file.type)) {
+        toast.error("Invalid file type");
+        return;
+    }
+
+    if (image?.startsWith("blob:")) {
         URL.revokeObjectURL(image);
     }
 
@@ -70,10 +78,27 @@ const handleFileChange = async (e) => {
 
     setSelectedFile(file);
     setImage(preview);
+
+    // Remove the REMOVE flag if user uploads a new image
+    setFormData(prev => {
+        const { image_url, ...rest } = prev;
+
+        return rest;
+    });
+};
+
+
+const analyzeFile = async () => {
+    if (!selectedFile) {
+        toast.error("Please select an image first.");
+        return;
+    }
+
     try {
         setIsAnalyzing(true);
+
         const formDataObj = new FormData();
-        formDataObj.append("image", file);
+        formDataObj.append("image", selectedFile);
 
         const response = await fetchWithAuth(
             `${API_URL}/api/gemini-item-listing/describe-item`,
@@ -84,10 +109,15 @@ const handleFileChange = async (e) => {
         );
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
+
+        if (!response.ok) {
+            throw new Error(data.error || "AI analysis failed");
+        }
 
         const matchedCategory = categories.find(
-            (cat) => cat.category_name.toLowerCase() === data.category?.toLowerCase()
+            (cat) =>
+                cat.category_name?.toLowerCase().trim() ===
+                data.category?.toLowerCase().trim()
         );
 
         setFormData(prev => ({
@@ -95,35 +125,63 @@ const handleFileChange = async (e) => {
             item_name: data.itemName || prev.item_name,
             description: data.detailedDescription || prev.description,
             contents: data.contents || prev.contents,
-            category_id: matchedCategory ? String(matchedCategory.category_id) : prev.category_id,
+            category_id: matchedCategory
+                ? String(matchedCategory.category_id)
+                : prev.category_id,
         }));
+
+        toast.success("Image analyzed successfully.");
+
     } catch (err) {
-        console.error(err);
-        toast.error("Failed to analyze image with AI.");
+        console.error("Image analysis error:", err);
+        toast.error(err.message || "Failed to analyze image with AI.");
     } finally {
         setIsAnalyzing(false);
     }
 };
 
+
+
+
+
     const [formData, setFormData] = useState({
-        item_name: "",
-        category_id: "",
-        description: "",
-        contents: "",
-        lost_date: "",
-        location_lost: [],
-        specific_location: "",
-    });
+    item_name: "",
+    category_id: "",
+    description: "",
+    contents: "",
+    lost_date: "",
+    location_lost: [],
+    specific_location: "",
+    owner_name: "",
+    email: "",
+    contact_number: "",
+});
 
     const handleRemovePicture = () => {
-        setFormData(prev => ({
-            ...prev,
-            image_url: "REMOVE",
-        }));
-        setImage(null)
+    if (image?.startsWith("blob:")) {
+        URL.revokeObjectURL(image);
     }
 
+    setFormData(prev => ({
+        ...prev,
+        image_url: "REMOVE",
+    }));
+
+    // Remove image from UI
+    setImage(null);
+    setSelectedFile(null);
+
+    // Clear file input so the same image can be selected again
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+};
+
+
     useEffect(() => {
+
+        setDiscardMessage("You have unsaved changes. Are you sure you want to discard them?")
+
         if (!selectedItem) return;
 
         setImage(selectedItem?.image_url);
@@ -247,10 +305,6 @@ const handleFileChange = async (e) => {
         formData.contact_number.trim() !== ""
     );
 
-    useEffect(() => {
-        console.log(formData.lost_date);
-    }, [formData.lost_date]);
-
     const isValidPhone = /^09\d{9}$/.test(
         formData.contact_number
     );
@@ -304,40 +358,49 @@ const handleFileChange = async (e) => {
                             disabled={isAnalyzing}
                             onChange={handleFileChange}
                         />
+                        
 
                         <div className="flex gap-2 h-10 justify-center text-[10px] xl:text-xs">
-                            {image &&
+                            {image && fileInputRef &&                 
                                 <button
-                                    className=" border border-primary items-center text-primary rounded-md p-2  cursor-pointer disabled:opacity-40 w-fit flex gap-2"
-                                    disabled={isAnalyzing}
+                                    className=" border border-primary items-center text-primary rounded-md p-2 disabled:cursor-not-allowed  cursor-pointer disabled:opacity-40 w-fit flex gap-2"
+                                    disabled={isAnalyzing || isSaving}
                                     onClick={() => handleRemovePicture()}
                                 >
                                     <CircleMinus size={15} />  <p>Remove Picture</p>
-                                </button>
-
+                                </button>       
                             }
                             <button
-                                className=" bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:opacity-40 w-fit flex gap-2"
-                                disabled={isAnalyzing}
+                                className=" bg-primary text-white items-center rounded-md p-2 disabled:cursor-not-allowed cursor-pointer disabled:opacity-40 w-fit flex gap-2"
+                                disabled={isAnalyzing || isSaving}
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <Upload size={15} />  <p>{image ? "Change Picture" : "Upload Picture"}</p>
+
                             </button>
 
                         </div>
+                        {image && fileInputRef &&
+                           <div className="flex gap-2 h-10  text-[10px] xl:text-xs">
+                                    <button
+                                   className=" bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 w-fit flex gap-2"
+                                    disabled={isAnalyzing || isSaving}
+                                    onClick={() => analyzeFile()}
+                                >
+                                    <Astroid size={15} />  <p>Scan Image</p>
+                                </button>
+                            </div>
 
-                        {isAnalyzing && (
-                            <p className="text-primary text-sm">
-                                Analyzing image...
-                            </p>
-                        )}
+                            }
+
+                       
                     </div>
                     {/* Item Name */}
 
                     <AdminTextField
                         title="Item Name"
                         reqField={true}
-                        value={formData?.item_name}
+                        value={formData?.item_name ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -350,7 +413,7 @@ const handleFileChange = async (e) => {
                     <AdminCategoriesDropdown
                         title="Category"
                         reqField={true}
-                        value={formData.category_id}
+                        value={formData.category_id ?? ""}
                         options={categories}
                         onChange={(value) =>
                             setFormData(prev => ({
@@ -363,7 +426,7 @@ const handleFileChange = async (e) => {
 
                     <AdminTextArea
                         title="Description"
-                        value={formData.description}
+                        value={formData.description ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -375,7 +438,7 @@ const handleFileChange = async (e) => {
 
                     <AdminTextArea
                         title="Contents"
-                        value={formData.contents}
+                        value={formData.contents ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -383,6 +446,12 @@ const handleFileChange = async (e) => {
                             }))
                         }
                     />
+
+                     {isAnalyzing && (
+                            <p className="text-primary text-sm">
+                                Analyzing image...
+                            </p>
+                        )}
 
                     {/* Date */}
 
@@ -420,7 +489,7 @@ const handleFileChange = async (e) => {
                     {/* Locations */}
 
                     <AdminLocationMultiSelect
-                        value={formData.location_lost}
+                        value={formData.location_lost ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -437,7 +506,7 @@ const handleFileChange = async (e) => {
 
                     <AdminTextField
                         title="Specific Location"
-                        value={formData.specific_location}
+                        value={formData.specific_location ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -448,7 +517,7 @@ const handleFileChange = async (e) => {
 
                     <AdminTextField
                         title="Item Owner Name"
-                        value={formData.owner_name}
+                        value={formData.owner_name ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -460,8 +529,8 @@ const handleFileChange = async (e) => {
                     <AdminTextField
                         title="Email"
                         reqField={true}
-                        name="specific_location"
-                        value={formData?.email}
+                        name="email"
+                        value={formData?.email ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -476,7 +545,7 @@ const handleFileChange = async (e) => {
                         title="Contact Number"
                         reqField={true}
                         name="specific_location"
-                        value={formData?.contact_number}
+                        value={formData?.contact_number ?? ""}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
@@ -523,6 +592,7 @@ const handleFileChange = async (e) => {
                     confirmText="Discard Changes"
                     onClose={() => setOpenDiscardDialog(false)}
                     onConfirm={() => {
+                        setHasChanges(false)
                         setOpenDiscardDialog(false);
                         setEditTab(false);
                     }}

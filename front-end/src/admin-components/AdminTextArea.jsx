@@ -17,7 +17,7 @@ export default function AdminTextArea({
       <div className={`rounded-md ${error ? "p-1 border border-red-600" : ""}`}>
 
         <textarea
-          className="textarea h-20 bg-white rounded-md w-full border border-[#DDD9CF] text-sm"
+          className="textarea h-20 bg-white rounded-md w-full border border-[#DDD9CF] text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}

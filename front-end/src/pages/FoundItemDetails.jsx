@@ -22,40 +22,33 @@ const [howToClaim, setHowToClaim] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
+  const [error, setError] = useState(null);
+  
 
-const handleTouchStart = (e) => {
-  touchStartRef.current = e.touches[0].clientY;
-  setIsDragging(true);
-};
+const fetchReport = async (id) => {
+  try {
+    setError(null);
+    const res = await fetchWithAuth(`${API_URL}/api/found-reports/${id}`);
+    const data = await res.json();
 
-const handleTouchMove = (e) => {
-  const delta = e.touches[0].clientY - touchStartRef.current;
-  if (delta > 0) setDragY(delta);
-};
+    if (!res.ok) {
+      throw new Error(data.message || `Request failed (${res.status})`);
+    }
 
-const handleTouchEnd = () => {
-  setIsDragging(false);
-  if (dragY > 100) {
-    setHowToClaim(false);
+    console.log("report:", data);
+    setReport(data);
+  } catch (err) {
+    console.error(err);
+    setError(err.message);
   }
-  setDragY(0);
 };
 
 
-
-    useEffect(() => {
-        const token = localStorage.getItem("token")
-        fetchWithAuth(`${API_URL}/api/found-reports/${id}`
-
-        )
-            .then((res) => res.json())
-            .then((data) => {
-                setReport(data);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, [])
+   useEffect(() => {
+    if (id) {
+        fetchReport(id);
+    }
+}, [id]);
 
     const fetchClaimSteps = async () => {
         try {
@@ -151,22 +144,11 @@ const handlePointerDown = (e) => {
 
 
 
-const renderValue = (value) => {
-    const parsed = parseValue(value);
-    if (parsed === null || parsed === undefined || parsed === "") {
-        return <span className="italic text-gray-400">Not specified</span>;
-    }
-    return <span>{parsed}</span>;
-};
-
-
-
-
     return(
         <>
 
             <div inert={howToClaim}>
-             <PageLabelWithReturn label="Item Details" onClick={() => {}} onClick={handleReturn}/>
+             <PageLabelWithReturn label="Item Details" onClick={handleReturn}/>
               <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col ">
                 {report?
                     (<>
@@ -200,7 +182,7 @@ const renderValue = (value) => {
                         </div>
                         <div>
                                              <p >Current Location</p>
-                        <p className="font-medium">{report.office_name}</p>
+                        <p className="font-medium">{report.office_name }</p>
                         </div>
                     </div>
                     <HorizontalBreak/>
@@ -216,7 +198,13 @@ const renderValue = (value) => {
                     :
                     (
                         <>
-                            <Loading/>
+                        {error ? (
+  <p className="text-center py-10 text-red-500">{error}</p>
+) : report ? (
+  <>{/* your details */}</>
+) : (
+  <Loading />
+)}
                         </>
                     )
 

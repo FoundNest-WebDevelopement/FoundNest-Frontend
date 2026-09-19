@@ -4,10 +4,9 @@ import AdminTextField from "./AdminTextField"
 import AdminTextArea from "./AdminTextArea";
 import AdminDateInput from "./AdminDateInput";
 import AdminHourInput from "./AdminHourInput";
-import AdminLocationDropDown from "./AdminLocationDropDown";
-import AdminAllLocationDropDown from "./AdminAllLocationDropDown";
+import AdminButton from "./AdminButton";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { Phone } from "lucide-react";
+import { Astroid } from "lucide-react";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import { toast } from "react-toastify";
 
@@ -59,7 +58,6 @@ export default function LostReportModal(
     const [showGates, setShowGates] = useState(false);
 
     const [cantRemember, setCantRemember] = useState(false);
-
 
 
 
@@ -219,64 +217,98 @@ export default function LostReportModal(
     };
 
     //FILE CHANGE HANDLER
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
+    // FILE CHANGE HANDLER
+const handleFileChange = (e) => {
+    const file = e.target.files[0];
 
-        if (!file) return;
+    if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size exceeds 10MB limit")
-      return;
+    // Validate file size
+    if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
     }
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+    // Validate file type
+    const validTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ];
+
     if (!validTypes.includes(file.type)) {
-      toast.error("Invalid file type");
-      return;
+        toast.error("Invalid file type");
+        return;
     }
 
+    // Revoke previous blob URL to prevent memory leaks
+    if (image && image.startsWith("blob:")) {
+        URL.revokeObjectURL(image);
+    }
 
-        setSelectedFile(file);
-        setImage(URL.createObjectURL(file));
+    // Create preview URL
+    const preview = URL.createObjectURL(file);
 
-        try {
-            setIsAnalyzing(true);
+    // Store actual file and preview separately
+    setSelectedFile(file);
+    setImage(preview);
+};
 
-            const formData = new FormData();
-            formData.append("image", file);
-            const token = localStorage.getItem("token")
-            const response = await fetchWithAuth(
-                `${API_URL}/api/gemini-item-listing/describe-item`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
-            );
+// ANALYZE SELECTED IMAGE
+const analyzeFile = async () => {
+    if (!selectedFile) {
+        toast.error("Please select an image first.");
+        return;
+    }
 
-            const data = await response.json();
+    try {
+        setIsAnalyzing(true);
 
-            if (!response.ok) {
-                throw new Error(data.error || "AI analysis failed");
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+
+        const response = await fetchWithAuth(
+            `${API_URL}/api/gemini-item-listing/describe-item`,
+            {
+                method: "POST",
+                body: formData,
             }
+        );
 
-            setItemName(data.itemName || "");
-            setDescription(data.detailedDescription || "");
-            setContents(data.contents || "");
+        const data = await response.json();
 
-            const matchedCategory = categories.find(
-                (item) =>
-                    item.category_name.toLowerCase() ===
-                    data.category?.toLowerCase()
-            );
-
-            if (matchedCategory) {
-                setCategory(String(matchedCategory.category_id));
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsAnalyzing(false);
+        if (!response.ok) {
+            throw new Error(data.error || "AI analysis failed");
         }
-    };
+
+        // Match AI category with existing category list
+        const matchedCategory = categories.find(
+            (item) =>
+                item.category_name?.toLowerCase().trim() ===
+                data.category?.toLowerCase().trim()
+        );
+
+        // Populate AI results
+        // Preserve existing values when AI does not return a value.
+        setItemName((prev) => data.itemName || prev);
+        setDescription((prev) => data.detailedDescription || prev);
+        setContents((prev) => data.contents || prev);
+
+        // Only replace category when AI successfully matched one
+        if (matchedCategory) {
+            setCategory(String(matchedCategory.category_id));
+        }
+        
+    } catch (error) {
+        console.error("Image analysis error:", error);
+        toast.error(error.message || "Failed to analyze image with AI.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+};
+
+
 
     //RESET TIME IF DATE IS CHANGED
     const handleDateChange = (value) => {
@@ -354,6 +386,21 @@ export default function LostReportModal(
         }
     };
 
+    // REMOVE IMAGE HANDLER
+const handleRemoveImage = () => {
+
+    if (image?.startsWith("blob:")) {
+        URL.revokeObjectURL(image);
+    }
+    setSelectedFile(null);
+    setImage(null);
+
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+};
+
+
     return (
         <>
             <dialog className={`modal ${open ? "modal-open" : ""}`}>
@@ -366,7 +413,7 @@ export default function LostReportModal(
                         <p className="text-xl font-semibold text-white">
                             Add New Report
                         </p>
-                        <button type="button" onClick={()=>{
+                        <button type="button" className="disabled:opacity-40 disabled:cursor-not-allowed" onClick={()=>{
                              if (hasUnsavedChanges) {
                                                 setOpenCancelReportDialog(true);
                                             } else {
@@ -420,9 +467,14 @@ export default function LostReportModal(
                                 disabled={isSubmitting}
                                 onChange={handleFileChange}
                             />
-                            {isAnalyzing && (
-                                <p className="text-xs text-primary mt-2">Analyzing image...</p>
-                            )}
+                             {image && fileInputRef &&
+                            <div className="flex gap-2 mt-2">
+                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting} onClick={analyzeFile}/>
+                               
+                                     <AdminButton isIcon={false}  label={"Remove Image"} disabled={isAnalyzing || isSubmitting} onClick={handleRemoveImage}/>
+                               
+                            </div>
+                          }
                         </div>
 
                         <AdminTextField
@@ -431,7 +483,7 @@ export default function LostReportModal(
                             value={itemName}
                             onChange={setItemName}
                             reqField={true}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminCategoriesDropdown
                             title="Category"
@@ -440,22 +492,25 @@ export default function LostReportModal(
                             onChange={setCategory}
                             options={categories}
                             reqField={true}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminTextArea
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
                             onChange={setDescription}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminTextField
                             title="Contents (if Applicable)"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
                             onChange={setContents}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         />
+                           {isAnalyzing && (
+                                <p className="text-xs text-primary mt-2">Analyzing image...</p>
+                            )}
                         <div className="dropdown w-full">
                             <p className="text-sm font-medium mt-2">Location Lost <span className="text-primary">*</span></p>
                             <button
@@ -686,7 +741,7 @@ export default function LostReportModal(
                         <AdminTextField
                             title="Logged By"
                             value={AdminFullName}
-                            disabled={isSubmitting}
+                            disabled={true}
 
                         />
                     </div>
@@ -699,7 +754,7 @@ export default function LostReportModal(
                                             } else {
                                                 handleClose();
                                             }}}
-                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md"
+                            className="font-medium text-sm text-primary border border-primary p-3 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>

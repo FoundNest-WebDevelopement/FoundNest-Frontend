@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, CircleMinus, Image as ImageIcon } from "lucide-react";
+import { Upload, CircleMinus, Image as ImageIcon, Astroid } from "lucide-react";
 import { toast } from "react-toastify";
 
 // Utilities & Hooks
@@ -20,6 +20,9 @@ import AdminTextField from "../../AdminTextField.jsx";
 export default function EditFoundReportTab({
     selectedItem,
     setSelectedItem,
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     categories = [],
     locations = [], // Used for current office location
     allLocations = [], // Used for location found
@@ -28,15 +31,14 @@ export default function EditFoundReportTab({
     refreshReports
 }) {
     const userId = localStorage.getItem("user_id");
-
+    
     // Hooks
     const { saveEdit, isSavingEdit } = useSaveEditReport();
 
     // UI & Loading States
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
+    const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
 
     // Image States
     const fileInputRef = useRef(null);
@@ -93,8 +95,9 @@ export default function EditFoundReportTab({
 
     // === INITIALIZATION ===
     useEffect(() => {
+        setDiscardMessage("You have unsaved changes. Are you sure you want to discard them? The listing will keep its original details.");
         if (!selectedItem) return;
-
+        
         setImage(selectedItem?.image_url);
         setSelectedFile(null);
 
@@ -143,59 +146,73 @@ export default function EditFoundReportTab({
         }));
     };
 
-    const handleRemovePicture = () => {
-        setSelectedFile(null);
-        setImage(null);
-    };
-
-    const handleFileChange = async (e) => {
+    const handleFileChange = (e) => { 
         const file = e.target.files[0];
-        if (!file) return;
+    if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error("File size exceeds 10MB limit");
-            return;
-        }
+    if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
+    }
 
-        const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-        if (!validTypes.includes(file.type)) {
-            toast.error("Invalid file type");
-            return;
-        }
+    const validTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ];
 
-        if (image && image.startsWith("blob:")) {
-            URL.revokeObjectURL(image);
-        }
+    if (!validTypes.includes(file.type)) {
+        toast.error("Invalid file type");
+        return;
+    }
 
-        const preview = URL.createObjectURL(file);
-        setSelectedFile(file);
-        setImage(preview);
+    if (image && image.startsWith("blob:")) {
+        URL.revokeObjectURL(image);
+    }
 
-        try {
-            setIsAnalyzing(true);
-            const formDataObj = new FormData();
-            formDataObj.append("image", file);
+    const preview = URL.createObjectURL(file);
 
-            const data = await analyzeItemImage(formDataObj);
+    setSelectedFile(file);
+    setImage(preview);
+};
 
-            const matchedCategory = categories.find(
-                (cat) => cat.category_name.toLowerCase() === data.category?.toLowerCase()
-            );
+const analyzeFile = async () => {
+    if (!selectedFile) {
+        toast.error("Please select an image first.");
+        return;
+    }
 
-            setFormData(prev => ({
-                ...prev,
-                item_name: data.itemName || prev.item_name,
-                description: data.detailedDescription || prev.description,
-                contents: data.contents || prev.contents,
-                category_id: matchedCategory ? String(matchedCategory.category_id) : prev.category_id,
-            }));
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to analyze image with AI.");
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
+    try {
+        setIsAnalyzing(true);
+
+        const formDataObj = new FormData();
+        formDataObj.append("image", selectedFile);
+
+        const data = await analyzeItemImage(formDataObj);
+
+        const matchedCategory = categories.find(
+            (cat) =>
+                cat.category_name.toLowerCase() ===
+                data.category?.toLowerCase()
+        );
+
+        setFormData((prev) => ({
+            ...prev,
+            item_name: data.itemName || "",
+            description: data.detailedDescription || "",
+            contents: data.contents || "",
+         
+        }));
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to analyze image with AI.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+};
+
+
 
     const handleCancel = () => {
         if (hasChanges) {
@@ -293,7 +310,18 @@ export default function EditFoundReportTab({
                         />
 
                         {/* Image Buttons */}
-                        <div className="flex gap-2 h-10 justify-center text-[10px] xl:text-xs">
+                        <div className="flex gap-2 h-10 justify-center text-[10px] xl:text-xs">               
+                                    
+                            {image && fileInputRef &&
+                            <button
+                                className="bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:opacity-40 w-fit flex gap-2"
+                                disabled={isAnalyzing || isSavingEdit}
+                                onClick={() => analyzeFile()}
+                            >
+                                <Astroid size={15} /> <p>Scan Image</p>
+                            </button>
+
+                            }
                            
                             <button
                                 className="bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:opacity-40 w-fit flex gap-2"
@@ -304,9 +332,7 @@ export default function EditFoundReportTab({
                             </button>
                         </div>
 
-                        {isAnalyzing && (
-                            <p className="text-primary text-sm text-center">Analyzing image with AI...</p>
-                        )}
+                       
                     </div>
 
                     {/* Form Fields Stack */}
@@ -314,24 +340,26 @@ export default function EditFoundReportTab({
                         title="Item Name"
                         reqField={true}
                         value={formData.item_name}
+                        disabled={isSavingEdit || isAnalyzing}
                         onChange={(value) => handleChange("item_name", value)}
                     />
 
                     <AdminCategoriesDropdown
                         title="Category"
                         reqField={true}
+                        disabled={isSavingEdit || isAnalyzing}
                         value={formData.category_id}
                         options={categories}
                         onChange={(value) => handleChange("category_id", value)}
                     />
 
                     {/* Using a native select styled to match Admin component rules since multi-select isn't applicable for Found location */}
-                    <div className="flex flex-col text-xs mt-2">
+                    <div className="flex flex-col text-xs mt-2 ">
                         <p className="text-[#6B5C42] font-semibold mb-1">
                             Location Found <span className="text-primary">*</span>
                         </p>
                         <select
-                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md font-normal"
+                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md font-normal disabled:opacity-40 disabled:cursor-pointer"
                             value={formData.location_found}
                             disabled={isSavingEdit}
                             onChange={(e) => handleChange("location_found", e.target.value)}
@@ -345,6 +373,7 @@ export default function EditFoundReportTab({
 
                     <AdminTextField
                         title="Specific Location"
+                        disabled={isSavingEdit}
                         value={formData.specific_location}
                         onChange={(value) => handleChange("specific_location", value)}
                     />
@@ -354,6 +383,7 @@ export default function EditFoundReportTab({
                             <AdminDateInput
                                 title="Date Found"
                                 reqField={true}
+                                disabled={isSavingEdit}
                                 max={getTodayDateString()}
                                 value={formData.found_date}
                                 onChange={(value) => handleChange("found_date", value)}
@@ -367,7 +397,7 @@ export default function EditFoundReportTab({
                                 title="Time Found"
                                 reqField={true}
                                 value={formData.found_time}
-                                disabled={!editDateValid}
+                                disabled={!editDateValid || isSavingEdit}
                                 onChange={(value) => handleChange("found_time", value)}
                             />
                             {!editTimeValid && formData.found_time && (
@@ -378,6 +408,7 @@ export default function EditFoundReportTab({
 
                     <AdminTextArea
                         title="Description"
+                        disabled={isSavingEdit || isAnalyzing}
                         value={formData.description}
                         onChange={(value) => handleChange("description", value)}
                     />
@@ -385,17 +416,24 @@ export default function EditFoundReportTab({
                     <AdminTextField
                         title="Contents (Optional)"
                         value={formData.contents}
+                        disabled={isSavingEdit || isAnalyzing}
                         onChange={(value) => handleChange("contents", value)}
                     />
+
+                     {isAnalyzing && (
+                            <p className="text-primary text-sm text-center">Analyzing image...</p>
+                        )}
 
                     <AdminTextField
                         title="Surrendered By"
                         value={formData.reported_by}
+                        disabled={isSavingEdit}
                         onChange={(value) => handleChange("reported_by", value)}
                     />
 
                     <AdminTextArea
                         title="Additional Notes"
+                        disabled={isSavingEdit}
                         value={formData.additional_notes}
                         onChange={(value) => handleChange("additional_notes", value)}
                     />
@@ -403,9 +441,9 @@ export default function EditFoundReportTab({
                     <div className="flex flex-col text-xs mt-2">
                         <p className="text-[#6B5C42] font-semibold mb-1">Current Office Location</p>
                         <select
-                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md font-normal"
-                            value={formData.office_id}
+                            className="select select-sm bg-white border border-[#DDD9CF] text-black w-full rounded-md font-normal disabled:opacity-40 disabled:cursor-not-allowed"
                             disabled={isSavingEdit}
+                            value={formData.office_id}
                             onChange={(e) => handleChange("office_id", e.target.value)}
                         >
                             <option value="">No office assigned</option>
@@ -455,6 +493,7 @@ export default function EditFoundReportTab({
                     onConfirm={() => {
                         setOpenDiscardDialog(false);
                         setIsEditing(false);
+                        setHasChanges(false);
                     }}
                 />
             )}

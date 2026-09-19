@@ -47,6 +47,12 @@ export default function FoundReportItemManagementModal({
   const [selectedImage, setSelectedImage] = useState();
   const [searchResults, setSearchResults] = useState();
 
+  const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [discardMessage, setDiscardMessage] = useState();
+
+
+
   //hooks
   const { saveEdit, isSavingEdit } = useSaveEditReport();
   const { refreshReports } = useRefreshFoundReports({
@@ -72,9 +78,7 @@ export default function FoundReportItemManagementModal({
   const [disposedTab, setDisposedTab] = useState(false);
   const [editTab, setEditTab] = useState(true);
 
-
   const [fullName, setFullName] = useState("");
-
 
   const [successData, setSuccessData] = useState(null);
 
@@ -118,7 +122,6 @@ export default function FoundReportItemManagementModal({
   const [editImagePreview, setEditImagePreview] = useState(false);
   const [originalEditForm, setOriginalEditForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const editImageInputRef = useRef(null);
   const [editImageFile, setEditImageFile] = useState(null);
   const [editForm, setEditForm] = useState({
     item_name: "",
@@ -216,6 +219,7 @@ export default function FoundReportItemManagementModal({
   };
 
   const handleCloseDetails = () => {
+
     setSelectedItem(null);
     setItemHistory(false);
     setIsEditing(false);
@@ -225,6 +229,15 @@ export default function FoundReportItemManagementModal({
     setDisposedTab(false);
     setItemInfo(true);
   };
+
+  const checkChanges = () => {
+    if (hasChanges) {
+      setOpenDiscardDialog(true)
+    }
+    else {
+      handleCloseDetails()
+    }
+  }
 
   const handleSaveEdit = async () => {
 
@@ -441,7 +454,7 @@ export default function FoundReportItemManagementModal({
                 </p>
               </div>
               <div className="ml-auto pr-5">
-                <button onClick={handleCloseDetails} className="cursor-pointer">
+                <button onClick={checkChanges} className="cursor-pointer">
                   <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
                 </button>
               </div>
@@ -468,7 +481,6 @@ export default function FoundReportItemManagementModal({
 
           {editTab && (
             <>
-
               <div className="h-full w-full p-5 pt-30">
                 {itemInfo ? (
                   <>
@@ -476,6 +488,9 @@ export default function FoundReportItemManagementModal({
                       (
                         <>
                           <EditFoundReportTab
+                            hasChanges={hasChanges}
+                            setHasChanges={setHasChanges}
+                            setDiscardMessage={setDiscardMessage}
                             selectedItem={selectedItem}
                             setSelectedItem={setSelectedItem}
                             categories={categories}
@@ -561,6 +576,11 @@ export default function FoundReportItemManagementModal({
           )}
           {claimTab && (
             <ClaimFoundReportTab
+            fullName={fullName}
+            setFullName={setFullName}
+              hasChanges={hasChanges}
+              setHasChanges={setHasChanges}
+              setDiscardMessage={setDiscardMessage}
               selectedItem={selectedItem}
               refreshReports={refreshReports}
               onCancel={() => {
@@ -573,6 +593,9 @@ export default function FoundReportItemManagementModal({
           )}
           {disposedTab && (
             <DisposeFoundReportTab
+              hasChanges={hasChanges}
+              setHasChanges={setHasChanges}
+              setDiscardMessage={setDiscardMessage}
               selectedItem={selectedItem}
               refreshReports={refreshReports}
               onCancel={() => {
@@ -608,13 +631,13 @@ export default function FoundReportItemManagementModal({
         )
       }
       {openArchivedDialog && (
-  <ArchiveDialog
-    open={openArchivedDialog}
-    onClose={() => setOpenArchivedDialog(false)}
-    onConfirm={() => handleArchiveReport(selectedItem.found_report_id)}
-    isArchiving={isArchiving}
-  />
-)}
+        <ArchiveDialog
+          open={openArchivedDialog}
+          onClose={() => setOpenArchivedDialog(false)}
+          onConfirm={() => handleArchiveReport(selectedItem.found_report_id)}
+          isArchiving={isArchiving}
+        />
+      )}
       {openRestoreDialog &&
         (
           <RestoreDialog
@@ -701,6 +724,20 @@ export default function FoundReportItemManagementModal({
           setSelectedImage={setSelectedImage}
         />
       }
+
+      {openDiscardDialog && (
+        <AdminConfirmDialog
+          title="Discard Changes?"
+          description={discardMessage}
+          cancelText="Keep Editing"
+          confirmText="Discard Changes"
+          onClose={() => setOpenDiscardDialog(false)}
+          onConfirm={() => {
+            setHasChanges(false);
+            handleCloseDetails();
+          }}
+        />
+      )}
     </>
   );
 }

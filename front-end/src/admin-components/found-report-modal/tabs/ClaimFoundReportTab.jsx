@@ -9,6 +9,11 @@ import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import AdminTextField from "../../AdminTextField.jsx";
 
 export default function ClaimFoundReportTab({
+    setFullName,
+    fullName,
+    hasChanges,
+    setHasChanges,
+    setDiscardMessage,
     selectedItem,
     setClaimId,
     onCancel, // Function to go back to previous tab
@@ -18,8 +23,6 @@ export default function ClaimFoundReportTab({
     const userId = localStorage.getItem("user_id");
     const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
 
-    // --- FORM STATES ---
-    const [fullName, setFullName] = useState("");
     const [claimantEmail, setClaimantEmail] = useState("");
     const [claimantNumber, setClaimantNumber] = useState("");
     const [verificationDetails, setVerificationDetails] = useState("");
@@ -47,7 +50,11 @@ export default function ClaimFoundReportTab({
     const isValidPhone = /^09\d{9}$/.test(claimantNumber);
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimantEmail);
     const isClaimValid = fullName.trim() && (claimantNumber.trim() || claimantEmail.trim()) && selectedFile && verificationDetails.trim();
-    const hasClaimFormChanges = fullName.trim() || claimantEmail.trim() || claimantNumber.trim() || verificationDetails.trim() || selectedFile || linkReport;
+    
+    useEffect(()=>{
+        setHasChanges(fullName.trim() || claimantEmail.trim() || claimantNumber.trim() || verificationDetails.trim() || selectedFile || linkReport)
+        setDiscardMessage("Cancel the release? The information you've entered on this form will not be saved.")
+    },[fullName,claimantEmail,claimantNumber,verificationDetails,selectedFile,linkReport])
 
     const formatItemId = (id) => `SI-${String(id).padStart(5, "0")}`;
 
@@ -90,6 +97,11 @@ export default function ClaimFoundReportTab({
         try {
             const officeId = localStorage.getItem("office_location");
             const officeIdTemp = (officeId && officeId !== "undefined") ? officeId : null;
+
+            if(officeId !== selectedItem.office_id){
+                toast.error("item is not in your respected office")
+                return
+            }
 
             const formData = new FormData();
             formData.append("claimant_full_name", fullName);
@@ -136,7 +148,7 @@ export default function ClaimFoundReportTab({
                 <AdminTextField title="Claimant Full Name" reqField={true} placeholder="Full name of claimant" value={fullName} disabled={isReleasing} onChange={setFullName} />
 
                 <div className="w-full mt-3 flex flex-col gap-2">
-                    <p className="text-sm font-medium">BulSU Email / Contact Number <span className="text-primary">*</span></p>
+                    <p className="text-sm font-medium">Email / Contact Number <span className="text-primary">*</span></p>
                     <div className="w-full h-10 flex">
                         <button className={`flex-1 text-[#6B5C42] rounded-l-lg text-xs font-semibold border border-[#DDD9CF] ${!identifierToggle && "text-white bg-primary border-primary"}`} onClick={() => setIdentifierToggle(false)}>Email</button>
                         <button className={`flex-1 text-[#6B5C42] rounded-r-lg text-xs font-semibold border border-[#DDD9CF] ${identifierToggle && "text-white bg-primary border-primary"}`} onClick={() => setIdentifierToggle(true)}>Contact No.</button>
@@ -215,7 +227,10 @@ export default function ClaimFoundReportTab({
 
                 {/* Actions */}
                 <div className="w-full h-10 flex gap-2 text-xs">
-                    <button className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95" onClick={() => hasClaimFormChanges ? setOpenCancelRelease(true) : onCancel()}>
+                    <button className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                     onClick={() => hasChanges ? setOpenCancelRelease(true) : onCancel()}
+                     disabled={isReleasing}
+                     >
                         Cancel
                     </button>
                     <button type="button" disabled={!isClaimValid || isReleasing || (!isValidEmail && claimantEmail) || (!isValidPhone && claimantNumber)} onClick={() => setOpenConfirmRelease(true)} className="flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 transition-transform active:scale-95">
@@ -231,7 +246,7 @@ export default function ClaimFoundReportTab({
                 <AdminConfirmDialog
                     description="Cancel the release? The information you've entered on this form will not be saved."
                     onClose={() => setOpenCancelRelease(false)}
-                    onConfirm={() => { setOpenCancelRelease(false); onCancel(); }}
+                    onConfirm={() => { setOpenCancelRelease(false); onCancel(); setHasChanges(false) }}
                 />
             )}
 

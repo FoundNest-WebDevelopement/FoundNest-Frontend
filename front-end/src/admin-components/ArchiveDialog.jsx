@@ -15,7 +15,7 @@ export default function ArchiveDialog({
         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
           <p className="font-semibold">Archived Item</p>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={isArchiving || isLoading} className="disabled:opacity-40 disabled:cursor-not-allowed">
             <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
           </button>
         </div>
@@ -49,8 +49,10 @@ export default function ArchiveDialog({
 
           <div className="flex gap-2">
             <button
-              className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+              className="w-full h-10 flex-1 bg-white rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95
+                        disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={onClose}
+              disabled={isArchiving || isLoading}
             >
               Cancel
             </button>
