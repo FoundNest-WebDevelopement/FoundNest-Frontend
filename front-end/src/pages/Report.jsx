@@ -1,1028 +1,1141 @@
-import ButtonPositive from "../components/ButtonPositive";
-import DropDown from "../components/DropDown";
-import HorizontalBreak from "../components/HorizontalBreak";
-import Horizontal from "../components/HorizontalBreak";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
+import { CircleAlert } from "lucide-react";
 import PageLabel from "../components/PageLabel";
-import PageLabel2 from "../components/PageLabel2";
-import { useState, useRef, useEffect } from "react"
-import TextField from "../components/TextField";
-import TextArea from "../components/TextArea";
-import DateInput from "../components/DateInput";
-import HourInput from "../components/HourInput";
-import { CircleAlert } from "lucide-react"
-import ButtonNegative from "../components/ButtonNegative";
-import heart from "../assets/heart.png"
+import PageLabelWithReturn from "../components/PageLabelWithReturn";
+import HorizontalBreak from "../components/HorizontalBreak";
 import Loading from "../components/Loading";
 import AlertDialog from "../components/AlertDialog";
 import Toast from "../components/Toast";
-import InfoIcon from "../assets/info_icon.png"
-import toast from "react-hot-toast";
+import InfoIcon from "../assets/info_icon.png";
+import heart from "../assets/heart.png";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { useNavigate, useParams } from "react-router-dom";
-import PageLabelWithReturn from "../components/PageLabelWithReturn";
 
-export default function Report() {
+const API_URL = import.meta.env.VITE_API_URL;
 
-  const API_URL = import.meta.env.VITE_API_URL;
-  const userID = localStorage.getItem("user_id");
+/* -------------------------------------------------------------------------- */
+/* Limits                                                                     */
+/* -------------------------------------------------------------------------- */
 
-  const navigate = useNavigate();
+// Change these in one place; inputs, counters, validation and AI output all use them.
+const LIMITS = {
+  itemName: 50,
+  description: 500,
+  contents: 100,
+  specificLocation: 100,
+};
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-  const [lostReport, setLostReport] = useState([]);
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
 
-  //locations
-  const [gates, setGates] = useState([]);
-  const [sharedSpaces, setSharedSpaces] = useState([]);
-  const [locations, setLocations] = useState([]);
+const showToast = (message) => toast.custom(() => <Toast icon={InfoIcon} message={message} />);
 
-  // --- DROPDOWN UI STATES ---
-  const [openLocations, setOpenLocations] = useState(false);
-  const [openCollgeBuilding, setOpenCollgeBuilding] = useState(false);
-  const [openSharedSpaces, setOpenSharedSpaces] = useState(false);
-  const [openGates, setOpenGates] = useState(false);
-  const [dsiableOtherLcoations, setdDisableOtherLcoations] = useState(false);
-
-  const { id } = useParams();
-  const { reportId } = useParams();
-  const { mode } = useParams();
-
-  const navBack = () => {
-    if(mode == "view" && reportId){
-      navigate(`/notifications/${reportId}/verify`)
-    }
-    else{
-      navigate(`/profile/report-history/${userID}`)
-    }
-  
-  }
-  const getDropdownLabel = () => {
-    if (totalLocations === 0) return "Select Locations";
-    if (totalLocations === 1) {
-      if (cantRemember) return "Can't remember";
-      if (selectedCollegeBuilding.length === 1) return selectedCollegeBuilding[0];
-      if (selectedSharedSpaces.length === 1) return selectedSharedSpaces[0];
-      if (selectedGates.length === 1) return selectedGates[0];
-      if (selectedOthers.length === 1) return selectedOthers[0];
-    }
-    return `Locations (${totalLocations})`;
-  };
-
-  // SELECTED DATA STATES
-  const [selectedCollegeBuilding, setSelectedCollegeBuilding] = useState([]);
-  const [selectedSharedSpaces, setSelectedSharedSpaces] = useState([]);
-  const [selectedGates, setSelectedGates] = useState([]);
-  const [selectedOthers, setSelectedOthers] = useState([]);
-  const [cantRemember, setCantRemember] = useState(false);
-
-  const sanitizeInput = (value, maxLength) =>
-  value
-    .replace(/\s+/g, " ")      
-    .replace(/[<>]/g, "")    
+// Strips < >, collapses whitespace, and enforces the max length
+const sanitizeInput = (value, maxLength) =>
+  String(value ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/[<>]/g, "")
     .slice(0, maxLength);
 
-  const totalLocations =
-    selectedCollegeBuilding.length +
-    selectedSharedSpaces.length +
-    selectedGates.length +
-    selectedOthers.length +
-    (cantRemember ? 1 : 0);
+async function fetchJson(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+  return data;
+}
 
-  // CHECKBOX TOGGLE HANDLERS 
-  const handleCollgeClick = (officeName) => {
-    setSelectedCollegeBuilding((prev) =>
-      prev.includes(officeName)
-        ? prev.filter((name) => name !== officeName)
-        : [...prev, officeName]
-    );
-  };
+// Page 1 validation: returns { valid, errors } like the mobile form
+function validatePage1({ categoryId, itemName, description, contents }) {
+  const errors = {};
 
-  const handleSharedSpaceClick = (spaceName) => {
-    setSelectedSharedSpaces((prev) =>
-      prev.includes(spaceName)
-        ? prev.filter((name) => name !== spaceName)
-        : [...prev, spaceName]
-    );
-  };
+  if (!categoryId) errors.category = "Please select a category.";
 
-  const handleGateClick = (gateName) => {
-    setSelectedGates((prev) =>
-      prev.includes(gateName)
-        ? prev.filter((name) => name !== gateName)
-        : [...prev, gateName]
-    );
-  };
+  const name = itemName.trim();
+  if (!name) errors.itemName = "Item name is required.";
+  else if (name.length > LIMITS.itemName)
+    errors.itemName = `Item name must be ${LIMITS.itemName} characters or less.`;
 
-  const [createdReportID, setCreatedReportID] = useState(null);
+  const desc = description.trim();
+  if (!desc) errors.description = "Description is required.";
+  else if (desc.length > LIMITS.description)
+    errors.description = `Description must be ${LIMITS.description} characters or less.`;
 
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [categoryID, setCategoryID] = useState("");
-  const [image, setImage] = useState(null);
+  if (contents.trim().length > LIMITS.contents)
+    errors.contents = `Contents must be ${LIMITS.contents} characters or less.`;
 
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+// Date helpers use LOCAL time. The old version compared UTC dates, which made
+// "today" unselectable for users ahead of UTC (e.g. the Philippines, before 8am).
+const pad = (n) => String(n).padStart(2, "0");
+
+const todayLocalISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const parseLocal = (dateStr, timeStr = "00:00") => {
+  const [y, m, d] = (dateStr || "").split("-").map(Number);
+  const [h, min] = (timeStr || "00:00").split(":").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, h || 0, min || 0);
+};
+
+const isValidPastOrToday = (dateStr) => {
+  const chosen = parseLocal(dateStr);
+  if (!chosen || Number.isNaN(chosen.getTime())) return false;
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return chosen <= endOfToday;
+};
+
+const isTimeNotFuture = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr) return false;
+  const chosen = parseLocal(dateStr, timeStr);
+  return !!chosen && chosen <= new Date();
+};
+
+/* -------------------------------------------------------------------------- */
+/* UI pieces                                                                  */
+/* -------------------------------------------------------------------------- */
+
+// Shared look for inputs, selects and textareas (same as the mobile form)
+const fieldClass = (hasError, extra = "") =>
+  `w-full rounded-lg border px-3 text-base text-[#333] bg-white outline-none placeholder:text-[#8C7A70] focus:border-primary disabled:bg-white disabled:opacity-80 ${
+    hasError ? "border-[#C62828]" : "border-[#DDD9CF]"
+  } ${extra}`;
+
+function Spinner({ className = "h-8 w-8" }) {
+  return (
+    <span
+      className={`inline-block animate-spin rounded-full border-[3px] border-primary border-t-transparent ${className}`}
+    />
+  );
+}
+
+function SectionHeading({ children }) {
+  return (
+    <h2 className="text-[17px] font-black text-black border-b border-black px-2.5 pt-5 pb-4 mb-5">
+      {children}
+    </h2>
+  );
+}
+
+// Label + control + error message + optional character counter
+function Field({ label, htmlFor, required, error, hint, count, max, children }) {
+  return (
+    <div className="mt-5">
+      <label htmlFor={htmlFor} className="block text-[17px] font-extrabold mb-2">
+        {label}
+        {required && <span className="text-primary"> *</span>}
+      </label>
+      {children}
+      <div className="flex items-start justify-between gap-2 mt-1 min-h-4">
+        {error ? (
+          <p role="alert" className="text-[13px] text-[#C62828]">
+            {error}
+          </p>
+        ) : (
+          <p className="text-[13px] text-[#8C7A70]">{hint}</p>
+        )}
+        {max != null && (
+          <p className={`text-xs shrink-0 ml-auto ${count >= max ? "text-[#C62828]" : "text-[#8C7A70]"}`}>
+            {count}/{max}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, disabled, label }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        checked ? "bg-primary" : "bg-[#CCCCCC]"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : ""
+        }`}
+      />
+    </button>
+  );
+}
+
+function ActionButton({ variant = "solid", danger = false, disabled = false, onClick, children }) {
+  const look =
+    variant === "solid"
+      ? "bg-primary text-white px-8 disabled:bg-[#A0A0A0]"
+      : danger
+      ? "border border-[#C62828] text-[#C62828] px-5 disabled:opacity-50"
+      : "border border-primary text-primary px-5 disabled:opacity-50";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-[10px] py-2.5 text-sm font-semibold transition-transform duration-100 enabled:active:scale-95 ${look}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function UploadCard({ image, isLoading, viewOnly, useAi, onToggleAi, onOpenPicker }) {
+  const hasImage = image && image !== "REMOVE";
+
+  return (
+    <div className="flex justify-center pb-2.5">
+      <div className="w-full max-w-[450px] bg-white rounded-[28px] py-5 px-5 flex flex-col items-center shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
+        <button
+          type="button"
+          onClick={onOpenPicker}
+          disabled={isLoading || viewOnly}
+          aria-label={hasImage ? "Change photo" : "Add photo"}
+          className="mb-5 flex items-center justify-center disabled:cursor-default"
+        >
+          {isLoading ? (
+            <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#CCC] flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : hasImage ? (
+            <div className="relative h-[110px] w-[110px]">
+              <img src={image} alt="Item" className="h-full w-full rounded-[20px] object-cover" />
+              {!viewOnly && (
+                <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary border-2 border-white flex items-center justify-center">
+                  <i className="fa-solid fa-pen text-white text-[11px]" />
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-primary flex items-center justify-center">
+              <div className="h-[60px] w-[60px] rounded-full bg-primary flex items-center justify-center">
+                <i className="fa-solid fa-plus text-white text-2xl" />
+              </div>
+            </div>
+          )}
+        </button>
+
+        <p className="text-[17px] font-semibold text-[#6B5A52] text-center mb-3.5">
+          {isLoading ? "Analyzing image..." : "Upload Item Photo (Optional)"}
+        </p>
+        <p className="text-[13px] text-[#8C7A70] text-center leading-[22px] px-3">
+          *FoundNest AI will help auto-fill details based on your photo.
+        </p>
+        <p className="text-xs text-[#8C7A70] text-center mt-1">PNG, JPG or WEBP up to 10MB</p>
+
+        {!viewOnly && (
+          <div className="flex items-center justify-center gap-2.5 mt-3.5">
+            <span className="text-sm font-semibold">Use AI to describe image</span>
+            <Toggle
+              checked={useAi}
+              onChange={onToggleAi}
+              disabled={isLoading}
+              label="Use AI to describe image"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PhotoSheet({ hasPhoto, onTake, onChoose, onRemove, onClose }) {
+  const row =
+    "w-full flex items-center gap-3 rounded-xl border border-[#eee] px-4 py-3 text-sm font-semibold text-left";
+
+  return (
+    <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-white w-full rounded-t-3xl p-4 pb-25 flex flex-col gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className={row} onClick={onTake}>
+          <i className="fa-solid fa-camera w-5 text-center text-primary" />
+          Take Photo
+        </button>
+        <button type="button" className={row} onClick={onChoose}>
+          <i className="fa-regular fa-image w-5 text-center text-primary" />
+          Choose from Library
+        </button>
+        {hasPhoto && (
+          <button type="button" className={`${row} text-[#C62828]`} onClick={onRemove}>
+            <i className="fa-regular fa-trash-can w-5 text-center" />
+            Remove Photo
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl py-3 text-sm font-semibold text-primary"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LocationGroup({ group, selectedLocations, open, onToggleOpen, onToggleItem, disabled, readOnly }) {
+  const count = group.items.filter((i) => selectedLocations.includes(i.name)).length;
+
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggleOpen}
+        disabled={disabled}
+        className="flex items-center justify-between p-2.5 text-xs font-medium bg-[#F2F2F2] rounded-md disabled:opacity-40"
+      >
+        <span>
+          {group.title}
+          {count > 0 && ` (${count})`}
+        </span>
+        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} text-[10px] text-primary`} />
+      </button>
+
+      {open && (
+        <div className="flex flex-wrap gap-2 pt-2 px-1">
+          {group.items.map((item) => (
+            <label
+              key={item.key}
+              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border border-[#eee] has-[:checked]:border-primary"
+            >
+              <input
+                type="checkbox"
+                checked={selectedLocations.includes(item.name)}
+                onChange={() => onToggleItem(item.name)}
+                disabled={readOnly}
+                className="w-3.5 h-3.5 accent-primary cursor-pointer"
+              />
+              {item.name}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page                                                                       */
+/* -------------------------------------------------------------------------- */
+
+export default function Report() {
+  const navigate = useNavigate();
+  const { id, reportId, mode } = useParams();
+  const viewOnly = mode === "view";
+  const userID = localStorage.getItem("user_id");
+
+  // ---- lookups ----
   const [categories, setCategories] = useState([]);
+  const [offices, setOffices] = useState([]);
+  const [sharedSpaces, setSharedSpaces] = useState([]);
+  const [gates, setGates] = useState([]);
+
+  // ---- page 1 fields ----
+  const [image, setImage] = useState(null); // preview url | existing url | "REMOVE" | null
+  const [selectedFile, setSelectedFile] = useState(null); // File | "REMOVE" | null
+  const [categoryID, setCategoryID] = useState("");
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
   const [contents, setContents] = useState("");
+  const [errors, setErrors] = useState({});
+  const [useAiDescribe, setUseAiDescribe] = useState(false);
+
+  // ---- page 2 fields ----
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
-  const [specificlocation, setSpecificLocation] = useState("");
+  const [selectedLocations, setSelectedLocations] = useState([]);
   const [rawLocations, setRawLocations] = useState([]);
+  const [cantRemember, setCantRemember] = useState(false);
+  const [specificLocation, setSpecificLocation] = useState("");
+  const [openLocations, setOpenLocations] = useState(false);
+  const [openGroups, setOpenGroups] = useState({ college: false, shared: false, gates: false });
+
+  // ---- flow / ui ----
+  const [createdReportID, setCreatedReportID] = useState(null);
+  const [nextPage, setNextPage] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isCancel, setIsCancel] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
 
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const [showImageOptions, setShowImageOptions] = useState(false);
-  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const blobUrlRef = useRef(null);
 
-  const [isCancel, setIsCancel] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
-  const [nextPage, setNextPage] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const isPage1Valid =
-    categoryID &&
-    itemName &&
-    description;
+  const hasPhoto = !!image && image !== "REMOVE";
+  const totalLocations = selectedLocations.length + (cantRemember ? 1 : 0);
 
-  function isValidPastOrToday(dateStr) {
-    if (!dateStr) return false;
-    const chosen = new Date(dateStr);
-    if (isNaN(chosen.getTime())) return false;
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    return chosen <= today;
-  }
+  const dateValid = isValidPastOrToday(dateLost);
+  const timeValid = dateValid && isTimeNotFuture(dateLost, timeLost);
 
-  function isTimeNotFuture(dateStr, timeStr) {
-    if (!dateStr || !timeStr) return false;
-    const chosenDate = new Date(dateStr).toISOString().split("T")[0];
-    const todayDate = new Date().toISOString().split("T")[0];
-    // If date is before today, any time is fine
-    if (chosenDate < todayDate) return true;
-    // If date is today, time must not exceed current time
-    const [h, m] = timeStr.split(":").map(Number);
-    const chosenDateTime = new Date(dateStr);
-    chosenDateTime.setHours(h, m, 0, 0);
-    return chosenDateTime <= new Date();
-  }
-  const fileInputRef = useRef(null);
+  const locationGroups = useMemo(
+    () => [
+      {
+        id: "college",
+        title: "College Buildings",
+        items: offices.map((o) => ({ key: o.office_id, name: o.office_name })),
+      },
+      {
+        id: "shared",
+        title: "Shared Spaces",
+        items: sharedSpaces.map((s) => ({ key: s.shared_space_id, name: s.shared_space_name })),
+      },
+      {
+        id: "gates",
+        title: "Gates",
+        items: gates.map((g) => ({ key: g.gate_id, name: g.gate_name })),
+      },
+    ],
+    [offices, sharedSpaces, gates]
+  );
 
-  const handleCancel = () => {
-    setIsCancel(true);
-  }
-  const handleKeepEditing = () => {
-    setIsCancel(false);
-  }
-  const handleDiscard = () => {
-    if(reportId){
-      navigate(`/notifications/${reportId}/verify`);
+  const locationLabel = (() => {
+    if (totalLocations === 0) return "Select Locations";
+    if (totalLocations === 1) return cantRemember ? "Can't remember" : selectedLocations[0];
+    return `Locations (${totalLocations})`;
+  })();
+
+  /* ------------------------------- navigation ------------------------------ */
+
+  const navBack = () => {
+    if (mode === "view" && reportId) navigate(`/notifications/${reportId}/verify`);
+    else navigate(`/profile/report-history/${userID}`);
+  };
+
+  /* ------------------------------ data loading ----------------------------- */
+
+  useEffect(() => {
+    (async () => {
+      const results = await Promise.allSettled([
+        fetchJson(`${API_URL}/api/categories`),
+        fetchJson(`${API_URL}/api/offices`),
+        fetchJson(`${API_URL}/api/gates`),
+        fetchJson(`${API_URL}/api/shared-spaces`),
+      ]);
+
+      results.forEach((r) => r.status === "rejected" && console.error(r.reason));
+      const list = (r) => (r.status === "fulfilled" && Array.isArray(r.value) ? r.value : []);
+
+      setCategories(list(results[0]));
+      setOffices(list(results[1]));
+      setGates(list(results[2]));
+      setSharedSpaces(list(results[3]));
+    })();
+  }, []);
+
+  const fetchLostReport = async (reportToLoad) => {
+    try {
+      setIsLoadingReport(true);
+      const res = await fetchWithAuth(`${API_URL}/api/lost-reports/${reportToLoad}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Cannot fetch lost report");
+
+      setItemName(data.item_name || "");
+      setDescription(data.description || "");
+      setContents(data.contents || "");
+      setCategoryID(String(data.category_id || ""));
+      setSpecificLocation(data.specific_location || "");
+
+      if (data.image_url) setImage(data.image_url); // existing photo; replaced only if user picks a new one
+
+      if (data.lost_date) {
+        const [datePart, timePart] = data.lost_date.split(/[T ]/);
+        setDateLost(datePart || "");
+        setTimeLost(timePart?.slice(0, 5) || ""); // "14:30:00" -> "14:30"
+      }
+
+      if (data.location_lost) {
+        let parsed;
+        try {
+          parsed = JSON.parse(data.location_lost);
+        } catch {
+          parsed = [data.location_lost];
+        }
+
+        if (Array.isArray(parsed)) {
+          if (parsed.includes("Can't Remember")) setCantRemember(true);
+          else setRawLocations(parsed);
+        }
+      }
+
+      setIsEdit(true);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || "Cannot load this report.");
+    } finally {
+      setIsLoadingReport(false);
     }
-    else if(id){
-      navigate(`/profile/report-history/${userID}`);
-    }else{
-      setIsCancel(false);
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchLostReport(id);
+      setCreatedReportID(id);
+    }
+  }, [id]);
+
+  // Once the location lists are loaded, tick the ones saved on the report
+  useEffect(() => {
+    if (rawLocations.length === 0) return;
+
+    const known = new Set(
+      locationGroups.flatMap((g) => g.items.map((i) => i.name?.trim().toLowerCase())).filter(Boolean)
+    );
+    if (known.size === 0) return;
+
+    setSelectedLocations(rawLocations.filter((loc) => known.has(loc.trim().toLowerCase())));
+  }, [rawLocations, locationGroups]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [nextPage, submitted]);
+
+  useEffect(
+    () => () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    },
+    []
+  );
+
+  /* -------------------------------- photo + AI ----------------------------- */
+
+  const setPhoto = (file) => {
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    const url = URL.createObjectURL(file);
+    blobUrlRef.current = url;
+    setImage(url);
+    setSelectedFile(file);
+  };
+
+  // When editing, "REMOVE" tells the server to drop the saved photo
+  const clearPhoto = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setImage(isEdit ? "REMOVE" : null);
+    setSelectedFile(isEdit ? "REMOVE" : null);
+  };
+
+  const analyzeImage = async (file) => {
+    try {
+      setIsAnalyzing(true);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetchWithAuth(`${API_URL}/api/gemini-item-listing/describe-item`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "AI analysis failed");
+
+      // AI text is cut to the same limits as typed text
+      setItemName(sanitizeInput(data.itemName, LIMITS.itemName));
+      setDescription(sanitizeInput(data.detailedDescription, LIMITS.description));
+      setContents(sanitizeInput(data.contents, LIMITS.contents));
+      setErrors({});
+
+      const aiCategory = data.category?.toLowerCase();
+      const matched = categories.find((c) => c.category_name?.toLowerCase() === aiCategory);
+      if (matched) setCategoryID(String(matched.category_id));
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to auto-fill details. Please fill them out manually.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // lets the same file be picked again
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("File size exceeds 10MB limit");
+      return;
+    }
+    if (!VALID_IMAGE_TYPES.includes(file.type)) {
+      showToast("Invalid file type");
+      return;
+    }
+
+    setPhoto(file);
+    if (useAiDescribe) analyzeImage(file);
+  };
+
+  // Same rule as the mobile form: turning AI on clears the photo so the
+  // next one the user adds is scanned
+  const handleAiToggle = (value) => {
+    setUseAiDescribe(value);
+    if (value && hasPhoto) {
+      clearPhoto();
+      showToast("Photo removed. Please insert an image again to use AI.");
+    }
+  };
+
+  /* ------------------------------ page 1 actions --------------------------- */
+
+  const clearError = (key) => errors[key] && setErrors((prev) => ({ ...prev, [key]: undefined }));
+
+  const confirmClearAll = () => {
+    clearPhoto();
+    setCategoryID("");
+    setItemName("");
+    setDescription("");
+    setContents("");
+    setErrors({});
+    setShowClearConfirm(false);
+  };
+
+  const handleNext = () => {
+    if (viewOnly) {
+      setNextPage(true);
+      return;
+    }
+
+    const { valid, errors: found } = validatePage1({
+      categoryId: categoryID,
+      itemName,
+      description,
+      contents,
+    });
+
+    if (!valid) {
+      setErrors(found);
+      showToast("Please fix the highlighted fields before continuing.");
+      return;
+    }
+
+    setErrors({});
     setNextPage(true);
-    setSubmitted(true);
-    }
+  };
 
-    toast.custom((e) => (
-      <Toast icon={InfoIcon} message="Edit has been cancelled." />
-    ));
-  }
+  /* ------------------------------ page 2 actions --------------------------- */
+
+  const handleDateChange = (value) => {
+    setDateLost(value);
+    setTimeLost("");
+  };
+
+  const toggleLocation = (name) =>
+    setSelectedLocations((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+
+  const toggleCantRemember = () => {
+    setCantRemember((prev) => !prev);
+    setSelectedLocations([]); // "Can't remember" replaces any other choice
+    setOpenGroups({ college: false, shared: false, gates: false });
+  };
+
+  /* --------------------------------- saving -------------------------------- */
+
+  const buildFormData = () => {
+    const formData = new FormData();
+
+    if (selectedFile) formData.append("image", selectedFile);
+    formData.append("item_name", itemName.trim());
+    formData.append("description", description.trim());
+    formData.append("contents", contents.trim());
+    formData.append("category_id", categoryID);
+    formData.append("user_id", userID);
+    formData.append("specific_location", specificLocation.trim());
+    formData.append("lost_date", `${dateLost} ${timeLost}`);
+    formData.append(
+      "location_lost",
+      JSON.stringify(cantRemember ? ["Can't Remember"] : selectedLocations)
+    );
+
+    return formData;
+  };
+
+  const saveReport = async (isUpdate) => {
+    setShowSubmitConfirmation(false);
+    if (isUpdate) setIsUpdating(true);
+    else setIsSubmitting(true);
+
+    try {
+      const res = await fetchWithAuth(
+        isUpdate ? `${API_URL}/api/lost-reports/${createdReportID}` : `${API_URL}/api/lost-reports`,
+        { method: isUpdate ? "PUT" : "POST", body: buildFormData() }
+      );
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || data.message || "Something went wrong");
+
+      if (!isUpdate) setCreatedReportID(data.report?.lost_report_id ?? null);
+      setSubmitted(true);
+      if (isUpdate) showToast("Report edited successfully.");
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setIsUpdating(false);
+    }
+  };
+
+  /* ---------------------------- cancel / edit flow ------------------------- */
+
+  const handleDiscard = () => {
+    if (reportId) {
+      navigate(`/notifications/${reportId}/verify`);
+    } else if (id) {
+      navigate(`/profile/report-history/${userID}`);
+    } else {
+      setIsCancel(false);
+      setNextPage(true);
+      setSubmitted(true);
+    }
+    showToast("Edit has been cancelled.");
+  };
+
   const handleEditReport = () => {
     setNextPage(false);
     setSubmitted(false);
     setIsEdit(true);
-  }
-
-  const handleUpdate = async () => {
-
-    setShowSubmitConfirmation(false)
-
-    try {
-      setIsUpdating(true);
-      const formData = new FormData();
-      formData.append("image", selectedFile);
-      formData.append("item_name", itemName);
-      formData.append("description", description);
-      formData.append("contents", contents);
-      formData.append("category_id", categoryID);
-      formData.append("user_id", userID);
-      formData.append("specific_location", specificlocation);
-
-      formData.append(
-        "lost_date",
-        `${dateLost} ${timeLost}`
-      );
-
-      if (cantRemember) {
-        formData.append("location_lost", JSON.stringify(["Can't Remember"]));
-      } else {
-        const allSelectedLocations = [
-          ...selectedCollegeBuilding,
-          ...selectedSharedSpaces,
-          ...selectedGates,
-          ...selectedOthers,
-        ];
-        formData.append("location_lost", JSON.stringify(allSelectedLocations));
-      }
-
-      const response = await fetchWithAuth(
-        `${API_URL}/api/lost-reports/${createdReportID}`,
-        {
-          method: "PUT",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong");
-        setIsUpdating(false);
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      if (response.ok) {
-        setIsUpdating(false);
-        setSubmitted(true);
-        toast.custom((e) => (
-          <Toast icon={InfoIcon} message="Report edited successfully." />
-        ));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-
-  }
-  //new
-  const handleSubmit = async () => {
-    try {
-
-      setShowSubmitConfirmation(false)
-      setIsSubmitting(true);
-      const formData = new FormData();
-
-      formData.append("image", selectedFile);
-      formData.append("item_name", itemName);
-      formData.append("description", description);
-      formData.append("contents", contents);
-      formData.append("category_id", categoryID);
-      formData.append("user_id", userID);
-      formData.append("specific_location", specificlocation);
-
-      formData.append(
-        "lost_date",
-        `${dateLost} ${timeLost}`
-      );
-
-      if (cantRemember) {
-        formData.append("location_lost", JSON.stringify(["Can't Remember"]));
-      } else {
-        const allSelectedLocations = [
-          ...selectedCollegeBuilding,
-          ...selectedSharedSpaces,
-          ...selectedGates,
-          ...selectedOthers,
-        ];
-        formData.append("location_lost", JSON.stringify(allSelectedLocations));
-      }
-
-      const response = await fetchWithAuth(
-        `${API_URL}/api/lost-reports`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong");
-        setIsSubmitting(false);
-      }
-
-      setSubmitted(true);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      if (response.ok) {
-        setIsSubmitting(false);
-
-
-        setCreatedReportID(data.report.lost_report_id);
-        setCreatedItemID(data.item.item_id);
-  
-      }
-
-    } catch (err) {
-      console.error(err);
-    }
   };
 
-  const handleChange = async (e) => {
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.custom((e) => (
-          <Toast icon={InfoIcon} message="File size exceeds 10MB limit" />
-        ));
-      return;
-    }
-
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-        if (!validTypes.includes(file.type)) { 
-          toast.custom((e) => (
-          <Toast icon={InfoIcon} message="Invalid file type"/>
-        ));
-          return;
-        }
-
-    setSelectedFile(file);
-    setImage(URL.createObjectURL(file));
-
-    try {
-      setIsLoading(true);
-
-      const formData = new FormData();
-      formData.append("image", file);
-      const response = await fetchWithAuth(
-        `${API_URL}/api/gemini-item-listing/describe-item`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "AI analysis failed");
-      }
-
-      setItemName(data.itemName || "");
-      setDescription(data.detailedDescription || "");
-      setContents(data.contents || "");
-
-      const matchedCategory = categories.find(
-        (category) =>
-          category.category_name.toLowerCase() ===
-          data.category.toLowerCase()
-      );
-
-      if (matchedCategory) {
-        setCategoryID(String(matchedCategory.category_id));
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-
-const fetchLostReport = async (id) => {
-  try {
-    setIsLoadingReport(true);
-    const response = await fetchWithAuth(`${API_URL}/api/lost-reports/${id}`);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || "cannot fetch lost report");
-    }
-    setLostReport(data);
-
-  
-
-  
-    setItemName(data.item_name || "");
-    setDescription(data.description || "");
-    setContents(data.contents || "");
-    setCategoryID(String(data.category_id || ""));
-    setSpecificLocation(data.specific_location || "");
-
-    if (data.image_url) {
-      setImage(data.image_url); // shows existing photo; only overwritten if user picks a new one
-    }
-
-    
-    if (data.lost_date) {
-      const [datePart, timePart] = data.lost_date.split(/[T ]/);
-      setDateLost(datePart || "");
-      setTimeLost(timePart?.slice(0, 5) || ""); // trims seconds if present, e.g. "14:30:00" -> "14:30"
-  
-    }
-
-    
-
-
-    if (data.location_lost) {
-  let parsedLocations;
-
-  try {
-    parsedLocations = JSON.parse(data.location_lost);
-  } catch (e) {
-    parsedLocations = [data.location_lost];
-  }
-
-  if (Array.isArray(parsedLocations)) {
-    if (parsedLocations.includes("Can't Remember")) {
-      setCantRemember(true);
-      setdDisableOtherLcoations(true);
-    } else {
-      setRawLocations(parsedLocations);
-    }
-  }
-}
-
-    setIsEdit(true);
-  } catch (error) {
-    console.log(error.message);
-  } finally {
-    setIsLoadingReport(false);
-  }
-};
-
-
-useEffect(() => {
-  if (id) {
-    fetchLostReport(id);
-    setCreatedReportID(id); 
-  }
-}, [id]);
-
-
-
-  useEffect(() => {
-    if (rawLocations.length > 0 && locations.length > 0) {
-      setSelectedCollegeBuilding(
-        rawLocations.filter((loc) =>
-          locations.some((l) => l.office_name?.trim().toLowerCase() === loc.trim().toLowerCase())
-        )
-      );
-    }
-  }, [rawLocations, locations]);
-
- 
-  useEffect(() => {
-    if (rawLocations.length > 0 && sharedSpaces.length > 0) {
-      setSelectedSharedSpaces(
-        rawLocations.filter((loc) =>
-          sharedSpaces.some((s) => s.shared_space_name?.trim().toLowerCase() === loc.trim().toLowerCase())
-        )
-      );
-    }
-  }, [rawLocations, sharedSpaces]);
-
- 
-  useEffect(() => {
-    if (rawLocations.length > 0 && gates.length > 0) {
-      setSelectedGates(
-        rawLocations.filter((loc) =>
-          gates.some((g) => g.gate_name?.trim().toLowerCase() === loc.trim().toLowerCase())
-        )
-      );
-    }
-  }, [rawLocations, gates]);
-
-
-
-  const dateValid = isValidPastOrToday(dateLost);
-  const timeValid = dateValid && isTimeNotFuture(dateLost, timeLost)
-
-  const handleDateChange = (val) => {
-    setDateLost(val);
-    setTimeLost("");
-  };
-
-  useEffect(() => {
-    fetch(`${API_URL}/api/categories`)
-      .then((res) => res.json())
-      .then((data) => {
-   
-        setCategories(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
-
-        //OFFICES FETCH
-            useEffect(() => {
-                fetch(`${API_URL}/api/offices`)
-                    .then((res) => res.json())
-                    .then((data) => {
-                        setLocations(data);
-                    })
-                    .catch((err) => {
-                        console.error(err);
-                    });
-            }, []);
-            //GATES FETCH
-            useEffect(() => {
-                fetch(`${API_URL}/api/gates`)
-                    .then((res) => res.json())
-                    .then((data) => {
-                        setGates(data);
-                    })
-                    .catch((err) => {
-                        console.error(err);
-                    });
-            }, []);
-            //SHARED SPACES FETCH
-            useEffect(() => {
-                fetch(`${API_URL}/api/shared-spaces`)
-                    .then((res) => res.json())
-                    .then((data) => {
-                        setSharedSpaces(data);
-                    })
-                    .catch((err) => {
-                        console.error(err);
-                    });
-            }, []);
-
-
-
-
+  /* --------------------------------- render -------------------------------- */
 
   return (
     <>
-      <div className={`${submitted ? "hidden" : ""}`} >
-        
-        {mode? 
-          <>
-            <PageLabelWithReturn label= {"View Lost Item Report Form"} onClick={navBack}/>
-          </>
-          :
-          <>
-          <PageLabel label= {id? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
-          </>
-        }
+      <div className={submitted ? "hidden" : ""}>
+        {mode ? (
+          <PageLabelWithReturn label="View Lost Item Report Form" onClick={navBack} />
+        ) : (
+          <PageLabel label={id ? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
+        )}
       </div>
-      <div className={`${submitted ? "bg-(--color-primary) flex flex-col items-center justify-center" : "bg-(--color-secondary)"}  min-h-screen px-4`}>
 
-        {!nextPage ?
-          (<>
-            <PageLabel2 label="Item Description" />
-            <HorizontalBreak />
-            <div className="bg-white w-full h-fit p-2 rounded-xl mt-4 mb-2 flex items-center justify-center flex-col ">
-              {(image && image !== "REMOVE")  ? (
-                <img
-                src={image}
-                alt="Uploaded"
-                onClick={() => {
-                  if (mode !== "view") {
-                    setShowImageOptions(true);
-                  }
+      <div
+        className={`${
+          submitted
+            ? "bg-(--color-primary) flex flex-col items-center justify-center"
+            : "bg-(--color-secondary)"
+        } min-h-screen px-4`}
+      >
+        {/* ---------------------------- PAGE 1 ---------------------------- */}
+        {!nextPage && (
+          <div className="pb-24">
+            <SectionHeading>Item Description</SectionHeading>
+
+            <UploadCard
+              image={image}
+              isLoading={isAnalyzing}
+              viewOnly={viewOnly}
+              useAi={useAiDescribe}
+              onToggleAi={handleAiToggle}
+              onOpenPicker={() => setShowImageOptions(true)}
+            />
+
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            <Field label="Category" htmlFor="category" required error={errors.category}>
+              <div className="relative">
+                <select
+                  id="category"
+                  value={categoryID}
+                  disabled={viewOnly || categories.length === 0}
+                  onChange={(e) => {
+                    setCategoryID(e.target.value);
+                    clearError("category");
+                  }}
+                  className={fieldClass(
+                    !!errors.category,
+                    `h-[50px] appearance-none pr-10 ${categoryID ? "" : "text-[#8C7A70]"}`
+                  )}
+                >
+                  <option value="">
+                    {categories.length === 0 ? "Loading categories..." : "Select Category"}
+                  </option>
+                  {categories.map((cat) => (
+                    <option key={cat.category_id} value={String(cat.category_id)}>
+                      {cat.category_name}
+                    </option>
+                  ))}
+                </select>
+                <i className="fa-solid fa-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-primary" />
+              </div>
+            </Field>
+
+            <Field
+              label="Item Name"
+              htmlFor="item-name"
+              required
+              error={errors.itemName}
+              count={itemName.length}
+              max={LIMITS.itemName}
+            >
+              <input
+                id="item-name"
+                type="text"
+                value={itemName}
+                maxLength={LIMITS.itemName}
+                disabled={viewOnly}
+                placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
+                onChange={(e) => {
+                  setItemName(sanitizeInput(e.target.value, LIMITS.itemName));
+                  clearError("itemName");
                 }}
-                className={`w-full max-h-50 object-contain rounded-xl transition ${
-                  mode === "view"
-                    ? "cursor-default"
-                    : "cursor-pointer hover:opacity-80"
-                }`}
+                className={fieldClass(!!errors.itemName, "h-[50px]")}
               />
-              ) : (
-                <div className="p-1 border border-dashed rounded-full border-(--color-primary)">
-                  <button
-                    type="button"
-                    disabled={mode === "view"}
-                    onClick={() => setShowImageOptions(true)}
-                    className="btn-circle btn-lg bg-(--color-primary) cursor-pointer flex items-center justify-center disabled:opacity-80
-                    transition-transform duration-100 ease-out enabled:active:scale-90
-                    "
-                  >
-                    <i className="fa-solid fa-plus text-white"></i>
-                  </button>
-                </div>
-              )}
+            </Field>
+
+            <Field
+              label="Detailed Description"
+              htmlFor="description"
+              required
+              error={errors.description}
+              count={description.length}
+              max={LIMITS.description}
+            >
+              <textarea
+                id="description"
+                value={description}
+                maxLength={LIMITS.description}
+                disabled={viewOnly}
+                placeholder="Brand, Model, Size, Color, Material, etc."
+                onChange={(e) => {
+                  setDescription(sanitizeInput(e.target.value, LIMITS.description));
+                  clearError("description");
+                }}
+                className={fieldClass(!!errors.description, "h-[140px] py-3 resize-none")}
+              />
+            </Field>
+
+            <Field
+              label="Contents (if applicable)"
+              htmlFor="contents"
+              error={errors.contents}
+              count={contents.length}
+              max={LIMITS.contents}
+            >
               <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleChange}
+                id="contents"
+                type="text"
+                value={contents}
+                maxLength={LIMITS.contents}
+                disabled={viewOnly}
+                placeholder="e.g., Cash amount, ID name"
+                onChange={(e) => {
+                  setContents(sanitizeInput(e.target.value, LIMITS.contents));
+                  clearError("contents");
+                }}
+                className={fieldClass(!!errors.contents, "h-[50px]")}
               />
+            </Field>
 
-              <input
-                ref={galleryInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleChange}
-              />
-              {(!image  || image === "REMOVE") && (
-                <>
-                  <p className="text-sm text-(--color-tertiary) opacity-70 font-medium mt-2">
-                    Upload Item Photo (Optional)
-                  </p>
-                  <p className="text-xs text-(--color-tertiary) opacity-50 font-medium mt-1">
-                    PNG, JPG or WEBP up to 10MB
-                  </p>
-                  <p className="text-xs text-center text-(--color-tertiary) opacity-70 font-medium mt-4 px-6">
-                    *FoundNest AI will help auto-fill details based on your photo.
-                  </p>
-                </>
-              )}
+            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/[0.24]">
+              <p className="text-sm font-bold">Page 1 out of 2</p>
 
-             
-            </div>
-            <DropDown title="Categories*" placeholder="Select Category" value={categoryID} options={categories} onChange={setCategoryID} disabled={mode === "view"} />
-            <TextField title="Item Name*" placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella" value={itemName} onChange={setItemName} error={false} maxLength={50} disabled={mode === "view"}/>
-            <TextArea title="Detailed Description*" placeholder="Brand, Model, Size, Color, Material, etc." value={description} onChange={(value) => setDescription(sanitizeInput(value, 500))} error={false} maxLength={500} disabled={mode === "view"}/>
-              <p className="text-xs text-gray-500 text-right">
-                  {description.length}/500
-              </p>
-            <TextField title="Contents (if applicable)" placeholder="e.g., Cash amount, ID name" value={contents} onChange={setContents} error={false} maxLength={100} disabled={mode === "view"}/>
-            <HorizontalBreak />
-            <div className="pb-5"></div>
-            <div className="flex justify-between items-center pb-20">
-              <p className="text-xs">Page 1 out of 2</p>
-
-              <div className="flex gap-2">
-                {isEdit && !mode &&
-                  (
-                    <>
-                      <ButtonNegative label="Cancel" onClick={handleCancel} />
-                    </>
+              <div className="flex gap-2.5">
+                {isEdit && !mode ? (
+                  <ActionButton variant="outline" onClick={() => setIsCancel(true)}>
+                    Cancel
+                  </ActionButton>
+                ) : (
+                  !viewOnly && (
+                    <ActionButton variant="outline" danger onClick={() => setShowClearConfirm(true)}>
+                      Clear All
+                    </ActionButton>
                   )
-                }
-                <ButtonPositive label="Next" enable={isPage1Valid} onClick={() => setNextPage(true)} />
+                )}
+                <ActionButton onClick={handleNext}>Next</ActionButton>
               </div>
-            </div>
-          </>)
-          :
-          (
-            <></>
-          )
-        }
-        {nextPage && !submitted &&
-          (
-            <>
-              <PageLabel2 label="When & Where" />
-              <HorizontalBreak />
-              <DateInput
-                title="Date Lost*"
-                value={dateLost}
-                onChange={handleDateChange}
-                error={dateLost && !dateValid}
-                max={new Date().toISOString().split("T")[0]}
-                disabled={mode === "view"}
-              />
-              {dateLost && !dateValid && (
-                <p className="text-xs text-red-500 mt-1 ml-1">Date cannot be in the future.</p>
-              )}
-
-              <HourInput
-                title="Time Lost*"
-                value={timeLost}
-                onChange={setTimeLost}
-                error={dateValid && timeLost && !timeValid}
-                disabled={!dateValid || (mode === "view")}
-              />
-              {!dateValid && (
-                <p className="text-xs text-yellow-500 mt-1 ml-1">Enter a valid date first.</p>
-              )}
-              {dateValid && timeLost && !timeValid && (
-                <p className="text-xs text-red-500 mt-1 ml-1">Time cannot be in the future.</p>
-              )}
-       
-            <p className="mt-3 text-xs font-semibold">Location Lost <span className="text-primary">*</span></p>
-            <div className="relative w-full mt-2">
-              <button
-                className={`w-full p-3 text-xs disabled:opacity-80 transition-transform duration-100 ease-out ${
-                  openLocations ? " border-primary text-black border" : " "
-                } 
-                ${totalLocations === 0? "text-[#4B2D23]/50" : "text-black"}
-                rounded-md  flex items-center justify-between min-w-37.5 shadow-sm bg-white `}
-                onClick={() => setOpenLocations(!openLocations)}
-                disabled={mode === "view"}
-              >
-                <span className="font-medium truncate max-w-55 text-left">
-                  {getDropdownLabel()}
-                </span>
-                <i
-                  className={`fa-solid fa-angle-${
-                    openLocations ? "up" : "down"
-                  } ml-2 text-primary shrink-0`}
-                />
-              </button>
-              {openLocations && (
-                <div className="absolute top-full left-0 mt-1 w-full z-50">
-                  <div className="border border-primary bg-white rounded-md p-2 flex flex-col gap-2 shadow-lg max-h-[60vh] overflow-y-auto">
-                    {/* 1. College Buildings */}
-                    <div className="flex flex-col rounded-md">
-                      <button
-                        onClick={() =>
-                          setOpenCollgeBuilding(!openCollgeBuilding)
-                        }
-                        disabled={dsiableOtherLcoations || (mode === "view")}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40 transition-transform duration-100 ease-out enabled:active:scale-90"
-                      >
-                        <span>
-                          College Buildings{" "}
-                          {selectedCollegeBuilding.length > 0 &&
-                            `(${selectedCollegeBuilding.length})`}
-                        </span>
-                        <i
-                          className={`fa-solid fa-angle-${
-                            openCollgeBuilding ? "up" : "down"
-                          } text-primary`}
-                        ></i>
-                      </button>
-                      {openCollgeBuilding && (
-                        <div className="flex flex-wrap gap-2 pt-2 px-1">
-                          {locations?.map((building) => (
-                            <label
-                              key={building.office_id}
-                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors transition-transform duration-100 ease-out enabled:active:scale-90"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedCollegeBuilding.includes(
-                                  building.office_name
-                                )}
-                                onChange={() =>
-                                  handleCollgeClick(building.office_name)
-                                }
-                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
-                              />
-                              {building.office_name}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 2. Shared Spaces */}
-                    <div className="flex flex-col rounded-md">
-                      <button
-                        onClick={() => setOpenSharedSpaces(!openSharedSpaces)}
-                        disabled={dsiableOtherLcoations}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40  duration-100 ease-out enabled:active:scale-90"
-                      >
-                        <span>
-                          Shared Spaces{" "}
-                          {selectedSharedSpaces.length > 0 &&
-                            `(${selectedSharedSpaces.length})`}
-                        </span>
-                        <i
-                          className={`fa-solid fa-angle-${
-                            openSharedSpaces ? "up" : "down"
-                          } text-primary`}
-                        ></i>
-                      </button>
-                      {openSharedSpaces && (
-                        <div className="flex flex-wrap gap-2 pt-2 px-1">
-                          {sharedSpaces?.map((space) => (
-                            <label
-                              key={space.shared_space_id}
-                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors duration-100 ease-out enabled:active:scale-90"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedSharedSpaces.includes(
-                                  space.shared_space_name
-                                )}
-                                onChange={() =>
-                                  handleSharedSpaceClick(space.shared_space_name)
-                                }
-                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
-                              />
-                              {space.shared_space_name}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {/* 3. Gates */}
-                    <div className="flex flex-col rounded-md">
-                      <button
-                        onClick={() => setOpenGates(!openGates)}
-                        disabled={dsiableOtherLcoations}
-                        className="flex justify-between items-center p-2 text-xs font-medium bg-[#F2F2F2] rounded-md hover:bg-gray-200 transition-colors disabled:opacity-40 duration-100 ease-out enabled:active:scale-90"
-                      >
-                        <span>
-                          Gates{" "}
-                          {selectedGates.length > 0 &&
-                            `(${selectedGates.length})`}
-                        </span>
-                        <i
-                          className={`fa-solid fa-angle-${
-                            openGates ? "up" : "down"
-                          } text-primary`}
-                        ></i>
-                      </button>
-                      {openGates && (
-                        <div className="flex flex-wrap gap-2 pt-2 px-1">
-                          {gates?.map((gate) => (
-                            <label
-                              key={gate.gate_id}
-                              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border hover:border-primary transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedGates.includes(gate.gate_name)}
-                                onChange={() => handleGateClick(gate.gate_name)}
-                                className="w-3.5 h-3.5 accent-primary cursor-pointer"
-                              />
-                              {gate.gate_name}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <hr className="my-1 border-gray-200" />
-                    {/* 5. Can't Remember Option */}
-                    <label
-                      className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full transition-colors ${
-                        cantRemember
-                          ? "bg-[#e5d4b8] text-primary"
-                          : "bg-[#F2F2F2] hover:bg-gray-200"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={cantRemember}
-                        onChange={() => {
-                          const newValue = !cantRemember;
-                          setCantRemember(newValue);
-                          setOpenCollgeBuilding(false);
-                          setOpenGates(false);
-                          setOpenSharedSpaces(false)
-
-                          // Clear other selections when "Can't remember" is checked
-                            setSelectedCollegeBuilding([]);
-                            setSelectedSharedSpaces([]);
-                            setSelectedGates([]);
-                            setSelectedOthers([]);  
-                              setdDisableOtherLcoations(!dsiableOtherLcoations);
-                              
-                        }}
-                        className="w-4 h-4 accent-primary cursor-pointer ml-1"
-                      />
-                      Can't remember the location
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-             
-              <TextField title="Specific Location" placeholder="e.g., 2nd Floor, Room A, near stairs, etc." value={specificlocation} onChange={setSpecificLocation} error={false} maxLength={100} disabled={mode === "view"}/>
-              <div className=" bg-primary/20 text-primary-content w-full my-3 rounded-md">
-                <div className="card-body">
-                  <div className="w-full flex items-center">
-                    <CircleAlert className="size-4 mr-2" />
-                    <p className="card-title text-sm">What happens next?</p>
-                  </div>
-                  <p className="text-primary text-xs">We’ll check for matching found items and notify you if we find a potential match. You’ll recieve updates via the notification bell.</p>
-                  <div className="card-actions justify-end">
-                  </div>
-                </div>
-              </div>
-              <HorizontalBreak />
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-xs">Page 2 out of 2</p>
-                <div className="flex gap-2">
-                  <ButtonNegative label="Back" onClick={() => { setNextPage(false) }} />
-                  {!mode &&
-                  <>
-                   {isEdit ?
-                    (
-                      <>
-                        <ButtonPositive label="Confirm" enable={timeValid} onClick={()=>setShowSubmitConfirmation(true)} />
-                      </>
-                    )
-                    :
-                    (
-                      <>
-                        <ButtonPositive label="Submit" enable={timeValid && totalLocations > 0} onClick={()=>setShowSubmitConfirmation(true)} />
-                      </>
-                    )
-                  }
-                  </>
-
-                  }
-                </div>
-              </div>
-              <div className="pb-20"></div>
-            </>)
-        }
-        {submitted && nextPage &&
-          (
-            <>
-              <div className="h-fit w-fit px-3 flex flex-col gap-8">
-                <div className="h-28 w-full flex gap-2 justify-evenly ">
-                  <img className="h-full w-2/5" src={heart} alt="smiley heart" />
-                  <div className="flex flex-col gap-2 h-full w-full ">
-                    <p className="text-white font-bold text-md">Report Successful!</p>
-                    <p className="text-white/70 font-bold text-xs text-justify">We've secured your lost report and immediately started searching for a match. Rest assured, we'll notify you if we find it.</p>
-                  </div>
-                </div>
-                <div className="h-full w-full rounded-xl  bg-white">
-                  <div className="h-full w-full flex flex-col gap-2 p-4">
-                    <p className=" font-bold text-xs">What happens next?</p>
-                    <div className="pl-5 flex flex-col gap-2">
-
-                      <li className=" text-xs">Your detailed description has been added to our records.</li>
-                      <li className=" text-xs">Our system is now automatically searching and comparing your report against all old and newly found items.</li>
-                      <li className=" text-xs">We will notify you immediately via email or in-app notifications if a potential match is reported by a finder..</li>
-
-                    </div>
-
-                  </div>
-                  <HorizontalBreak />
-                  <div className=" flex justify-between px-3 py-3 ">
-                    <div className="flex justify-evenly gap-1" onClick={handleEditReport}>
-                      <i className="fa-regular fa-pen-to-square text-primary"></i>
-                      <p className="text-xs text-primary">Edit Report</p>
-                    </div>
-                    <div className="flex gap-1" onClick={()=>navigate(`/profile/report-history/${userID}`)}>
-                      <p className="text-xs text-primary">Go to my Report History</p>
-                      <i className="fa-solid fa-arrow-right text-primary"></i>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </>
-          )
-        }
-        {isLoading &&
-          (
-            <>
-              <Loading label="Analyzing Image" />
-            </>
-          )
-        }
-        {isSubmitting &&
-          (
-            <>
-              <Loading label="Creating Lost Report" />
-            </>
-          )
-        }
-        {isUpdating &&
-          (
-            <>
-              <Loading label="Updating Lost Report" />
-            </>
-          )
-        }
-        {isCancel &&
-          (
-            <>
-              <AlertDialog message="Discard changes? Unsaved edits will be lost." b1Label="Keep Editing" b2Label="Discard" b1OnClick={handleKeepEditing} b2OnClick={handleDiscard} />
-            </>
-          )
-        }
-        {showImageOptions && (
-          <div className="fixed inset-0 w-full bg-black/20 flex items-end justify-center z-50 ">
-            <div className="bg-white w-full  p-4 rounded-t-xl flex flex-col gap-2 pb-25">
-              <ButtonPositive label="Take Photo" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                cameraInputRef.current?.click();
-              }} />
-              <ButtonPositive label="Choose from Gallery" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                galleryInputRef.current?.click();
-              }} />
-              {image && image !== "REMOVE" &&
-              <ButtonPositive label="Remove Photo" enable={showImageOptions} onClick={() => {
-                setShowImageOptions(false);
-                setImage("REMOVE");
-                setSelectedFile("REMOVE");    
-              }} />
-              }
-              <ButtonNegative label="Cancel" onClick={() => setShowImageOptions(false)} />
             </div>
           </div>
         )}
-        {showSubmitConfirmation &&
-          <AlertDialog 
-          message="Please review the information for accuracy before to submission."
-          b1Label={"Cancel"}
-          b2Label={"Submit"}
-          b1OnClick={()=>setShowSubmitConfirmation(false)}
-          b2OnClick={isEdit? handleUpdate : handleSubmit}
-        />
 
-        }
+        {/* ---------------------------- PAGE 2 ---------------------------- */}
+        {nextPage && !submitted && (
+          <div className="pb-24">
+            <SectionHeading>When & Where</SectionHeading>
 
+            <Field
+              label="Date Lost"
+              htmlFor="date-lost"
+              required
+              error={dateLost && !dateValid ? "Date cannot be in the future." : null}
+            >
+              <input
+                id="date-lost"
+                type="date"
+                value={dateLost}
+                max={todayLocalISO()}
+                disabled={viewOnly}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className={fieldClass(!!dateLost && !dateValid, "h-[50px]")}
+              />
+            </Field>
+
+            <Field
+              label="Time Lost"
+              htmlFor="time-lost"
+              required
+              error={dateValid && timeLost && !timeValid ? "Time cannot be in the future." : null}
+              hint={!dateValid ? "Enter a valid date first." : null}
+            >
+              <input
+                id="time-lost"
+                type="time"
+                value={timeLost}
+                disabled={!dateValid || viewOnly}
+                onChange={(e) => setTimeLost(e.target.value)}
+                className={fieldClass(dateValid && !!timeLost && !timeValid, "h-[50px]")}
+              />
+            </Field>
+
+            <Field label="Location Lost" required>
+              <button
+                type="button"
+                onClick={() => setOpenLocations((prev) => !prev)}
+                className={fieldClass(false, "h-[50px] flex items-center justify-between text-left text-sm")}
+              >
+                <span className={`truncate ${totalLocations === 0 ? "text-[#8C7A70]" : ""}`}>
+                  {locationLabel}
+                </span>
+                <i
+                  className={`fa-solid fa-chevron-${openLocations ? "up" : "down"} ml-2 text-sm text-primary shrink-0`}
+                />
+              </button>
+
+              {openLocations && (
+                <div className="mt-2 rounded-xl border border-primary bg-white p-2 flex flex-col gap-2">
+                  {locationGroups.map((group) => (
+                    <LocationGroup
+                      key={group.id}
+                      group={group}
+                      selectedLocations={selectedLocations}
+                      open={openGroups[group.id]}
+                      onToggleOpen={() =>
+                        setOpenGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                      }
+                      onToggleItem={toggleLocation}
+                      disabled={cantRemember}
+                      readOnly={viewOnly}
+                    />
+                  ))}
+
+                  <hr className="my-1 border-gray-200" />
+
+                  <label
+                    className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full ${
+                      cantRemember ? "bg-[#e5d4b8] text-primary" : "bg-[#F2F2F2]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={cantRemember}
+                      onChange={toggleCantRemember}
+                      disabled={viewOnly}
+                      className="w-4 h-4 accent-primary cursor-pointer ml-1"
+                    />
+                    Can't remember the location
+                  </label>
+                </div>
+              )}
+            </Field>
+
+            <Field
+              label="Specific Location"
+              htmlFor="specific-location"
+              count={specificLocation.length}
+              max={LIMITS.specificLocation}
+            >
+              <input
+                id="specific-location"
+                type="text"
+                value={specificLocation}
+                maxLength={LIMITS.specificLocation}
+                disabled={viewOnly}
+                placeholder="e.g., 2nd Floor, Room A, near stairs, etc."
+                onChange={(e) =>
+                  setSpecificLocation(sanitizeInput(e.target.value, LIMITS.specificLocation))
+                }
+                className={fieldClass(false, "h-[50px]")}
+              />
+            </Field>
+
+            <div className="bg-primary/20 text-primary-content w-full my-3 rounded-md">
+              <div className="card-body">
+                <div className="w-full flex items-center">
+                  <CircleAlert className="size-4 mr-2" />
+                  <p className="card-title text-sm">What happens next?</p>
+                </div>
+                <p className="text-primary text-xs">
+                  We’ll check for matching found items and notify you if we find a potential match.
+                  You’ll receive updates via the notification bell.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/[0.24]">
+              <p className="text-sm font-bold">Page 2 out of 2</p>
+
+              <div className="flex gap-2.5">
+                <ActionButton variant="outline" onClick={() => setNextPage(false)}>
+                  Back
+                </ActionButton>
+                {!viewOnly && (
+                  <ActionButton
+                    disabled={isEdit ? !timeValid : !timeValid || totalLocations === 0}
+                    onClick={() => setShowSubmitConfirmation(true)}
+                  >
+                    {isEdit ? "Confirm" : "Submit"}
+                  </ActionButton>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --------------------------- SUCCESS ---------------------------- */}
+        {submitted && nextPage && (
+          <div className="h-fit w-fit px-3 flex flex-col gap-8">
+            <div className="h-28 w-full flex gap-2 justify-evenly">
+              <img className="h-full w-2/5" src={heart} alt="smiley heart" />
+              <div className="flex flex-col gap-2 h-full w-full">
+                <p className="text-white font-bold text-md">Report Successful!</p>
+                <p className="text-white/70 font-bold text-xs text-justify">
+                  We've secured your lost report and immediately started searching for a match. Rest
+                  assured, we'll notify you if we find it.
+                </p>
+              </div>
+            </div>
+
+            <div className="h-full w-full rounded-xl bg-white">
+              <div className="h-full w-full flex flex-col gap-2 p-4">
+                <p className="font-bold text-xs">What happens next?</p>
+                <div className="pl-5 flex flex-col gap-2">
+                  <li className="text-xs">Your detailed description has been added to our records.</li>
+                  <li className="text-xs">
+                    Our system is now automatically searching and comparing your report against all
+                    old and newly found items.
+                  </li>
+                  <li className="text-xs">
+                    We will notify you immediately via email or in-app notifications if a potential
+                    match is reported by a finder.
+                  </li>
+                </div>
+              </div>
+
+              <HorizontalBreak />
+
+              <div className="flex justify-between px-3 py-3">
+                <button type="button" className="flex items-center gap-1" onClick={handleEditReport}>
+                  <i className="fa-regular fa-pen-to-square text-primary" />
+                  <span className="text-xs text-primary">Edit Report</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1"
+                  onClick={() => navigate(`/profile/report-history/${userID}`)}
+                >
+                  <span className="text-xs text-primary">Go to my Report History</span>
+                  <i className="fa-solid fa-arrow-right text-primary" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------ overlays & dialogs ------------------------ */}
+        {isAnalyzing && <Loading label="Analyzing Image" />}
+        {isSubmitting && <Loading label="Creating Lost Report" />}
+        {isUpdating && <Loading label="Updating Lost Report" />}
+
+        {isCancel && (
+          <AlertDialog
+            message="Discard changes? Unsaved edits will be lost."
+            b1Label="Keep Editing"
+            b2Label="Discard"
+            b1OnClick={() => setIsCancel(false)}
+            b2OnClick={handleDiscard}
+          />
+        )}
+
+        {showClearConfirm && (
+          <AlertDialog
+            message="Clear all entered data? This action cannot be undone."
+            b1Label="Cancel"
+            b2Label="Clear"
+            b1OnClick={() => setShowClearConfirm(false)}
+            b2OnClick={confirmClearAll}
+          />
+        )}
+
+        {showSubmitConfirmation && (
+          <AlertDialog
+            message="Please review the information for accuracy before submission."
+            b1Label="Cancel"
+            b2Label={isEdit ? "Update" : "Submit"}
+            b1OnClick={() => setShowSubmitConfirmation(false)}
+            b2OnClick={() => saveReport(isEdit)}
+          />
+        )}
+
+        {showImageOptions && (
+          <PhotoSheet
+            hasPhoto={hasPhoto}
+            onClose={() => setShowImageOptions(false)}
+            onTake={() => {
+              setShowImageOptions(false);
+              cameraInputRef.current?.click();
+            }}
+            onChoose={() => {
+              setShowImageOptions(false);
+              galleryInputRef.current?.click();
+            }}
+            onRemove={() => {
+              setShowImageOptions(false);
+              clearPhoto();
+            }}
+          />
+        )}
       </div>
-      {isLoadingReport && 
-        <Loading/>
 
-      }
+      {isLoadingReport && <Loading />}
     </>
   );
 }

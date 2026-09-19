@@ -1,585 +1,430 @@
-import { useEffect, useState } from "react";
-import PageLabel from "../components/PageLabel";
-import FoundItemCard from "../components/FoundItemCard";
-import AdminLocationDropDown from "../admin-components/AdminLocationDropDown";
-import { FOUND_REPORT_STATUS } from "../constants/found_item_status";
-import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown";
-import AdminStatusDropDown from "../admin-components/AdminStatusDropDown";
-import CategoriesDropDownFilter from "../components/CategoriesDropDownFilter";
-import OfficeDropDown from "../components/OfficeDropDown";
-import StudentSpacedDrowDown from "../components/StudentSpacesDropDown";
-import GateDropDown from "../components/GateDropDown";
-import StatusDropDown from "../components/StatusDropDown";
-import Loading from "../components/Loading";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PageLabel from "../components/PageLabel";
+import Loading from "../components/Loading";
+import formatDateTime from "../utils/formatDateTime";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
+const API_URL = import.meta.env.VITE_API_URL;
 
+// Which location tabs share a row (mirrors the RN layout: 2 tabs, then 1)
+const LOCATION_ROWS = [["college", "shared"], ["gates"]];
 
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+async function fetchJson(url, fetcher = fetch) {
+  const res = await fetcher(url);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+const toggleInList = (list, value) =>
+  list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+
+const summaryLabel = (base, count, singleName) => {
+  if (count === 0) return base;
+  if (count === 1 && singleName) return singleName;
+  return `${count} Selected`;
+};
+
+/* -------------------------------------------------------------------------- */
+/* UI pieces                                                                  */
+/* -------------------------------------------------------------------------- */
+
+// White pill used inside dropdowns (categories / locations)
+function Chip({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-3.5 py-2.5 text-[13px] bg-white border ${
+        active
+          ? "border-primary text-primary font-bold"
+          : "border-[#eee] text-[#333] font-semibold"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// The three buttons at the top of the filter card
+function FilterTrigger({ label, open = false, active = false, showArrow = true, onClick }) {
+  const highlighted = open || active;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-white rounded-2xl border px-2 py-2 text-xs ${
+        highlighted ? "border-primary text-primary font-bold" : "border-[#ddd] text-[#333]"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      {showArrow && (
+        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} text-[10px] text-primary`} />
+      )}
+    </button>
+  );
+}
+
+// Folder-style tab; the active one visually joins the content box below it
+function LocationTab({ title, open, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        open
+          ? "flex items-center gap-1.5 bg-[#F3F3F3] border border-[#ddd] border-b-0 rounded-t-lg px-3.5 pt-2.5 pb-5 text-[13px] font-bold text-black"
+          : "flex items-center gap-1.5 bg-[#FAFAFA] rounded-lg px-3.5 py-2.5 mb-2.5 text-[13px] font-medium text-[#333]"
+      }
+    >
+      {title}
+      <i className={`fa-solid fa-chevron-${open ? "up" : "down"} text-[10px] text-primary`} />
+    </button>
+  );
+}
+
+function ItemCard({ report, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(report.found_report_id)}
+      className="min-w-0 flex flex-col text-left bg-white rounded-2xl overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.1)]"
+    >
+      <div className="relative w-full">
+        <img
+          src={report.image_url}
+          alt={report.item_name}
+          loading="lazy"
+          className="w-full h-30 object-cover bg-[#ccc]"
+        />
+        {report.category_name && (
+          <span className="absolute bottom-2 right-2.5 bg-white border border-[#ddd] rounded-[10px] px-2 py-1 text-[10px] font-bold text-[#333]">
+            {report.category_name}
+          </span>
+        )}
+      </div>
+
+      <div className="p-2.5 flex flex-col gap-1 w-full min-w-0">
+        <p className="text-sm font-bold text-[#333] truncate">{report.item_name}</p>
+        <div className="flex items-center gap-1.5 text-[11px] text-[#666] min-w-0">
+          <i className="fa-regular fa-calendar text-xs shrink-0" />
+          <span className="truncate">{formatDateTime(report.found_date)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-[#666] min-w-0">
+          <i className="fa-solid fa-location-dot text-xs shrink-0" />
+          <span className="truncate">{report.location_found}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page                                                                       */
+/* -------------------------------------------------------------------------- */
 
 export default function Find() {
-  const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
-  const [viewItem, setViewItem] = useState();
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [openStatus, setOpenStatus] = useState(false);
-  const [openCategory, setOpenCategory] = useState(false);
-  const [openLocations, setOpenLocations] = useState(false);
-  const [selectedGates, setSelectedGates] = useState([]);
-  const [openGates, setOpenGates] = useState(false);
-  const [openCollgeBuilding, setOpenCollgeBuilding] = useState(false);
-  const [openSharedSpaces, setOpenSharedSpaces] = useState(false);
-  const [selectedSharedSpaces, setSelectedSharedSpaces] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedCollegeBuilding, setSelectedCollegeBuilding] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [location, setLocation] = useState("");
-  const [gates, setGates] = useState([]);
-  const [building, setBuilding] = useState("");
-  const [gate, setGate] = useState("");
-  const [space, setSpace] = useState("");
-  const [spaces, setSpaces] = useState([]);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [categories, setCategories] = useState([]);
-  const [status, setStatus] = useState("");
-  const [locations, setLocations] = useState([]);
-  const [buildings, setBuildings] = useState([]);
 
-  const statuses = Object.values(FOUND_REPORT_STATUS);
+  // ---- server data ----
   const [reports, setReports] = useState([]);
-  const [isLoadingReports, setIsLoadingReports] = useState(false);
-  const reportStatuses = ["Unclaimed", "Claimed"];
+  const [categories, setCategories] = useState([]);
+  const [buildings, setBuildings] = useState([]);
+  const [spaces, setSpaces] = useState([]);
+  const [gates, setGates] = useState([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(true);
+  const [error, setError] = useState(null);
+
+  // ---- filters ----
+  const [search, setSearch] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]); // category ids
+  const [selectedLocations, setSelectedLocations] = useState([]); // location names
+  const [showClaimed, setShowClaimed] = useState(false);
+
+  // ---- ui ----
+  const [activeMenu, setActiveMenu] = useState(null); // "categories" | "locations" | null
+  const [activeLocationGroup, setActiveLocationGroup] = useState(null);
+
+  /* ------------------------------ data loading ----------------------------- */
+
+  const fetchReports = async () => {
+    try {
+      setIsLoadingReports(true);
+      setError(null);
+      const data = await fetchJson(`${API_URL}/api/found-reports/public`, fetchWithAuth);
+      setReports(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsLoadingReports(false);
+    }
+  };
+
+  const loadDropdownData = async () => {
+    const results = await Promise.allSettled([
+      fetchJson(`${API_URL}/api/categories`),
+      fetchJson(`${API_URL}/api/offices`),
+      fetchJson(`${API_URL}/api/shared-spaces`),
+      fetchJson(`${API_URL}/api/gates`),
+    ]);
+
+    const listOrEmpty = (r) =>
+      r.status === "fulfilled" && Array.isArray(r.value) ? r.value : [];
+
+    results.forEach((r) => r.status === "rejected" && console.error(r.reason));
+
+    setCategories(listOrEmpty(results[0]));
+    setBuildings(listOrEmpty(results[1]));
+    setSpaces(listOrEmpty(results[2]));
+    setGates(listOrEmpty(results[3]));
+  };
 
   useEffect(() => {
-
-    setIsLoadingReports(true);
-    fetchWithAuth(`${API_URL}/api/found-reports/public`
-      ,  
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        setReports(data);
-        setIsLoadingReports(false)
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    fetchReports();
+    loadDropdownData();
   }, []);
 
-  const categoryLabel =
-  selectedCategories.length === 0
-    ? "Categories"
-    : selectedCategories.length === 1
-    ? categories.find(
-        (c) => c.category_id === selectedCategories[0]
-      )?.category_name
-    : `Categories (${selectedCategories.length})`;
+  /* ------------------------------ derived data ----------------------------- */
 
-    const locationCount =
-  selectedCollegeBuilding.length +
-  selectedSharedSpaces.length +
-  selectedGates.length;
+  const locationGroups = useMemo(
+    () => ({
+      college: {
+        title: "College Buildings",
+        items: buildings.map((b) => ({ key: b.office_id, name: b.office_name })),
+      },
+      shared: {
+        title: "Shared Spaces",
+        items: spaces.map((s) => ({ key: s.shared_space_id, name: s.shared_space_name })),
+      },
+      gates: {
+        title: "Gates",
+        items: gates.map((g) => ({ key: g.gate_id, name: g.gate_name })),
+      },
+    }),
+    [buildings, spaces, gates]
+  );
 
-const allLocationNames = [
-  ...selectedCollegeBuilding,
-  ...selectedSharedSpaces,
-  ...selectedGates,
-];
+  const filteredReports = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const locations = selectedLocations.map((l) => l.toLowerCase());
+    const wantedStatus = showClaimed ? "claimed" : "unclaimed";
 
-const locationLabel =
-  locationCount === 0
-    ? "Locations"
-    : locationCount === 1
-    ? allLocationNames[0]
-    : `Locations (${locationCount})`;
-  
+    return reports.filter((report) => {
+      const matchesSearch =
+        !query ||
+        [
+          report.item_name,
+          report.description,
+          report.contents,
+          report.category_name,
+          report.location_found,
+        ].some((field) => field?.toLowerCase().includes(query));
 
-  const allSelectedLocations = [
-    ...selectedCollegeBuilding,
-    ...selectedSharedSpaces,
-    ...selectedGates,
-  ];
+      const locationText = report.location_found?.toLowerCase() || "";
+      const matchesLocation =
+        locations.length === 0 || locations.some((loc) => locationText.includes(loc));
 
-  
+      const matchesCategory =
+        selectedCategories.length === 0 || selectedCategories.includes(report.category_id);
 
-  useEffect(() => {
+      const matchesStatus = report.status?.toLowerCase() === wantedStatus;
 
-    fetch(`${API_URL}/api/categories`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        setCategories(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
+      return matchesSearch && matchesLocation && matchesCategory && matchesStatus;
+    });
+  }, [reports, search, selectedLocations, selectedCategories, showClaimed]);
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/offices`)
-      .then((res) => res.json())
-      .then((data) => {
-        setBuildings(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
+  const categoryLabel = summaryLabel(
+    "All Categories",
+    selectedCategories.length,
+    categories.find((c) => c.category_id === selectedCategories[0])?.category_name
+  );
+  const locationLabel = summaryLabel("All Locations", selectedLocations.length, selectedLocations[0]);
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/gates`)
-      .then((res) => res.json())
-      .then((data) => {
-        setGates(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-  }, [])
+  /* -------------------------------- handlers ------------------------------- */
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/shared-spaces`)
-      .then((res) => res.json())
-      .then((data) => {
-        setSpaces(data);
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-  }, [])
+  const toggleMenu = (menu) => {
+    setActiveMenu((prev) => (prev === menu ? null : menu));
+    setActiveLocationGroup(menu === "locations" ? "college" : null);
+  };
 
+  const toggleClaimed = () => {
+    setShowClaimed((prev) => !prev);
+    setActiveMenu(null);
+    setActiveLocationGroup(null);
+  };
 
-  const filteredReports = reports?.filter((report) => {
-    const query = search.toLowerCase();
-    const words = (locationLabel || "")
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    const firstWord = words[0];
-    const firstTwoWords =
-      words.length >= 2
-        ? `${words[0]} ${words[1]}`
-        : words[0];
-    const locationText =
-      report.location_found?.toLowerCase() || "";
-    const matchesSearch =
-      report.item_name?.toLowerCase().includes(query) ||
-      report.description?.toLowerCase().includes(query) ||
-      report.contents?.toLowerCase().includes(query) ||
-      report.category_name?.toLowerCase().includes(query) ||
-      report.location_found?.toLowerCase().includes(query) ||
-      report.reported_by?.toLowerCase().includes(query);
-    const matchesLocation =
-      allSelectedLocations.length === 0 ||
-      allSelectedLocations.some((location) =>
-        locationText.includes(location.toLowerCase())
+  const onFoundItemClick = (id) => navigate(`/find/${id}`);
+
+  /* --------------------------------- render -------------------------------- */
+
+  const renderResults = () => {
+    if (isLoadingReports) return <Loading />;
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-10">
+          <p className="text-sm text-red-500 text-center">{error}</p>
+          <button
+            type="button"
+            onClick={fetchReports}
+            className="border border-primary rounded-lg h-10 px-6 text-primary bg-white text-xs"
+          >
+            Try again
+          </button>
+        </div>
       );
-    const matchesCategory =
-      selectedCategories.length === 0 ||
-      selectedCategories.includes(report.category_id);
-    const matchesStatus =
-  !selectedStatus || report.status === selectedStatus;
+    }
+
+    if (filteredReports.length === 0) {
+      return (
+        <p className="text-center text-base text-[#666] mt-5">
+          No items found matching your filter.
+        </p>
+      );
+    }
 
     return (
-      matchesSearch &&
-      matchesCategory &&
-      matchesLocation &&
-      matchesStatus
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 pb-4">
+        {filteredReports.map((report) => (
+          <ItemCard key={report.found_report_id} report={report} onClick={onFoundItemClick} />
+        ))}
+      </div>
     );
-  });
-  const sortedReports = [...(filteredReports || [])].sort((a, b) => {
-    if (!locationLabel) return 0;
-    const words = locationLabel
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    const getScore = (text = "") => {
-      text = text.toLowerCase();
-      let score = 0;
-      const firstWord = words[0];
-      const firstTwoWords =
-        words.length >= 2
-          ? `${words[0]} ${words[1]}`
-          : firstWord;
-      if (text === locationLabel.toLowerCase()) score += 100;
-      if (text.includes(firstTwoWords)) score += 50;
-      if (text.includes(firstWord)) score += 25;
-      return score;
-    };
-    return (
-      getScore(b.location_found) -
-      getScore(a.location_found)
-    );
-  });
-
-  const onFoundItemClick = (id) => {
-    navigate(`/find/${id}`);
-  }
-
-  const handleCategoryClick = (categoryId) => {
-    setSelectedCategories((prev) => {
-      if (prev.includes(categoryId)) {
-        return prev.filter((id) => id !== categoryId);
-      }
-
-      return [...prev, categoryId];
-    });
   };
-
-  const handleCollgeClick = (locationId) => {
-    setSelectedCollegeBuilding((prev) => {
-      if (prev.includes(locationId)) {
-        return prev.filter((id) => id !== locationId);
-      }
-
-      return [...prev, locationId];
-    });
-  };
-
-  const handleSharedSpaceClick = (spaceId) => {
-    setSelectedSharedSpaces((prev) => {
-      if (prev.includes(spaceId)) {
-        return prev.filter((id) => id !== spaceId);
-      }
-
-      return [...prev, spaceId];
-    });
-  };
-
-  const handleGateClick = (gateName) => {
-    setSelectedGates((prev) => {
-      if (prev.includes(gateName)) {
-        return prev.filter((name) => name !== gateName);
-      }
-
-      return [...prev, gateName];
-    });
-  };
-
-  const handleStatusClick = (isClicked) => {
-    if(isClicked){
-      setSelectedStatus("claimed")
-    }
-    else{
-        setSelectedStatus("unclaimed")
-    }
-  };
-
 
   return (
     <>
-      <PageLabel label="Search Item" />
-      <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col pb-25">
-        {!isLoadingReports &&  spaces && buildings && gates && buildings && categories && reports.length > 0  ?
-          (
-            <>
-              <div className="flex h-12 bg-white border border-[#DDD9CF]  rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] items-center my-3">
-                <i className="fa-brands fa-sistrix text-primary text-2xl ml-1"></i>
-                <input
-                  type="text"
-                  placeholder="Search"
-                  className="input input-bordered w-full"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+      <PageLabel label="Found Item Gallery" />
+      <div className="bg-(--color-secondary) min-h-screen w-full px-2.5 flex flex-col pb-25">
+        {/* Search */}
+        <div className="flex items-center gap-2.5 bg-white border border-[#ddd] rounded-full h-11 px-4 my-3.5">
+          <i className="fa-solid fa-magnifying-glass text-primary" />
+          <input
+            type="text"
+            placeholder="Search Item"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 min-w-0 bg-transparent outline-none text-base placeholder:text-[#999]"
+          />
+        </div>
+
+        {/* Filter card */}
+        <div className="bg-[#F0E4DE] rounded-2xl py-2.5 mb-3">
+          <div className="flex gap-2 px-2.5">
+            <FilterTrigger
+              label={categoryLabel}
+              open={activeMenu === "categories"}
+              onClick={() => toggleMenu("categories")}
+            />
+            <FilterTrigger
+              label={locationLabel}
+              open={activeMenu === "locations"}
+              onClick={() => toggleMenu("locations")}
+            />
+            <FilterTrigger
+              label="Claimed"
+              active={showClaimed}
+              showArrow={false}
+              onClick={toggleClaimed}
+            />
+          </div>
+
+          {/* Category dropdown */}
+          {activeMenu === "categories" && (
+            <div className="bg-white mt-3 mx-2.5 rounded-xl p-4 border border-[#eee]">
+              <div className="flex flex-wrap gap-2">
+                <Chip
+                  label="All Categories"
+                  active={selectedCategories.length === 0}
+                  onClick={() => {
+                    setSelectedCategories([]);
+                    setActiveMenu(null);
+                  }}
+                />
+                {categories.map((cat) => (
+                  <Chip
+                    key={cat.category_id}
+                    label={cat.category_name}
+                    active={selectedCategories.includes(cat.category_id)}
+                    onClick={() =>
+                      setSelectedCategories((prev) => toggleInList(prev, cat.category_id))
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Location dropdown */}
+          {activeMenu === "locations" && (
+            <div className="bg-white mt-3 mx-2.5 rounded-xl p-4 border border-[#eee] max-h-80 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 pb-2.5 mb-3 border-b border-[#eee]">
+                <Chip
+                  label="All Locations"
+                  active={selectedLocations.length === 0}
+                  onClick={() => {
+                    setSelectedLocations([]);
+                    setActiveMenu(null);
+                  }}
                 />
               </div>
-              <div className="flex flex-col bg-white border border-[#DDD9CF] px-1 rounded-xl shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] mb-3 gap-1">
-                <div className="flex h-12 p-1 items-center gap-1 overflow-x-auto overflow-y-auto">
-                  <div className="  shrink-0">
-                    <button
-                      className={`w-full p-2 text-xs ${openCategory ? "bg-white" : "bg-[#F2F2F2]"
-                        } rounded-md`}
-                      onClick={() => {
-                        setOpenCategory(!openCategory);
-                        setOpenLocations(false);
-                        setOpenStatus(false);
-                      }}
-                    >
-                      {categoryLabel}
-                      <i
-                        className={`fa-solid fa-angle-${openCategory ? "up" : "down"
-                          } ml-2 text-primary`}
-                      />
-                    </button>
-                  </div>
 
-                  <div className="shrink-0">
-                    <button
-                      className={`w-full p-2 text-xs ${openLocations ? "bg-white" : "bg-[#F2F2F2]"
-                        } rounded-md`}
-                      onClick={() => {
-                        setOpenLocations(!openLocations);
-                        setOpenCategory(false);
-                        setOpenStatus(false);
-                      }}
-                    >
-                      {locationLabel}
-                      <i
-                        className={`fa-solid fa-angle-${openLocations ? "up" : "down"
-                          } ml-2 text-primary`}
-                      />
-                    </button>
-                  </div>
+              {LOCATION_ROWS.map((rowIds, rowIndex) => {
+                const openId = rowIds.find((id) => id === activeLocationGroup);
+                const openGroup = openId ? locationGroups[openId] : null;
 
-                  <div className="shrink-0">
-                    <button
-                      className={`w-full p-2 text-xs ${openStatus ? "bg-white" : "bg-[#F2F2F2]"
-                        } rounded-md`}
-                      onClick={() => { 
-                        const nextStatus = !openStatus;
-                        setOpenStatus(!openStatus);
-                        handleStatusClick(nextStatus);
-          
-                      }}
-                    >
-                        {openStatus? "Claimed Items" : "Unclaimed Items"}
-                    </button>
-                  </div>
-                </div>
-
-
-
-                {openCategory &&
-                  (
-                    <>
-                      <div className="w-full min-h-20  flex flex-wrap gap-2 pb-2 px-3">
-                        <button
-                          onClick={() => setSelectedCategories([])}
-                          className={`text-xs p-2 rounded-md font-medium w-fit h-fit px-5 text-center ${selectedCategories.length === 0
-                            ? "bg-(--color-primary) text-white"
-                            : "bg-[#F2F2F2]"
-                            }`}
-                        >
-                          All Category
-                        </button>
-
-                        {categories?.map((cat) => (
-                          <button
-                            key={cat.category_id}
-                            onClick={() => handleCategoryClick(cat.category_id)}
-                            className={`text-xs p-2 rounded-md font-medium w-fit px-5 text-center ${selectedCategories.includes(cat.category_id)
-                              ? "bg-(--color-primary) text-white"
-                              : "bg-[#F2F2F2]"
-                              }`}
-                          >
-                            {cat.category_name}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )
-
-                }
-                {openLocations &&
-                  (
-                    <>
-                      <div className="w-full min-h-20  flex flex-wrap gap-2 pb-2 px-3 relative z-60">
-
-                        <div className="h-fit rounded-t-md  ">
-                          <button
-                            onClick={() => { setOpenCollgeBuilding(!openCollgeBuilding), setOpenGates(false), setOpenSharedSpaces(false) }}
-                            className={`text-xs p-2 rounded-md z-60 font-medium min-w-35 h-fit text-center ${openCollgeBuilding ? "bg-white border border-primary" : "bg-[#F2F2F2]"}  `}
-                          >
-                            College Buildings
-                            <i className={`fa-solid fa-angle-${openCollgeBuilding ? "up" : "down"} 
-                                     ml-3 text-primary`}></i>
-                          </button>
-                          {openCollgeBuilding &&
-                            (
-                              <>
-                                <div className="absolute w-full h-full  left-0   z-50 ">
-                                  <div className="w-full min-h-20 border border-primary mt-1 rounded-md bg-white p-2 flex flex-wrap gap-2">
-                                    <button
-                                      onClick={() => setSelectedCollegeBuilding([])}
-                                      className={`text-xs p-2 rounded-md font-medium w-fit px-5  h-fit text-center ${selectedCollegeBuilding.length === 0
-                                        ? "bg-(--color-primary) text-white"
-                                        : "bg-[#F2F2F2]"
-                                        }`}
-                                    >
-                                      All College Buildings
-                                    </button>
-                                    {buildings?.map((building) => (
-                                      <button
-                                        key={building.office_id}
-                                        onClick={() => handleCollgeClick(building.office_name)}
-                                        className={`text-xs p-2 rounded-md font-medium w-fit px-5  text-center ${selectedCollegeBuilding.includes(building.office_name)
-                                          ? "bg-(--color-primary) text-white"
-                                          : "bg-[#F2F2F2]"
-                                          }`}
-                                      >
-                                        {building.office_name}
-                                      </button>
-                                    ))}
-
-                                  </div>
-
-                                </div>
-                              </>
-                            )
-
+                return (
+                  <div key={rowIndex} className={rowIndex > 0 ? "mt-2.5" : ""}>
+                    <div className="relative z-10 flex items-end gap-2">
+                      {rowIds.map((id) => (
+                        <LocationTab
+                          key={id}
+                          title={locationGroups[id].title}
+                          open={activeLocationGroup === id}
+                          onClick={() =>
+                            setActiveLocationGroup(activeLocationGroup === id ? null : id)
                           }
-                        </div>
-                        <div className="h-fit rounded-t-md">
-                          <button
-                            onClick={() => { setOpenSharedSpaces(!openSharedSpaces), setOpenCollgeBuilding(false), setOpenGates(false) }}
-                            className={`text-xs p-2 rounded-md font-medium min-w-35 h-fit text-center ${openSharedSpaces
-                                ? "bg-white border border-primary"
-                                : "bg-[#F2F2F2]"
-                              }`}
-                          >
-                            Shared Spaces
-                            <i
-                              className={`fa-solid fa-angle-${openSharedSpaces ? "up" : "down"
-                                } ml-3 text-primary`}
-                            ></i>
-                          </button>
+                        />
+                      ))}
+                    </div>
 
-                          {openSharedSpaces && (
-                            <div className="absolute w-full left-0 z-50">
-                              <div className="w-full min-h-20 border border-primary mt-1 rounded-md bg-white p-2 flex flex-wrap gap-2">
-
-                                <button
-                                  onClick={() => setSelectedSharedSpaces([])}
-                                  className={`text-xs p-2 rounded-md font-medium w-fit px-5  h-fit text-center ${selectedSharedSpaces.length === 0
-                                      ? "bg-(--color-primary) text-white"
-                                      : "bg-[#F2F2F2]"
-                                    }`}
-                                >
-                                  All Shared Spaces
-                                </button>
-
-                                {spaces?.map((space) => (
-                                  <button
-                                    key={space.shared_space_id}
-                                    onClick={() =>
-                                      handleSharedSpaceClick(space.shared_space_name)
-                                    }
-                                    className={`text-xs p-2 rounded-md font-medium w-fit px-5  text-center ${selectedSharedSpaces.includes(space.shared_space_name)
-                                        ? "bg-(--color-primary) text-white"
-                                        : "bg-[#F2F2F2]"
-                                      }`}
-                                  >
-                                    {space.shared_space_name}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="h-fit rounded-t-md">
-                          <button
-                            onClick={() => { setOpenGates(!openGates), setOpenCollgeBuilding(false), setOpenSharedSpaces(false) }}
-                            className={`text-xs p-2 rounded-md font-medium min-w-35 h-fit text-center ${openGates
-                                ? "bg-white border border-primary"
-                                : "bg-[#F2F2F2]"
-                              }`}
-                          >
-                            Gates
-                            <i
-                              className={`fa-solid fa-angle-${openGates ? "up" : "down"
-                                } ml-3 text-primary`}
+                    {openGroup && (
+                      <div
+                        className={`-mt-px bg-[#F3F3F3] border border-[#ddd] rounded-lg p-1.5 pt-2.5 ${
+                          openId === rowIds[0] ? "rounded-tl-none" : ""
+                        }`}
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          {openGroup.items.map((item) => (
+                            <Chip
+                              key={item.key}
+                              label={item.name}
+                              active={selectedLocations.includes(item.name)}
+                              onClick={() =>
+                                setSelectedLocations((prev) => toggleInList(prev, item.name))
+                              }
                             />
-                          </button>
-
-                          {openGates && (
-                            <div className="absolute w-full left-0 z-50">
-                              <div className="w-full min-h-20 border border-primary mt-1 rounded-md bg-white p-2 flex flex-wrap gap-2">
-
-                                <button
-                                  onClick={() => setSelectedGates([])}
-                                  className={`text-xs p-2 rounded-md font-medium w-fit px-5  h-fit text-center ${selectedGates.length === 0
-                                      ? "bg-(--color-primary) text-white"
-                                      : "bg-[#F2F2F2]"
-                                    }`}
-                                >
-                                  All Gates
-                                </button>
-
-                                {gates?.map((gate) => (
-                                  <button
-                                    key={gate.gate_id}
-                                    onClick={() => handleGateClick(gate.gate_name)}
-                                    className={`text-xs p-2 rounded-md font-medium w-fit px-5 text-center ${selectedGates.includes(gate.gate_name)
-                                        ? "bg-(--color-primary) text-white"
-                                        : "bg-[#F2F2F2]"
-                                      }`}
-                                  >
-                                    {gate.gate_name}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          ))}
                         </div>
-
-
-
-
-
                       </div>
-                    </>
-                  )
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-                }
-
-                {/* {openStatus && (
-  <div className="w-full flex gap-2 pb-2 px-3">
-    <button
-      onClick={() => setSelectedStatus("")}
-      className={`text-xs p-2 rounded-md font-medium px-5 ${
-        selectedStatus === ""
-          ? "bg-(--color-primary) text-white"
-          : "bg-[#F2F2F2]"
-      }`}
-    >
-      All
-    </button>
-
-    <button
-      onClick={() => setSelectedStatus("unclaimed")}
-      className={`text-xs p-2 rounded-md font-medium px-5 ${
-        selectedStatus === "unclaimed"
-          ? "bg-(--color-primary) text-white"
-          : "bg-[#F2F2F2]"
-      }`}
-    >
-      Unclaimed
-    </button>
-
-    <button
-      onClick={() => setSelectedStatus("claimed")}
-      className={`text-xs p-2 rounded-md font-medium px-5 ${
-        selectedStatus === "claimed"
-          ? "bg-(--color-primary) text-white"
-          : "bg-[#F2F2F2]"
-      }`}
-    >
-      Claimed
-    </button>
-  </div>
-)} */}
-
-
-              </div>
-              <div className=" grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {sortedReports?.map((report, index) =>
-                  <FoundItemCard key={index} data={report} onClick={onFoundItemClick} />
-                )}
-              </div>
-            </>
-          )
-          :
-          (
-            <>
-              <Loading />
-            </>)
-
-        }
-
-
+        {/* Results */}
+        {renderResults()}
       </div>
     </>
   );
