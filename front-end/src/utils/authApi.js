@@ -2,6 +2,52 @@
 import { fetchWithAuth } from "./fetchWithAuth";
 const API_URL = import.meta.env.VITE_API_URL;
 
+export const forgotPassword = async (email) => {
+  const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to send verification code.");
+  return data;
+};
+
+export const verifyResetOTP = async (email, otp) => {
+  const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Invalid or expired code.");
+  return data;
+};
+
+export const resetPassword = async (resetToken, newPassword) => {
+  const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resetToken, newPassword }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to reset password.");
+  return data;
+};
+
+export const changePassword = async (userId, currentPassword, newPassword) => {
+  const response = await fetchWithAuth(
+    `${API_URL}/api/profile/${userId}/change-password`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to change password.");
+  return data;
+};
+
 export const adminSendResetOTP = async (userId) => {
   const response = await fetchWithAuth(
     `${API_URL}/api/auth/admin/reset-password/send-otp/${userId}`,

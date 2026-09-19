@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import QRItem from "./QRItem";
+import ChangePassword from "./ChangePassword";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -298,7 +299,10 @@ export default function Profile() {
               </button>
 
               {/* Change Password */}
-              <button className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100">
+              <button
+                onClick={() => setPage("changePassword")}
+                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
+              >
                 <ChangePasswordIcon />
                 <p className="flex-1 text-sm text-left text-[#4B2D23]">
                   Change Password
@@ -528,5 +532,12 @@ export default function Profile() {
   // =====================
   if (page === "qrItem") {
     return <QRItem onBack={() => setPage("main")} />;
+  }
+
+  // =====================
+  // CHANGE PASSWORD PAGE
+  // =====================
+  if (page === "changePassword") {
+    return <ChangePassword onBack={() => setPage("main")} />;
   }
 }
