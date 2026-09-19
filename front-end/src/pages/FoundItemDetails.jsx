@@ -23,19 +23,17 @@ const [howToClaim, setHowToClaim] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const [error, setError] = useState(null);
-  
+
 
 const fetchReport = async (id) => {
   try {
     setError(null);
-    const res = await fetchWithAuth(`${API_URL}/api/found-reports/${id}`);
+    const res = await fetchWithAuth(`${API_URL}/api/found-reports/public/${id}`);
     const data = await res.json();
 
     if (!res.ok) {
       throw new Error(data.message || `Request failed (${res.status})`);
     }
-
-    console.log("report:", data);
     setReport(data);
   } catch (err) {
     console.error(err);
