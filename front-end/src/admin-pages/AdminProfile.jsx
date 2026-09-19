@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, X, Upload } from "lucide-react";
+import { Pencil, X, Upload, Eye, EyeOff } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { changePassword } from "../utils/authApi";
+import PasswordChecklist from "../components/PasswordChecklist";
+import { isPasswordStrong } from "../utils/passwordRules";
 
 export default function AdminProfile() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -16,6 +19,18 @@ export default function AdminProfile() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
+
+  // Change password modal
+  const [openChangePassword, setOpenChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // ── Fetch admin profile ──────────────────────────────────────────────────
   useEffect(() => {
@@ -132,6 +147,42 @@ export default function AdminProfile() {
     setUploadError("");
   };
 
+  // ── Change password ──────────────────────────────────────────────────────
+  const isPasswordFormValid =
+    currentPassword !== "" &&
+    isPasswordStrong(newPassword) &&
+    confirmPassword !== "" &&
+    newPassword === confirmPassword;
+
+  const handleChangePassword = async () => {
+    if (!isPasswordFormValid || changingPassword) return;
+    setPasswordError("");
+    setChangingPassword(true);
+    try {
+      await changePassword(userId, currentPassword, newPassword);
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        handleClosePasswordModal();
+      }, 1500);
+    } catch (err) {
+      setPasswordError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleClosePasswordModal = () => {
+    setOpenChangePassword(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordError("");
+    setPasswordSuccess(false);
+  };
+
   // ── Loading / error states ───────────────────────────────────────────────
   if (loading) {
     return (
@@ -191,6 +242,19 @@ export default function AdminProfile() {
               <Pencil size={15} />
               Edit Profile
             </button>
+
+            {/* Security Section */}
+            <div className="w-full flex flex-col gap-3 pt-2 border-t border-gray-100">
+              <p className="text-sm font-semibold text-[#1A1208] pt-3">
+                Security
+              </p>
+              <button
+                onClick={() => setOpenChangePassword(true)}
+                className="text-sm text-left text-gray-500 hover:text-primary transition-colors cursor-pointer"
+              >
+                Change Password
+              </button>
+            </div>
 
           </div>
 
@@ -362,6 +426,124 @@ export default function AdminProfile() {
                 </button>
               )}
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Change Password Modal ─────────────────────────────────────────── */}
+      {openChangePassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-[#1A1208] text-base">
+                Change Password
+              </p>
+              <button
+                onClick={handleClosePasswordModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {passwordSuccess ? (
+              <p className="text-sm text-green-600 text-center py-4">
+                Password changed successfully.
+              </p>
+            ) : (
+              <>
+                {/* Current Password */}
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-medium text-gray-500">Current Password</p>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setPasswordError("");
+                      }}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm outline-none focus:border-primary transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    >
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* New Password */}
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-medium text-gray-500">New Password</p>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordError("");
+                      }}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm outline-none focus:border-primary transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+                  <PasswordChecklist password={newPassword} variant="light" />
+                </div>
+
+                {/* Confirm New Password */}
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-medium text-gray-500">Confirm New Password</p>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setPasswordError("");
+                      }}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm outline-none focus:border-primary transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {confirmPassword !== "" && confirmPassword !== newPassword && (
+                    <p className="text-xs text-red-500">Passwords do not match.</p>
+                  )}
+                </div>
+
+                {passwordError && (
+                  <p className="text-xs text-red-500 text-center">{passwordError}</p>
+                )}
+
+                <button
+                  onClick={handleChangePassword}
+                  disabled={!isPasswordFormValid || changingPassword}
+                  className="w-full bg-primary text-white rounded-lg py-3 text-sm font-semibold hover:opacity-90 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {changingPassword ? "Saving..." : "Save Changes"}
+                </button>
+              </>
+            )}
 
           </div>
         </div>
