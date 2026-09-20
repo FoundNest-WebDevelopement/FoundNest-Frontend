@@ -10,9 +10,11 @@ import AdminProfile from "./admin-pages/AdminProfile";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NotFoundPage from "./pages/NotFoundPage";
+import useDesktopViewport from "./hooks/useDesktopViewport";
 
 
 function Admin() {
+  useDesktopViewport(1024);
   return (
     <>
     <ToastContainer
@@ -22,7 +24,8 @@ function Admin() {
     width: "100%",
   }}
       />
-      <Routes>
+      <div className="min-w-5xl">
+        <Routes>
         
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
@@ -35,6 +38,7 @@ function Admin() {
         </Route>
         <Route path="*" element={<NotFoundPage />}></Route>
       </Routes>
+      </div>
       </>
 
   );

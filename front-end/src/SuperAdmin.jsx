@@ -11,8 +11,10 @@ import SuperAdminSystemReportDetail from "./super-admin-pages/SuperAdminSystemRe
 import SuperAdminActionLogs from "./super-admin-pages/SuperAdminActionLogs";
 import SuperAdminProfile from "./super-admin-pages/SuperAdminProfile";
 import NotFoundPage from "./pages/NotFoundPage";
+import useDesktopViewport from "./hooks/useDesktopViewport";
 
 function SuperAdmin() {
+    useDesktopViewport(1024);
 
     return (
         <>
@@ -24,7 +26,8 @@ function SuperAdmin() {
                 }}
             />
 
-            <Routes>
+            <div className="min-w-5xl">
+                <Routes>
 
                 <Route path="/" element={<SuperAdminLayout />}>
                     <Route index element={<SuperAdminDashboard />} />
@@ -37,6 +40,7 @@ function SuperAdmin() {
                 </Route>
                 <Route path="*" element={<NotFoundPage />}></Route>
             </Routes>
+            </div>
         </>
     )
 

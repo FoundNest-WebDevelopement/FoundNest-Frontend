@@ -7,6 +7,7 @@ import { formatReportId } from "../../../utils/formatId.js";
 import { claimFoundItem, searchLostReports } from "../services/foundReportModalServices.js"
 import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import AdminTextField from "../../AdminTextField.jsx";
+import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning.js";
 
 export default function ClaimFoundReportTab({
     setFullName,
@@ -20,6 +21,7 @@ export default function ClaimFoundReportTab({
     onSuccess, // Function to trigger when claim is successful
     refreshReports
 }) {
+    useUnsavedChangesWarning(selectedItem && hasChanges);
     const userId = localStorage.getItem("user_id");
     const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
 
@@ -98,7 +100,9 @@ export default function ClaimFoundReportTab({
             const officeId = localStorage.getItem("office_location");
             const officeIdTemp = (officeId && officeId !== "undefined") ? officeId : null;
 
-            if(officeId !== selectedItem.office_id){
+            console.log(officeId)
+
+            if(officeId !== String(selectedItem.office_id)){
                 toast.error("item is not in your respected office")
                 return
             }
