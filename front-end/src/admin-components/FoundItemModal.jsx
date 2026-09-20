@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { Astroid } from "lucide-react";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminButton from "./AdminButton";
+import useUnsavedChangesWarning from "../hooks/useUnsavedChangesWarning";
 
 
 export default function FoundItemModal({
@@ -24,6 +25,7 @@ export default function FoundItemModal({
     prefillData,
     setSelectedItem,
 }) {
+
 
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -46,6 +48,10 @@ export default function FoundItemModal({
     const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    
+
+    
 
     const [prefilledImageUrl, setPrefilledImageUrl] = useState(null);
     const [prefilledQrData, setPrefilledQrData] = useState(null);
@@ -134,31 +140,30 @@ export default function FoundItemModal({
         }
     };
 
+    const hasChanges = [
+    selectedFile,
+    itemName,
+    category,
+    description,
+    contents,
+    locationFound,
+    dateFound,
+    timeFound,
+    surrenderedBy,
+    additionalNotes,
+    specificLocation,
+].some((value) =>
+    typeof value === "string" ? value.trim() !== "" : value != null
+);
+
+useUnsavedChangesWarning(open && hasChanges);
+
 
 const handleCancelForm = () => {
   
-        const userInputs = [
-            selectedFile,
-            itemName,
-            category,
-            description,
-            contents,
-            locationFound,
-            dateFound,
-            timeFound,
-            surrenderedBy,
-            additionalNotes,
-            specificLocation
-        ];
 
-
-        const hasUserProgress = userInputs.some(value => {
-            if (typeof value === 'string') return value.trim() !== '';
-            return value !== null && value !== undefined;
-        });
-
-
-        if (hasUserProgress || isSubmitting) {
+        if (hasChanges || isSubmitting) {
+         
             setCancelListConfirmation(true);
         } else {
             resetForm(); 

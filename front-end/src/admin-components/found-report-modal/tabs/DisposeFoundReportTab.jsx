@@ -9,6 +9,7 @@ import AdminTextField from "../../AdminTextField.jsx";
 import AdminDateInput from "../../AdminDateInput.jsx";
 import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import AdminTextArea from "../../AdminTextArea.jsx";
+import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning.js";
 
 export default function DisposeFoundReportTab({
     hasChanges,
@@ -18,6 +19,8 @@ export default function DisposeFoundReportTab({
     onCancel, // Function to go back to the details tab
     refreshReports
 }) {
+
+    useUnsavedChangesWarning(selectedItem && hasChanges);
     // --- USER CONTEXT ---
     const userId = localStorage.getItem("user_id");
     const adminFullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");

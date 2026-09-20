@@ -13,6 +13,7 @@ import AdminConfirmDialog from "../../AdminConfirmDialog";
 import { Upload, CircleMinus, Image, Astroid } from "lucide-react"
 import { toast } from "react-toastify";
 import { updateLostReport, getLostReports } from "../services/LostReportModalService";
+import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning";
 export default function EditTab({
     hasChanges,
     setHasChanges,
@@ -26,6 +27,7 @@ export default function EditTab({
     onUpdated,
     setEditTab,
 }) {
+    useUnsavedChangesWarning(selectedItem && hasChanges);
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [isSaving, setIsSaving] = useState(false);

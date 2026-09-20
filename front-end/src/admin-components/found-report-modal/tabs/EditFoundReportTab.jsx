@@ -16,6 +16,7 @@ import AdminCategoriesDropdown from "../../AdminCategoriesDropdown.jsx";
 import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import ScaleImage from "../../ScaleImage.jsx";
 import AdminTextField from "../../AdminTextField.jsx";
+import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning.js";
 
 export default function EditFoundReportTab({
     selectedItem,
@@ -30,6 +31,8 @@ export default function EditFoundReportTab({
     setIsEditing, // Replaces setEditTab to close the edit view
     refreshReports
 }) {
+
+    
     const userId = localStorage.getItem("user_id");
     
     // Hooks
@@ -127,6 +130,8 @@ export default function EditFoundReportTab({
         const formChanged = JSON.stringify(formData) !== JSON.stringify(originalFormData);
         setHasChanges(imageChanged || formChanged);
     }, [formData, originalFormData, selectedFile]);
+
+    useUnsavedChangesWarning(selectedItem && hasChanges);
 
     useEffect(() => {
         return () => {
