@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import WebLoading from "../global-components/WebLoading";
+import DateRangeFilter from "../global-components/DateRangeFilter";
 
 const CENTER_COLORS = ["#7A0C0C", "#D4A017", "#8C7B6B", "#4A6FA5", "#5A8F5A", "#A55A8F"];
 
@@ -78,12 +79,19 @@ export default function SuperAdminDashboard() {
     const [actionFeed, setActionFeed] = useState([]);
     const [aiSummary, setAiSummary] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
 
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
                 setIsLoading(true);
-                const response = await fetchWithAuth(`${API_URL}/api/super-admin/dashboard`);
+                const params = new URLSearchParams();
+                if (dateRange.startDate && dateRange.endDate) {
+                    params.set("start_date", dateRange.startDate);
+                    params.set("end_date", dateRange.endDate);
+                }
+                const query = params.toString() ? `?${params.toString()}` : "";
+                const response = await fetchWithAuth(`${API_URL}/api/super-admin/dashboard${query}`);
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -104,9 +112,9 @@ export default function SuperAdminDashboard() {
         };
 
         fetchDashboard();
-    }, []);
+    }, [dateRange]);
 
-if (isLoading || !stats || !counters) {
+if (!stats || !counters) {
     return <WebLoading />;
 }
 
@@ -119,11 +127,14 @@ if (isLoading || !stats || !counters) {
     ];
 
     return (
-        <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex flex-col gap-6">
-           
-           <p className="text-sm text-[#6B5C42]">
-                 Welcome back, <span className="font-semibold text-[#1A1208]">{fullName}</span>! Here's your system overview.
-            </p>
+        <div className={`w-full min-h-screen bg-[#FAFAF8] p-6 flex flex-col gap-6 transition-opacity ${isLoading ? "opacity-60" : "opacity-100"}`}>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-sm text-[#6B5C42]">
+                    Welcome back, <span className="font-semibold text-[#1A1208]">{fullName}</span>! Here's your system overview.
+                </p>
+                <DateRangeFilter onChange={setDateRange} />
+            </div>
 
             {/* STAT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">

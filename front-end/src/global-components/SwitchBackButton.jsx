@@ -44,7 +44,7 @@ export default function SwitchBackButton() {
         }
     };
 
-    const label = actingAsSuperAdmin ? "← Back to Super Admin" : "← Back to Admin";
+    const label = actingAsSuperAdmin ? "Back to Super Admin" : "Back to Admin";
 
     return (
         <button
