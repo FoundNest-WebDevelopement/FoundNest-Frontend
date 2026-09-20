@@ -100,7 +100,9 @@ export default function ClaimFoundReportTab({
             const officeId = localStorage.getItem("office_location");
             const officeIdTemp = (officeId && officeId !== "undefined") ? officeId : null;
 
-            if(officeId !== selectedItem.office_id){
+            console.log(officeId)
+
+            if(officeId !== String(selectedItem.office_id)){
                 toast.error("item is not in your respected office")
                 return
             }
