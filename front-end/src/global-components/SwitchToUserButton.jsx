@@ -2,11 +2,13 @@ import { useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
 
 export default function SwitchToUserButton() {
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [openConfirm, setOpenConfirm] = useState(false);
 
     // Only a true (non-acting) Admin can switch here. If this admin session
     // is itself a Super Admin acting-as-Admin, switching further down would
@@ -40,18 +42,34 @@ export default function SwitchToUserButton() {
             toast.error(err.message || "Failed to switch mode.");
         } finally {
             setIsLoading(false);
+            setOpenConfirm(false);
         }
     };
 
     return (
-        <button
-            type="button"
-            onClick={handleSwitchToUser}
-            disabled={isLoading}
-            className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
-                transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-            {isLoading ? "Switching..." : "Switch to User"}
-        </button>
+        <>
+            <button
+                type="button"
+                onClick={() => setOpenConfirm(true)}
+                disabled={isLoading}
+                className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
+                    transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isLoading ? "Switching..." : "Switch to User"}
+            </button>
+
+            {openConfirm && (
+                <AdminConfirmDialog
+                    title="Switch Mode"
+                    description="Switch to the User view?"
+                    message="You'll leave the Admin dashboard and see the app as a regular user."
+                    confirmText={isLoading ? "Switching..." : "Switch"}
+                    cancelText="Cancel"
+                    disabled={isLoading}
+                    onClose={() => setOpenConfirm(false)}
+                    onConfirm={handleSwitchToUser}
+                />
+            )}
+        </>
     );
 }

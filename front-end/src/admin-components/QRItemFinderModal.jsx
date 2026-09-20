@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
 function disposeScanner(instance) {
+  // Multiple code paths (effect cleanup, decode callback, delayed start()
+  // resolution) can all try to tear down the same scanner instance. Calling
+  // stop()/clear() twice on html5-qrcode can throw, so make disposal
+  // idempotent per instance.
+  if (!instance || instance.__disposed) return;
+  instance.__disposed = true;
+
   const clearScannerUi = () => {
     instance.clear().catch(() => {});
   };
@@ -111,8 +118,11 @@ export default function QRItemFinderModal({ open, setOpen, onItemFound }) {
   }, [open, screen]);
 
   return (
-    <dialog className={`modal ${open ? "modal-open" : ""}`}>
-      <div className="bg-white flex flex-col w-full max-w-md rounded-2xl overflow-hidden">
+    <dialog className={`modal ${open ? "modal-open" : ""}`} onClick={handleClose}>
+      <div
+        className="bg-white flex flex-col w-full max-w-md rounded-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* HEADER */}
         <div className="h-15 w-full bg-primary flex items-center justify-between px-6 shrink-0">

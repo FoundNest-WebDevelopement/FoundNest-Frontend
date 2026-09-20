@@ -69,13 +69,6 @@ if (isLoading || !profile) {
                                 <i className="fa-regular fa-circle-user text-5xl text-[#1A1208]" />
                             </div>
                         )}
-                        <button
-                            type="button"
-                            onClick={() => setOpenEditPicture(true)}
-                            className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-white"
-                        >
-                            <Pencil size={14} className="text-white" />
-                        </button>
                     </div>
 
                     <div className="text-center">

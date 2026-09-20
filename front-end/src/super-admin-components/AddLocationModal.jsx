@@ -74,8 +74,14 @@ export default function AddLocationModal({ onClose, onUpdated }) {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
-                <div className="relative bg-white rounded-lg w-100 max-w-[90vw]">
+            <div
+                className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                onClick={() => !isSaving && onClose()}
+            >
+                <div
+                    className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                         <p className="font-semibold">Add Location</p>
                         <button onClick={onClose}>

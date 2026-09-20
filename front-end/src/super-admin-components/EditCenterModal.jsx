@@ -90,6 +90,11 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
             return;
         }
 
+        if (latitude === null || longitude === null) {
+            setError("Please pin the center's location on the map.");
+            return;
+        }
+
         try {
             setIsSaving(true);
             setError("");
@@ -138,8 +143,14 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
-                <div className="relative bg-white rounded-lg w-[900px] max-w-[92vw]">
+            <div
+                className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                onClick={() => !isSaving && onClose()}
+            >
+                <div
+                    className="relative bg-white rounded-lg w-[900px] max-w-[92vw]"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <div className="w-full h-12 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                         <p className="font-semibold text-base">
                             Edit Center: {center?.office_name}
@@ -241,7 +252,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                             {/* RIGHT COLUMN — MAP + STATUS */}
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-[#1A1208]">
-                                    Center Location on Map
+                                    Center Location on Map <span className="text-[#C0392B]">*</span>
                                 </label>
                                 <CampusMapPicker
                                     latitude={latitude}
@@ -319,7 +330,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving || !hasChanges}
+                            disabled={isSaving || !hasChanges || latitude === null || longitude === null}
                             onClick={() => setOpenConfirmDialog(true)}
                         >
                             {isSaving ? "Saving..." : "Save Changes"}

@@ -132,6 +132,8 @@ export default function AdminTopBar({ tabName }) {
             <p>{tabName}</p>
           </div>
           <div className="flex items-center gap-2 ">
+            <SwitchBackButton />
+            <SwitchToUserButton />
             <div className="relative group flex items-center justify-center">
               <button
                 className={`text-primary outline-none relative cursor-pointer
@@ -164,8 +166,6 @@ export default function AdminTopBar({ tabName }) {
                 />
               )}
             </div>
-            <SwitchBackButton />
-            <SwitchToUserButton />
             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
               <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
               <p className="text-sm text-[#1A1208]">{fullName}</p>

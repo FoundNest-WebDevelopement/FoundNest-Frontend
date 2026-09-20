@@ -221,8 +221,14 @@ export default function LostReportTable(
 
             {/* Image Modal */}
             {selectedImage && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
-                    <div className="relative rounded-2xl h-125">
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div
+                        className="relative rounded-2xl h-125"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
                             onClick={() => setSelectedImage(null)}

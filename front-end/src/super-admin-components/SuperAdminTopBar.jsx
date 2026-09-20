@@ -132,6 +132,7 @@ const markAllAdminNotificationsAsRead = async () => {
                             <p>{tabName}</p>
                         </div>
                         <div className="flex items-center gap-2 ">
+                            <SuperAdminModeSwitcher />
                             <div className="relative group flex items-center justify-center">
                                 <button
                                     className={`text-primary outline-none relative cursor-pointer
@@ -177,7 +178,6 @@ const markAllAdminNotificationsAsRead = async () => {
                                 </div> */}
     
                             </div>
-                            <SuperAdminModeSwitcher />
                             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
                                 <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
                                 <p className="text-sm text-[#1A1208]">{fullName}</p>

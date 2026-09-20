@@ -157,8 +157,14 @@ export default function ViewAdminsModal({ center, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-end z-1040">
-        <div className="relative bg-white h-full w-full max-w-md flex flex-col">
+      <div
+        className="fixed inset-0 bg-black/60 flex items-center justify-end z-1040"
+        onClick={() => onClose()}
+      >
+        <div
+          className="relative bg-white h-full w-full max-w-md flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="w-full h-14 bg-primary text-white flex items-center justify-between px-5 shrink-0">
             <p className="font-semibold text-base">
               {center.office_name} Admins
@@ -258,8 +264,14 @@ export default function ViewAdminsModal({ center, onClose }) {
       </div>
 
       {openAddAdmin && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1050">
-          <div className="relative bg-white rounded-lg w-100 max-w-[90vw] flex flex-col max-h-[80vh]">
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-1050"
+          onClick={() => !isAssigning && setOpenAddAdmin(false)}
+        >
+          <div
+            className="relative bg-white rounded-lg w-100 max-w-[90vw] flex flex-col max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5 shrink-0">
               <p className="font-semibold">Add Admin</p>
               <button onClick={() => setOpenAddAdmin(false)}>

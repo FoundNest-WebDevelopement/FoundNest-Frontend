@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { ClipboardList, CheckCircle, AlertTriangle, Gift } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
+import DateRangeFilter from "../global-components/DateRangeFilter";
 
 const STATUS_COLORS = ["#4A6FA5", "#C0392B", "#5A8F5A", "#D4A017", "#8C7B6B"];
 
@@ -17,11 +18,19 @@ export default function Dashboard() {
     const [recentActions, setRecentActions] = useState([]);
     const [recentFeedbacks, setRecentFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
 
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                const res = await fetchWithAuth(`${API_URL}/api/dashboard/${officeId}`);
+                setLoading(true);
+                const params = new URLSearchParams();
+                if (dateRange.startDate && dateRange.endDate) {
+                    params.set("start_date", dateRange.startDate);
+                    params.set("end_date", dateRange.endDate);
+                }
+                const query = params.toString() ? `?${params.toString()}` : "";
+                const res = await fetchWithAuth(`${API_URL}/api/dashboard/${officeId}${query}`);
                 const data = await res.json();
                 setStats(data.stats);
                 setStatusBreakdown(data.statusBreakdown ?? []);
@@ -34,7 +43,7 @@ export default function Dashboard() {
             }
         };
         fetchDashboard();
-    }, []);
+    }, [dateRange]);
 
     const formatTimeAgo = (dateStr) => {
         const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
@@ -85,9 +94,12 @@ export default function Dashboard() {
         <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col gap-5">
 
             {/* Welcome */}
-            <p className="text-[#1A1208] text-base">
-                Welcome back, <span className="font-bold">{fullName}</span>! Here's your center overview.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-[#1A1208] text-base">
+                    Welcome back, <span className="font-bold">{fullName}</span>! Here's your center overview.
+                </p>
+                <DateRangeFilter onChange={setDateRange} />
+            </div>
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

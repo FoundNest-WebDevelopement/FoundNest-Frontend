@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Check, X as XIcon, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5Qrcode } from "html5-qrcode";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -7,6 +7,13 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 const API_URL = import.meta.env.VITE_API_URL;
 
 function disposeScanner(instance) {
+  // Multiple code paths (effect cleanup, decode callback, delayed start()
+  // resolution) can all try to tear down the same scanner instance. Calling
+  // stop()/clear() twice on html5-qrcode can throw, which crashes the page
+  // to a blank screen — so make disposal idempotent per instance.
+  if (!instance || instance.__disposed) return;
+  instance.__disposed = true;
+
   const clearScannerUi = () => {
     instance.clear().catch(() => {});
   };
@@ -109,6 +116,7 @@ export default function QRItem({ onBack }) {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [editTargetId, setEditTargetId] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
+  const [viewQrCodeUrl, setViewQrCodeUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -221,6 +229,23 @@ export default function QRItem({ onBack }) {
     const link = document.createElement("a");
     link.href = qrCodeUrl;
     link.download = `${generatedItemName}-QR.png`;
+    link.click();
+  };
+
+  const handleViewQr = async (item) => {
+    try {
+      const url = await QRCode.toDataURL(item.qrData, { width: 200, margin: 2 });
+      setViewQrCodeUrl(url);
+      setPage("viewQr");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDownloadViewQr = () => {
+    const link = document.createElement("a");
+    link.href = viewQrCodeUrl;
+    link.download = `${viewingItem?.itemName || "item"}-QR.png`;
     link.click();
   };
 
@@ -496,7 +521,7 @@ export default function QRItem({ onBack }) {
 
         {showDiscardModal && (
           <div
-            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8"
+            className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 px-8"
             onClick={() => setShowDiscardModal(false)}
           >
             <div
@@ -669,7 +694,7 @@ export default function QRItem({ onBack }) {
 
         {showDeleteModal && (
           <div
-            className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/50"
+            className="fixed inset-0 z-[5000] flex items-end justify-center bg-black/50"
             onClick={() => setShowDeleteModal(false)}
           >
             <div
@@ -773,7 +798,60 @@ export default function QRItem({ onBack }) {
               <p className="text-sm text-[#4B2D23]">{viewingItem.category || "N/A"}</p>
             </div>
           </div>
+
+          <button
+            onClick={() => handleViewQr(viewingItem)}
+            disabled={!viewingItem.qrData}
+            className="w-full flex items-center justify-center gap-3 rounded-lg px-4 py-3 mt-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            style={{ backgroundColor: "#990000" }}
+          >
+            <QrCode size={20} color="white" />
+            <p className="text-sm font-semibold text-white">View QR</p>
+          </button>
         </div>
+      </div>
+    );
+  }
+
+  // =====================
+  // VIEW QR CODE (read-only)
+  // =====================
+  if (page === "viewQr") {
+    return (
+      <div
+        className="flex flex-col min-h-screen mt-13 mb-16 items-center justify-center px-5"
+        style={{ backgroundColor: "#990000" }}
+      >
+        <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3 w-full max-w-xs">
+          <p className="font-bold text-[#4B2D23] text-base">{viewingItem?.itemName || "Item"}</p>
+          {viewQrCodeUrl && (
+            <img src={viewQrCodeUrl} alt="QR Code" className="w-48 h-48" />
+          )}
+          <p className="text-xs font-bold text-[#990000]">FoundNest</p>
+        </div>
+
+        <button
+          onClick={handleDownloadViewQr}
+          className="flex items-center gap-2 mt-6 text-white text-sm font-medium cursor-pointer"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Image For Printing
+        </button>
+
+        <button
+          onClick={() => {
+            setViewQrCodeUrl("");
+            setPage("viewItemDetail");
+          }}
+          className="mt-3 w-full max-w-xs py-3 rounded-lg text-sm font-semibold cursor-pointer"
+          style={{ backgroundColor: "#FFF3E0", color: "#990000" }}
+        >
+          Back
+        </button>
       </div>
     );
   }
@@ -902,32 +980,49 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "scan") {
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16 bg-black">
+      <div className="flex flex-col h-screen pt-13 pb-16 bg-black overflow-hidden">
         <BackHeader
           title="Scan An Item"
-          onBackPress={() => {
-            if (html5QrRef.current) {
-              disposeScanner(html5QrRef.current);
-              html5QrRef.current = null;
-            }
-            setPage("main");
-          }}
+          onBackPress={() => setPage("main")}
         />
-        <div className="flex-1 flex items-center justify-center relative">
-          <div id="qr-reader" ref={scannerRef} className="w-full h-full" />
-          {!scannerError && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-56 h-56 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"/>
+        <div className="flex-1 relative overflow-hidden">
+          {!scannerError ? (
+            <>
+              <div id="qr-reader" ref={scannerRef} className="w-full h-full [&_video]:w-full! [&_video]:h-full! [&_video]:object-cover!" />
+
+              {/* Viewfinder */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-64 h-64 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"/>
+                </div>
               </div>
-            </div>
-          )}
-          {scannerError && (
+
+              {/* Helper text + status, overlaid on the camera feed */}
+              <div
+                className="absolute bottom-0 left-0 right-0 px-6 pt-16 pb-8 flex flex-col items-center gap-2 pointer-events-none"
+                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" />
+                  <p className="text-sm font-semibold text-white">Scanning...</p>
+                </div>
+                <p className="text-xs text-center text-white/70">
+                  Point the camera at the item's QR tag. Item details will appear once detected.
+                </p>
+              </div>
+            </>
+          ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-              <p className="text-white text-sm">{scannerError}</p>
+              <div className="w-16 h-16 rounded-full border-4 border-red-400 flex items-center justify-center">
+                <XIcon size={28} className="text-red-400" />
+              </div>
+              <div>
+                <p className="font-bold text-lg text-white">Camera Error</p>
+                <p className="text-sm text-white/70 mt-1">{scannerError}</p>
+              </div>
               <button
                 onClick={() => setScanRetryCount((c) => c + 1)}
                 className="px-5 py-2 rounded-full text-sm font-semibold cursor-pointer"
@@ -946,18 +1041,32 @@ export default function QRItem({ onBack }) {
   // SCAN RESULT
   // =====================
   if (page === "scanResult") {
+    const isRecognized = !!scanResult && !scanResult.raw;
+    const handleScanAgain = () => {
+      setScanResult(null);
+      setPage("scan");
+    };
+
     return (
       <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
         <BackHeader
-          title={scanResult?.itemName || "Scanned Item"}
-          onBackPress={() => {
-            setScanResult(null);
-            setPage("scan");
-          }}
+          title={isRecognized ? scanResult?.itemName || "Scanned Item" : "Scan Result"}
+          onBackPress={handleScanAgain}
         />
         <div className="px-5 py-5 flex flex-col gap-4">
-          {scanResult ? (
+          {isRecognized ? (
             <>
+              {/* Success feedback */}
+              <div className="flex flex-col items-center gap-2 pb-2">
+                <div className="w-16 h-16 rounded-full border-4 border-green-400 flex items-center justify-center">
+                  <Check size={28} className="text-green-400" />
+                </div>
+                <p className="font-bold text-base text-[#4B2D23]">QR Code Detected!</p>
+                <p className="text-xs text-gray-500 text-center">
+                  The following details were read from the item's QR tag.
+                </p>
+              </div>
+
               <div>
                 <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
                 <div className="bg-white rounded-lg px-4 py-3 opacity-60">
@@ -990,8 +1099,24 @@ export default function QRItem({ onBack }) {
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-500 text-center mt-10">No data found.</p>
+            <div className="flex flex-col items-center gap-2 py-10">
+              <div className="w-16 h-16 rounded-full border-4 border-red-400 flex items-center justify-center">
+                <XIcon size={28} className="text-red-400" />
+              </div>
+              <p className="font-bold text-base text-[#4B2D23]">QR Code Not Recognized</p>
+              <p className="text-xs text-gray-500 text-center px-6">
+                This QR code doesn't match a registered item.
+              </p>
+            </div>
           )}
+
+          <button
+            onClick={handleScanAgain}
+            className="w-full py-3 rounded-full text-sm font-semibold mt-2 cursor-pointer"
+            style={{ backgroundColor: "#990000", color: "white" }}
+          >
+            Scan Again
+          </button>
         </div>
       </div>
     );

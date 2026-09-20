@@ -139,8 +139,14 @@ export default function TransferPrivilegesModal({ onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
-            <div className="relative bg-white rounded-lg w-100 max-w-[90vw] flex flex-col max-h-[85vh]">
+        <div
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            onClick={() => !isLoading && onClose()}
+        >
+            <div
+                className="relative bg-white rounded-lg w-100 max-w-[90vw] flex flex-col max-h-[85vh]"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5 shrink-0">
                     <p className="font-semibold">Transfer Super Admin Privileges</p>
                     <button onClick={onClose}>

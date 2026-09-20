@@ -215,8 +215,14 @@ export default function UserManagementModal(
 
     return (
         <>
-            <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
-                <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col">
+            <div
+                className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center"
+                onClick={() => setSelectedUser(null)}
+            >
+                <div
+                    className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <div className="w-full h-fit sticky top-0 z-50">
                         <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0">
                             <p className="text-white font-semibold text-md xl:text-lg pl-2">User Account Details</p>
@@ -529,8 +535,14 @@ export default function UserManagementModal(
             {openLockAccount &&
                 (
 
-                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
-                        <div className="relative bg-white rounded-lg w-100 max-w-[90vw]">
+                    <div
+                        className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                        onClick={() => !isLocking && setOpenLockAccount(false)}
+                    >
+                        <div
+                            className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
 
                             <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                                 <p className="font-semibold">Lock Account</p>

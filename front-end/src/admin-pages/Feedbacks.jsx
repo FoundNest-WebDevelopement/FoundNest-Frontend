@@ -449,8 +449,14 @@ export default function Feedbacks() {
 
             {/* View Feedback Side Panel */}
             {selectedReview && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex justify-end">
-                    <div className="bg-white w-full max-w-md h-full shadow-xl flex flex-col">
+                <div
+                    className="fixed inset-0 bg-black/40 z-50 flex justify-end"
+                    onClick={() => setSelectedReview(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-md h-full shadow-xl flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
 
                         {/* Header */}
                         <div className="bg-primary px-6 py-4 flex items-center justify-between">

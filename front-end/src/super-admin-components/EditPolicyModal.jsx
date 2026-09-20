@@ -106,8 +106,14 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
 
     return (
         <>
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040">
-            <div className={`relative bg-white rounded-lg max-w-[90vw] ${isSteps ? "w-140" : "w-100"}`}>
+        <div
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            onClick={() => (hasChanges ? setOpenCancelConfirmDialog(true) : onClose())}
+        >
+            <div
+                className={`relative bg-white rounded-lg max-w-[90vw] ${isSteps ? "w-140" : "w-100"}`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                     <p className="font-semibold">Edit Policy</p>
                     <button onClick={()=>{

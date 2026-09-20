@@ -403,9 +403,22 @@ const handleRemoveImage = () => {
 
     return (
         <>
-            <dialog className={`modal ${open ? "modal-open" : ""}`}>
+            <dialog
+                className={`modal ${open ? "modal-open" : ""}`}
+                onClick={() => {
+                    if (isAnalyzing || isSubmitting) return;
+                    if (hasUnsavedChanges) {
+                        setOpenCancelReportDialog(true);
+                    } else {
+                        handleClose();
+                    }
+                }}
+            >
 
-                <div className="bg-white flex flex-col w-full max-w-3xl h-[80vh] rounded-2xl">
+                <div
+                    className="bg-white flex flex-col w-full max-w-3xl h-[80vh] rounded-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                >
 
 
                     <div className="h-15 w-full bg-primary flex items-center justify-between px-6 rounded-t-2xl shrink-0">

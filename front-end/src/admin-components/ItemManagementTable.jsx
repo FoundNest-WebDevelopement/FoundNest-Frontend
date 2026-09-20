@@ -230,8 +230,14 @@ export default function ItemManagementTable({
 
       
             {selectedImage && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="relative rounded-2xl h-125">
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div
+                        className="relative rounded-2xl h-125"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
                             onClick={() => setSelectedImage(null)}

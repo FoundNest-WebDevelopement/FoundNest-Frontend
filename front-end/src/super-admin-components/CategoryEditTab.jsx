@@ -96,7 +96,7 @@ export default function CategoryEditTab({
 
     return (
         <>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 h-full">
                 <div className="flex flex-col gap-1">
                     <label className="text-xs text-[#6B5C42]">CATEGORY NAME</label>
                     <input
@@ -119,24 +119,34 @@ export default function CategoryEditTab({
                     />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-4 mt-auto">
+                    <hr className="border-(--color-tertiary) opacity-30" />
+                    <div className="flex gap-2 ">
                     <div className="flex-1">
-                        <Button
+                        <div className="flex flex-col">
+                            <Button
                             isBorder={true}
                             isSolid={false}
                             disabled={isSaving}
                             label="Cancel"
                             onClick={handleCancel}
                         />
+                        </div>
+                        
                     </div>
                     <div className="flex-1">
-                        <Button
+                        <div className="flex flex-col">
+                            <Button
                             isSolid={true}
                             disabled={locked || !isChanged}
                             label={isSaving ? "Saving..." : "Save Changes"}
                             onClick={() => setOpenSaveChange(true)}
                         />
+
+                        </div>
                     </div>
+                </div>
+
                 </div>
             </div>
 
