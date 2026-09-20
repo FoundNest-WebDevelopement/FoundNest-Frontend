@@ -216,11 +216,12 @@ const DesktopLogin = (
             type="email"
             placeholder="Email"
             value={email}
+            disabled={loading}
             onChange={(e) => {
               setEmail(e.target.value);
               setError("");
             }}
-            className="w-full border border-[#d8d8d8] bg-white outline-none"
+            className="w-full border border-[#d8d8d8] bg-white outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
             style={{
               height: "52px",
               padding: "0 15px",
@@ -235,11 +236,12 @@ const DesktopLogin = (
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
+              disabled={loading}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setError("");
               }}
-              className="w-full border border-[#d8d8d8] bg-white outline-none"
+              className="w-full border border-[#d8d8d8] bg-white outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               style={{
                 height: "52px",
                 paddingLeft: "15px",
@@ -251,7 +253,9 @@ const DesktopLogin = (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2"
+              disabled={loading}
+              className="absolute right-4 top-1/2 -translate-y-1/2 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ cursor: loading ? "default" : "pointer" }}
             >
               {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
@@ -259,16 +263,17 @@ const DesktopLogin = (
 
           {/* Remember Me + Forgot Password */}
           <div className="flex items-center justify-between mb-6">
-            <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer">
+            <label className={`flex items-center gap-2 text-sm text-[#1A1208] ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
               <input
                 type="checkbox"
                 checked={rememberMe}
+                disabled={loading}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 style={{
                   width: "14px",
                   height: "14px",
                   accentColor: "#990000",
-                  cursor: "pointer",
+                  cursor: loading ? "not-allowed" : "pointer",
                 }}
               />
               Remember me
@@ -277,8 +282,9 @@ const DesktopLogin = (
             <button
               type="button"
               onClick={() => navigate("/forgot-password")}
-              className="text-[#990000] text-sm font-medium hover:underline"
-              style={{ cursor: "pointer" }}
+              disabled={loading}
+              className="text-[#990000] text-sm font-medium hover:underline disabled:opacity-50 disabled:hover:no-underline"
+              style={{ cursor: loading ? "default" : "pointer" }}
             >
               Forgot password?
             </button>
@@ -373,8 +379,9 @@ const DesktopLogin = (
           type="email"
           placeholder="Email"
           value={email}
+          disabled={loading}
           onChange={(e) => { setEmail(e.target.value); setError(""); }}
-          className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
+          className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
         />
 
         <div className="relative">
@@ -382,25 +389,39 @@ const DesktopLogin = (
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
+            disabled={loading}
             onChange={(e) => { setPassword(e.target.value); setError(""); }}
-            className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
+            className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={loading}
+            className="absolute right-3 top-3 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ cursor: loading ? "default" : "pointer" }}
+          >
             {showPassword ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         </div>
 
         <div className="flex items-center justify-between mt-1">
-          <label className="flex items-center gap-2 text-white text-xs cursor-pointer">
+          <label className={`flex items-center gap-2 text-white text-xs ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             <input
               type="checkbox"
               checked={rememberMe}
+              disabled={loading}
               onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ width: "14px", height: "14px", borderRadius: "3px", border: "2px solid white", backgroundColor: "white", accentColor: "#990000", cursor: "pointer" }}
+              style={{ width: "14px", height: "14px", borderRadius: "3px", border: "2px solid white", backgroundColor: "white", accentColor: "#990000", cursor: loading ? "not-allowed" : "pointer" }}
             />
             Remember me
           </label>
-          <button type="button" onClick={() => navigate("/forgot-password")} className="text-[#F9E055] text-xs" style={{ cursor: "pointer" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            disabled={loading}
+            className="text-[#F9E055] text-xs disabled:opacity-50"
+            style={{ cursor: loading ? "default" : "pointer" }}
+          >
             Forgot password?
           </button>
         </div>
