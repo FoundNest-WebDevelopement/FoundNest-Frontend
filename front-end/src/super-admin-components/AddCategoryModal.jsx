@@ -109,7 +109,7 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-[#1A1208]">
-                                Category Name
+                                Category Name <span className="text-primary">*</span>
                             </label>
                             <input
                                 type="text"
@@ -123,7 +123,7 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
  
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-[#1A1208]">
-                                Description
+                                Description <span className="text-primary">*</span>
                             </label>
                             <textarea
                                 value={description}

@@ -30,6 +30,8 @@ const TABS = [
 export default function SuperAdminGlobalConfiguration() {
     const API_URL = import.meta.env.VITE_API_URL;
 
+    const [categoryStatusFilter, setCategoryStatusFilter] = useState("ALL");
+
     const [activeTab, setActiveTab] = useState(TABS[0].value);
 
     const [isLoading, setIsLoading] = useState(false);
@@ -194,7 +196,7 @@ export default function SuperAdminGlobalConfiguration() {
         policy.title.toLowerCase().includes(search.toLowerCase())
     );
 
-    const filteredCategories = categories?.filter((category) => {
+ const filteredCategories = categories?.filter((category) => {
     const query = categorySearch.toLowerCase();
 
     const formattedCategoryId =
@@ -202,11 +204,17 @@ export default function SuperAdminGlobalConfiguration() {
 
     const paddedCategoryId = String(category.category_id).padStart(5, "0");
 
-    return (
+    const matchesSearch =
         category.category_name?.toLowerCase().includes(query) ||
         formattedCategoryId.includes(query) ||
-        paddedCategoryId.includes(query)
-    );
+        paddedCategoryId.includes(query);
+
+    const matchesStatus =
+        categoryStatusFilter === "ALL" ||
+        (categoryStatusFilter === "ACTIVE" && category.status === true) ||
+        (categoryStatusFilter === "INACTIVE" && category.status === false);
+
+    return matchesSearch && matchesStatus;
 });
 
     const filteredLocations = locations.filter((loc) =>
@@ -398,7 +406,8 @@ export default function SuperAdminGlobalConfiguration() {
             {activeTab === "CATEGORIES" && (
                 <>
                     <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 min-w-100  shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
                             <Search size={16} className="text-[#9A8F7C]" />
                             <input
                                 type="text"
@@ -408,6 +417,17 @@ export default function SuperAdminGlobalConfiguration() {
                                 className="w-full text-sm outline-none placeholder:text-[#9A8F7C] "
                             />
                         </div>
+                          <select
+            value={categoryStatusFilter}
+            onChange={(e) => setCategoryStatusFilter(e.target.value)}
+            className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+        >
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+        </select>
+                        </div>
+                      
 
                         <Button
                             icon={Plus}
