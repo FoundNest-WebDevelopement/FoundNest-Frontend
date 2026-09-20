@@ -287,11 +287,12 @@ export default function UserManagementModal(
                                                 <p className="text-xs">{selectedUser.student_number}</p>
                                             </div>
                                         </div>
-                                        <div className="flex  gap-2">
-                                            <div className="flex flex-col flex-1">
+                                        <div className="flex flex-col flex-1">
                                                 <p className="text-xs text-[#6B5C42]">COLLEGE</p>
-                                                <p className="text-xs">{selectedUser.office_name || "N/A"}</p>
+                                                <p className="text-xs">{selectedUser.college_name || "N/A"}</p>
                                             </div>
+                                        <div className="flex  gap-2">
+                                            
                                             <div className="flex flex-col flex-1">
                                                 <p className="text-xs text-[#6B5C42]">COURSE & SECTION</p>
                                                 <p className="text-xs">{selectedUser.course_section || "N/A"}</p>

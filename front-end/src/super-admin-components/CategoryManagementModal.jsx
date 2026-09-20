@@ -175,9 +175,9 @@ export default function CategoryManagementModal({
                                     <hr className="border-(--color-tertiary) opacity-30" />
 
                                     {selectedCategory.status === true && (
-                                        <div className="flex w-full gap-2">
-                                            <div className="flex-1">
-                                                <div className=" flex flex-col">
+                                        <div className="flex w-full gap-2 h-10">
+                                            <div className="flex-1 h-full">
+                                                <div className=" flex flex-col h-full">
                                                     <Button
                                                         isSolid={true}
                                                         disabled={isTogglingStatus}
@@ -186,8 +186,8 @@ export default function CategoryManagementModal({
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <div className=" flex flex-col">
+                                            <div className="flex-1 h-full">
+                                                <div className=" flex flex-col h-full">
                                                     <Button
                                                         isBorder={true}
                                                         isSolid={false}

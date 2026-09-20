@@ -55,6 +55,8 @@ export default function SuperAdminUserMangement() {
 
         const data = await res.json();
 
+        console.log(data)
+
         setUsers(data);
     } catch (err) {
         console.error("Error fetching users:", err);

@@ -58,6 +58,15 @@ const ACTION_TYPE_COLORS = {
 const getActionTypeColor = (actionType) =>
     ACTION_TYPE_COLORS[actionType] || "bg-gray-200 text-gray-700";
 
+// Local YYYY-MM-DD (toISOString() uses UTC, which is off by a day for part of
+// the day in timezones ahead of/behind UTC).
+const toLocalISODate = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
+
 export default function SuperAdminActionLogs() {
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -78,16 +87,32 @@ export default function SuperAdminActionLogs() {
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-    // Applied filters (only updated when "Apply Filters" is clicked)
-    const [appliedActionTypes, setAppliedActionTypes] = useState([]);
-    const [appliedDateFrom, setAppliedDateFrom] = useState("");
-    const [appliedDateTo, setAppliedDateTo] = useState("");
-
     const [expandedLogId, setExpandedLogId] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [tableHeight, setTableHeight] = useState("");
         const [itemsPerPage, setItemsPerPage] = useState();
+
+    const today = toLocalISODate();
+
+    // ---- Live date validation (derived from state on every render) ----
+    // Both dates are optional here, so there are no "required" errors.
+    // ISO date strings (YYYY-MM-DD) compare correctly as plain strings.
+    const dateErrors = { from: "", to: "" };
+
+    if (dateFrom && dateFrom > today) {
+        dateErrors.from = "Start date cannot be in the future.";
+    }
+
+    if (dateTo) {
+        if (dateTo > today) {
+            dateErrors.to = "End date cannot be in the future.";
+        } else if (dateFrom && dateFrom > dateTo) {
+            dateErrors.to = "End date must be on or after the start date.";
+        }
+    }
+
+    const hasDateError = Boolean(dateErrors.from || dateErrors.to);
 
     const formatLogId = (id) => `LOG-${String(id).padStart(5, "0")}`;
     const formatRecordId = (entityType, entityId) => {
@@ -134,25 +159,22 @@ export default function SuperAdminActionLogs() {
         );
     };
 
-    const handleApplyFilters = () => {
-        setAppliedActionTypes(selectedActionTypes);
-        setAppliedDateFrom(dateFrom);
-        setAppliedDateTo(dateTo);
+    // Filters apply live, so just go back to page 1 whenever one of them changes.
+    useEffect(() => {
         setCurrentPage(1);
-    };
-    useEffect(()=>{
-    handleApplyFilters();
-    },[dateFrom, selectedActionTypes, dateTo])
+    }, [dateFrom, selectedActionTypes, dateTo]);
 
     const handleClearFilters = () => {
         setSelectedActionTypes([]);
         setDateFrom("");
         setDateTo("");
-        setAppliedActionTypes([]);
-        setAppliedDateFrom("");
-        setAppliedDateTo("");
         setCurrentPage(1);
     };
+
+    // When the date range is wrong, the dates are ignored completely
+    // (neither the start nor the end filters the table).
+    const activeDateFrom = hasDateError ? "" : dateFrom;
+    const activeDateTo = hasDateError ? "" : dateTo;
 
     const filteredLogs = useMemo(() => {
         return logs?.filter((log) => {
@@ -163,16 +185,18 @@ export default function SuperAdminActionLogs() {
                 log.description?.toLowerCase().includes(search.toLowerCase());
 
             const matchesActionType =
-                appliedActionTypes.length === 0 ||
-                appliedActionTypes.includes(log.action_type);
+                selectedActionTypes.length === 0 ||
+                selectedActionTypes.includes(log.action_type);
 
+            // Both bounds are parsed as local time. (A bare "YYYY-MM-DD" string is
+            // parsed as UTC, which would skip the first hours of the start day.)
             const logDate = new Date(log.created_at);
-            const matchesDateFrom = !appliedDateFrom || logDate >= new Date(appliedDateFrom);
-            const matchesDateTo = !appliedDateTo || logDate <= new Date(appliedDateTo + "T23:59:59");
+            const matchesDateFrom = !activeDateFrom || logDate >= new Date(activeDateFrom + "T00:00:00");
+            const matchesDateTo = !activeDateTo || logDate <= new Date(activeDateTo + "T23:59:59");
 
             return matchesSearch && matchesActionType && matchesDateFrom && matchesDateTo;
         });
-    }, [logs, search, appliedActionTypes, appliedDateFrom, appliedDateTo]);
+    }, [logs, search, selectedActionTypes, activeDateFrom, activeDateTo]);
 
     const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -202,6 +226,13 @@ useEffect(() => {
         window.removeEventListener("resize", updateTableSize);
     };
 }, []);
+
+    const dateInputClass = (hasError) =>
+        `w-full border rounded-md px-3 py-2 text-sm outline-none ${
+            hasError
+                ? "border-[#C0392B] focus:border-[#C0392B]"
+                : "border-[#DDD9CF] focus:border-primary"
+        }`;
 
     return (
         <div className="w-full flex flex-col gap-4 bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7">
@@ -292,18 +323,45 @@ useEffect(() => {
 
                         <div className="flex flex-col gap-3 md:w-56 shrink-0">
                             <p className="text-sm font-semibold text-[#1A1208]">Date Range</p>
-                            <input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
-                            />
-                            <input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
-                            />
+
+                            <div className="flex flex-col gap-1">
+                                <input
+                                    type="date"
+                                    aria-label="Start date"
+                                    value={dateFrom}
+                                    max={today}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    aria-invalid={Boolean(dateErrors.from)}
+                                    aria-describedby={dateErrors.from ? "filter-start-error" : undefined}
+                                    className={dateInputClass(dateErrors.from)}
+                                />
+                                {dateErrors.from && (
+                                    <p id="filter-start-error" className="text-xs text-[#C0392B]">
+                                        {dateErrors.from}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <input
+                                    type="date"
+                                    aria-label="End date"
+                                    value={dateTo}
+                                    min={dateFrom || undefined}
+                                    max={today}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                    aria-invalid={Boolean(dateErrors.to)}
+                                    aria-describedby={dateErrors.to ? "filter-end-error" : undefined}
+                                    className={dateInputClass(dateErrors.to)}
+                                />
+                                {dateErrors.to && (
+                                    <p id="filter-end-error" className="text-xs text-[#C0392B]">
+                                        {dateErrors.to}
+                                    </p>
+                                )}
+                            </div>
+
+                     
                         </div>
                     </div>
 
