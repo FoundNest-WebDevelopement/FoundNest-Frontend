@@ -108,9 +108,12 @@ export default function QRItem({ onBack }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [editTargetId, setEditTargetId] = useState(null);
+  const [viewingItem, setViewingItem] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [scannerError, setScannerError] = useState("");
+  const [scanRetryCount, setScanRetryCount] = useState(0);
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
 
@@ -264,6 +267,7 @@ export default function QRItem({ onBack }) {
     if (page !== "scan" || !scannerRef.current) return;
 
     let cancelled = false;
+    setScannerError("");
     scannerRef.current.replaceChildren();
     const html5Qrcode = new Html5Qrcode("qr-reader");
     html5QrRef.current = html5Qrcode;
@@ -291,14 +295,28 @@ export default function QRItem({ onBack }) {
           html5QrRef.current = null;
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to start QR scanner:", err);
+        html5QrRef.current = null;
+        const name = err?.name || "";
+        if (name === "NotAllowedError") {
+          setScannerError("Camera access was denied. Please allow camera permission in your browser settings and try again.");
+        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+          setScannerError("No camera was found on this device.");
+        } else if (name === "NotReadableError") {
+          setScannerError("The camera is already in use by another app.");
+        } else {
+          setScannerError("Could not start the camera. Please check your camera permissions and try again.");
+        }
+      });
 
     return () => {
       cancelled = true;
       disposeScanner(html5Qrcode);
       html5QrRef.current = null;
     };
-  }, [page]);
+  }, [page, scanRetryCount]);
 
   // =====================
   // MAIN PAGE
@@ -477,8 +495,14 @@ export default function QRItem({ onBack }) {
         </div>
 
         {showDiscardModal && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
-            <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
+          <div
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8"
+            onClick={() => setShowDiscardModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-6 py-6">
                 <p className="text-[#4B2D23] font-bold text-base text-center">
                   Discard changes? Unsaved edits will be lost.
@@ -592,22 +616,30 @@ export default function QRItem({ onBack }) {
             <div className="grid grid-cols-2 gap-4">
               {registeredItems.map((item) => (
                 <div key={item.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
-                  {item.imagePreview ? (
-                    <img src={item.imagePreview} alt={item.itemName} className="w-full h-28 object-cover" />
-                  ) : (
-                    <div className="w-full h-28 bg-gray-200 flex items-center justify-center">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21 15 16 10 5 21"/>
-                      </svg>
+                  <button
+                    onClick={() => {
+                      setViewingItem(item);
+                      setPage("viewItemDetail");
+                    }}
+                    className="block w-full text-left cursor-pointer"
+                  >
+                    {item.imagePreview ? (
+                      <img src={item.imagePreview} alt={item.itemName} className="w-full h-28 object-cover" />
+                    ) : (
+                      <div className="w-full h-28 bg-gray-200 flex items-center justify-center">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                      </div>
+                    )}
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-semibold text-[#4B2D23] truncate">
+                        {item.itemName || "Unnamed Item"}
+                      </p>
                     </div>
-                  )}
-                  <div className="px-3 py-2">
-                    <p className="text-xs font-semibold text-[#4B2D23] truncate">
-                      {item.itemName || "Unnamed Item"}
-                    </p>
-                  </div>
+                  </button>
                   <div className="flex border-t border-gray-100">
                     <button
                       onClick={() => {
@@ -636,8 +668,14 @@ export default function QRItem({ onBack }) {
         </div>
 
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/50">
-            <div className="bg-white rounded-t-2xl overflow-hidden w-full">
+          <div
+            className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/50"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <div
+              className="bg-white rounded-t-2xl overflow-hidden w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-6 py-6">
                 <p className="text-[#4B2D23] font-bold text-base">Delete registered item?</p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -656,12 +694,86 @@ export default function QRItem({ onBack }) {
                   className="flex-1 py-4 text-sm font-semibold text-white"
                   style={{ backgroundColor: "#990000" }}
                 >
-                  Confirm Cancel
+                  Delete
                 </button>
               </div>
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // =====================
+  // VIEW ITEM DETAIL (read-only)
+  // =====================
+  if (page === "viewItemDetail" && viewingItem) {
+    return (
+      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
+        <BackHeader
+          title="Item Details"
+          onBackPress={() => {
+            setViewingItem(null);
+            setPage("viewItems");
+          }}
+        />
+        <div className="px-5 py-5 flex flex-col gap-4">
+          <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+            {viewingItem.imagePreview ? (
+              <img src={viewingItem.imagePreview} alt={viewingItem.itemName} className="w-full h-48 object-cover" />
+            ) : (
+              <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.ownerName || "N/A"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.studentNumber || "N/A"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.courseSection || "N/A"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.contactNumber || "N/A"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.itemName || "N/A"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-[#4B2D23] font-medium mb-1">Category</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{viewingItem.category || "N/A"}</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -802,15 +914,29 @@ export default function QRItem({ onBack }) {
           }}
         />
         <div className="flex-1 flex items-center justify-center relative">
-          <div id="qr-reader" ref={scannerRef} className="w-full" />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-56 h-56 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"/>
+          <div id="qr-reader" ref={scannerRef} className="w-full h-full" />
+          {!scannerError && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-56 h-56 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"/>
+              </div>
             </div>
-          </div>
+          )}
+          {scannerError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+              <p className="text-white text-sm">{scannerError}</p>
+              <button
+                onClick={() => setScanRetryCount((c) => c + 1)}
+                className="px-5 py-2 rounded-full text-sm font-semibold cursor-pointer"
+                style={{ backgroundColor: "#990000", color: "white" }}
+              >
+                Try Again
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Search, Filter, ChevronDown, ArrowLeft, Download, Package, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { Search, Filter, ChevronDown, ArrowLeft, Download, Package, CheckCircle2, AlertTriangle, Trash2, Eye, X } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDateTime from "../utils/formatDataTimeNew";
@@ -79,6 +79,10 @@ export default function SuperAdminSystemReportDetail() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    const [viewingLog, setViewingLog] = useState(null);
+    const [viewDetail, setViewDetail] = useState(null);
+    const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
     const hasActiveFilters =
         selectedActivityTypes.length > 0 ||
@@ -208,6 +212,37 @@ export default function SuperAdminSystemReportDetail() {
 
     const formatRecordId = (log) =>
         log.record_type === "report" ? formatReportId(log.record_id) : formatItemId(log.record_id);
+
+    const handleViewLog = async (log) => {
+        setViewingLog(log);
+        setViewDetail(null);
+        setIsLoadingDetail(true);
+        try {
+            const endpoint = log.record_type === "report"
+                ? `${API_URL}/api/lost-reports/${log.record_id}`
+                : `${API_URL}/api/system-reports/item/${log.record_id}`;
+
+            const response = await fetchWithAuth(endpoint);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || "Failed to load item details.");
+            }
+
+            setViewDetail(data);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || "Failed to load item details.");
+            setViewingLog(null);
+        } finally {
+            setIsLoadingDetail(false);
+        }
+    };
+
+    const handleCloseView = () => {
+        setViewingLog(null);
+        setViewDetail(null);
+    };
 
     const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -392,12 +427,13 @@ export default function SuperAdminSystemReportDetail() {
                                     <th>ID</th>
                                     <th>ITEM</th>
                                     <th>DETAILS</th>
+                                    <th>VIEW</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {isLoadingLogs && (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-8 text-[#6B5C42]">
+                                        <td colSpan={7} className="text-center py-8 text-[#6B5C42]">
                                             Loading logs...
                                         </td>
                                     </tr>
@@ -418,12 +454,22 @@ export default function SuperAdminSystemReportDetail() {
                                         <td className="align-middle font-semibold text-primary">{formatRecordId(log)}</td>
                                         <td className="align-middle">{log.item_name || "—"}</td>
                                         <td className="align-middle text-left text-[#6B5C42]">{log.description}</td>
+                                        <td className="align-middle">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleViewLog(log)}
+                                                title="View item details"
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary hover:bg-[#F5E6D8] transition-colors cursor-pointer"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
 
                                 {!isLoadingLogs && logs.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-8 text-[#6B5C42]">
+                                        <td colSpan={7} className="text-center py-8 text-[#6B5C42]">
                                             No Records to display.
                                         </td>
                                     </tr>
@@ -463,6 +509,103 @@ export default function SuperAdminSystemReportDetail() {
                     </div>
                 </div>
             </div>
+
+            {/* View Item/Report Detail Modal */}
+            {viewingLog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <p className="font-semibold text-[#1A1208] text-base">
+                                {viewingLog.record_type === "report" ? "Lost Report Details" : "Item Details"}
+                            </p>
+                            <button
+                                onClick={handleCloseView}
+                                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {isLoadingDetail && (
+                            <p className="text-sm text-[#6B5C42] text-center py-8">Loading details...</p>
+                        )}
+
+                        {!isLoadingDetail && viewDetail && (
+                            <>
+                                {viewDetail.image_url && (
+                                    <img
+                                        src={viewDetail.image_url}
+                                        alt={viewDetail.item_name}
+                                        className="w-full max-h-80 object-contain rounded-lg border border-[#E5E1D8] bg-[#F5F5F3]"
+                                    />
+                                )}
+
+                                <div className="flex items-center justify-between">
+                                    <p className="text-lg font-bold text-[#1A1208]">{viewDetail.item_name || "—"}</p>
+                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F5E6D8] text-primary capitalize">
+                                        {(viewDetail.status || viewDetail.found_report_status || "—").replace(/_/g, " ")}
+                                    </span>
+                                </div>
+
+                                {viewDetail.description && (
+                                    <p className="text-sm text-[#6B5C42]">{viewDetail.description}</p>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2 border-t border-[#E5E1D8]">
+                                    {viewDetail.category_name && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Category</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.category_name}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.office_name && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Office</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.office_name}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.location_found && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Location Found</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.location_found}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.location_lost && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Location Lost</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.location_lost}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.found_date && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Found</p>
+                                            <p className="text-sm text-[#1A1208]">{formatDateTime(viewDetail.found_date)}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.date_reported && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Reported</p>
+                                            <p className="text-sm text-[#1A1208]">{formatDateTime(viewDetail.date_reported)}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.reported_by_admin && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Reported By</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.reported_by_admin}</p>
+                                        </div>
+                                    )}
+                                    {viewDetail.claimant_full_name && (
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Claimant</p>
+                                            <p className="text-sm text-[#1A1208]">{viewDetail.claimant_full_name}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

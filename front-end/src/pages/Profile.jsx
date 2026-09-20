@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Camera, X, Upload } from "lucide-react";
 import QRItem from "./QRItem";
 import ChangePassword from "./ChangePassword";
+import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -129,6 +130,18 @@ export default function Profile() {
     email: "",
   });
 
+  const [profileImageUrl, setProfileImageUrl] = useState(
+    localStorage.getItem("profile_image_url") || null
+  );
+
+  // Edit profile picture modal
+  const [openEditPicture, setOpenEditPicture] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [pictureError, setPictureError] = useState("");
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
     const firstName = localStorage.getItem("first_name") || "";
     const lastName = localStorage.getItem("last_name") || "";
@@ -145,6 +158,79 @@ export default function Profile() {
       email,
     });
   }, []);
+
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}`);
+        const data = await res.json();
+        if (res.ok && data.profile_image_url) {
+          setProfileImageUrl(data.profile_image_url);
+          localStorage.setItem("profile_image_url", data.profile_image_url);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    if (user_id) fetchProfileImage();
+  }, [user_id]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setPictureError("");
+  };
+
+  const handleUploadPicture = async () => {
+    if (!selectedFile) return;
+    setUploadingPicture(true);
+    setPictureError("");
+    try {
+      const formData = new FormData();
+      formData.append("profile_image", selectedFile);
+      const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}/picture`, {
+        method: "PUT",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Upload failed.");
+      setProfileImageUrl(data.profile_image_url);
+      localStorage.setItem("profile_image_url", data.profile_image_url);
+      handleClosePictureModal();
+    } catch (err) {
+      setPictureError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    setUploadingPicture(true);
+    setPictureError("");
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}/picture`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Remove failed.");
+      setProfileImageUrl(null);
+      localStorage.removeItem("profile_image_url");
+      handleClosePictureModal();
+    } catch (err) {
+      setPictureError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
+
+  const handleClosePictureModal = () => {
+    setOpenEditPicture(false);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setPictureError("");
+  };
 
   const validateContact = (value) => {
     const phoneRegex = /^9\d{9}$/;
@@ -209,6 +295,7 @@ export default function Profile() {
   };
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = async () => {
   try {
@@ -250,8 +337,12 @@ export default function Profile() {
         <div className="px-5 py-5 flex flex-col gap-5">
           {/* User Card */}
           <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-4 shadow-sm">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <AccountDetailsIcon />
+            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {profileImageUrl ? (
+                <img src={profileImageUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <AccountDetailsIcon />
+              )}
             </div>
             <div className="flex-1">
               <p className="font-bold text-[#4B2D23] text-base">{user.name}</p>
@@ -324,7 +415,7 @@ export default function Profile() {
 
               {/* Log out */}
               <button
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 className="flex items-center gap-4 px-4 py-4 w-full"
               >
                 <LogoutIcon />
@@ -335,6 +426,19 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* Logout Confirmation Modal */}
+        {showLogoutModal && (
+          <AdminConfirmDialog
+            title="Logout"
+            description="Are you sure you want to log out?"
+            cancelText="Cancel"
+            confirmText={isLoggingOut ? "Logging out..." : "Logout"}
+            disabled={isLoggingOut}
+            onClose={() => setShowLogoutModal(false)}
+            onConfirm={handleLogout}
+          />
+        )}
       </div>
     );
   }
@@ -371,8 +475,20 @@ export default function Profile() {
         <div className="px-5 py-5 flex flex-col gap-4">
           {/* Avatar */}
           <div className="flex justify-center mb-2">
-            <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-              <AccountDetailsIcon />
+            <div className="relative w-20 h-20">
+              <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <AccountDetailsIcon />
+                )}
+              </div>
+              <button
+                onClick={() => setOpenEditPicture(true)}
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#990000] flex items-center justify-center border-2 border-[#FFF3E0] cursor-pointer"
+              >
+                <Camera size={13} color="white" />
+              </button>
             </div>
           </div>
 
@@ -381,7 +497,7 @@ export default function Profile() {
             <p className="text-xs text-[#4B2D23] font-medium mb-1">
               {user.studentId ? "Student Number" : "Faculty ID"}
             </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60">
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
               <p className="text-sm text-[#4B2D23]">
                 {user.studentId || user.facultyId || "N/A"}
               </p>
@@ -393,16 +509,16 @@ export default function Profile() {
             <p className="text-xs text-[#4B2D23] font-medium mb-1">
               First Name
             </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-              <p className="text-sm text-[#4B2D23]">{user.firstName}</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{user.firstName || "N/A"}</p>
             </div>
           </div>
 
           {/* Last Name */}
           <div>
             <p className="text-xs text-[#4B2D23] font-medium mb-1">Last Name</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-              <p className="text-sm text-[#4B2D23]">{user.lastName}</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{user.lastName || "N/A"}</p>
             </div>
           </div>
 
@@ -412,7 +528,7 @@ export default function Profile() {
               Contact Number
             </p>
             <div
-              className="bg-white rounded-lg px-4 py-3 flex items-center gap-2"
+              className="bg-white rounded-lg px-4 py-3 flex items-center gap-2 min-h-11.5"
               style={{
                 border: contactError
                   ? "1.5px solid #990000"
@@ -450,8 +566,8 @@ export default function Profile() {
             <p className="text-xs text-[#4B2D23] font-medium mb-1">
               Email Address
             </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-              <p className="text-sm text-[#4B2D23]">{user.email}</p>
+            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
+              <p className="text-sm text-[#4B2D23]">{user.email || "N/A"}</p>
             </div>
           </div>
 
@@ -521,6 +637,83 @@ export default function Profile() {
             <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
               Changes saved successfully.
             </p>
+          </div>
+        )}
+
+        {/* Edit Profile Picture Modal */}
+        {openEditPicture && (
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
+            <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-[#4B2D23] text-base">
+                  Edit Profile Picture
+                </p>
+                <button onClick={handleClosePictureModal} className="text-gray-400 cursor-pointer">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
+                  {previewUrl || profileImageUrl ? (
+                    <img
+                      src={previewUrl || profileImageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <AccountDetailsIcon />
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 text-sm text-[#990000] font-medium border border-[#990000] rounded-md px-4 py-1.5 cursor-pointer"
+                >
+                  <Upload size={15} />
+                  Choose Photo
+                </button>
+
+                {selectedFile && (
+                  <p className="text-xs text-gray-400 text-center truncate max-w-[200px]">
+                    {selectedFile.name}
+                  </p>
+                )}
+              </div>
+
+              {pictureError && (
+                <p className="text-xs text-[#990000] text-center">{pictureError}</p>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleUploadPicture}
+                  disabled={uploadingPicture || !selectedFile}
+                  className="w-full flex items-center justify-center gap-2 bg-[#990000] text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <Upload size={15} />
+                  {uploadingPicture ? "Uploading..." : "Save Photo"}
+                </button>
+
+                {profileImageUrl && (
+                  <button
+                    onClick={handleRemovePicture}
+                    disabled={uploadingPicture}
+                    className="text-xs text-[#990000] text-center disabled:opacity-50 cursor-pointer"
+                  >
+                    Remove current photo
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

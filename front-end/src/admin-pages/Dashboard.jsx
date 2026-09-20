@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { ClipboardList, CheckCircle, AlertTriangle } from "lucide-react";
+import { ClipboardList, CheckCircle, AlertTriangle, Gift } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
+
+const STATUS_COLORS = ["#4A6FA5", "#C0392B", "#5A8F5A", "#D4A017", "#8C7B6B"];
 
 export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -10,6 +13,7 @@ export default function Dashboard() {
     const fullName = `${firstName} ${lastName}`.trim();
 
     const [stats, setStats] = useState(null);
+    const [statusBreakdown, setStatusBreakdown] = useState([]);
     const [recentActions, setRecentActions] = useState([]);
     const [recentFeedbacks, setRecentFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -20,6 +24,7 @@ export default function Dashboard() {
                 const res = await fetchWithAuth(`${API_URL}/api/dashboard/${officeId}`);
                 const data = await res.json();
                 setStats(data.stats);
+                setStatusBreakdown(data.statusBreakdown ?? []);
                 setRecentActions(data.recentActions);
                 setRecentFeedbacks(data.recentFeedbacks);
             } catch (err) {
@@ -67,6 +72,13 @@ export default function Dashboard() {
             icon: <AlertTriangle size={28} className="text-red-400" />,
             bg: "bg-red-50",
         },
+        {
+            label: "Donated Items",
+            value: stats?.donated_items ?? "--",
+            sub: "Given to charity",
+            icon: <Gift size={28} className="text-blue-500" />,
+            bg: "bg-blue-50",
+        },
     ];
 
     return (
@@ -78,7 +90,7 @@ export default function Dashboard() {
             </p>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {statCards.map((card, i) => (
                     <div key={i} className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5 flex flex-col gap-3">
                         <p className="text-sm text-gray-500">{card.label}</p>
@@ -93,6 +105,24 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-400">{card.sub}</p>
                     </div>
                 ))}
+            </div>
+
+            {/* Item Status Breakdown */}
+            <div className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5">
+                <p className="font-semibold text-[#1A1208] text-base mb-4">Item Status Breakdown</p>
+                <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={statusBreakdown} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                            <XAxis dataKey="status" tick={{ fontSize: 12 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} label={{ position: "top", fontSize: 12, fontWeight: 600 }}>
+                                {statusBreakdown.map((entry, index) => (
+                                    <Cell key={entry.status} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
 
             {/* Bottom Section */}
