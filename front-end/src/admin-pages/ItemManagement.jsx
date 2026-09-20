@@ -141,6 +141,7 @@ export default function ItemManagement() {
         }
 
         const data = await response.json();
+        console.log(data)
 
         setReports(data);
     } catch (err) {

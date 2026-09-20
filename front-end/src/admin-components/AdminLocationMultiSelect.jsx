@@ -69,7 +69,7 @@ export default function AdminLocationMultiSelect({
                 onClick={() => setShowDropdown(prev => !prev)}
                 className={`p-2.5 px-3 mt-2 flex justify-between w-full rounded-md border border-[#DDD9CF] bg-white text-sm
                     ${showDropdown && "border-black"}
-                    ${disabled && "opacity-50 cursor-not-allowed"}
+                    ${disabled && "opacity-60 cursor-not-allowed"}
                 `}
             >
                 {buttonLabel}

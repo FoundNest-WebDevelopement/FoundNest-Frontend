@@ -26,11 +26,44 @@ export default function FoundItemModal({
     setSelectedItem,
 }) {
 
+    
+    const getTodayDate = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`; // local date, not UTC
+};
+
+const getCurrentHour = () => {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+};
+
+const defaultDateTimeRef = useRef({
+    date: getTodayDate(),
+    time: getCurrentHour(),
+});
+
+const setDateTimeToNow = () => {
+    const date = getTodayDate();
+    const time = getCurrentHour();
+    defaultDateTimeRef.current = { date, time };
+    setDateFound(date);
+    setTimeFound(time);
+};
+
+useEffect(() => {
+    if (open) setDateTimeToNow();
+}, [open]);
 
     const API_URL = import.meta.env.VITE_API_URL;
 
     const adminID = localStorage.getItem("admin_id")
     const officeId = localStorage.getItem("office_location");
+    const officeName = localStorage.getItem("office_name");
     const superAdminID = localStorage.getItem("super_admin_id")
     const userId = localStorage.getItem("user_id")
     const [selectedFile, setSelectedFile] = useState(null);
@@ -40,16 +73,13 @@ export default function FoundItemModal({
     const [description, setDescription] = useState("");
     const [contents, setContents] = useState("");
     const [locationFound, setLocationFound] = useState("");
-    const [dateFound, setDateFound] = useState("");
-    const [timeFound, setTimeFound] = useState("");
+    const [dateFound, setDateFound] = useState(defaultDateTimeRef.current.date);
+const [timeFound, setTimeFound] = useState(defaultDateTimeRef.current.time);
     const [surrenderedBy, setSurrenderedBy] = useState("");
     const [additionalNotes, setAdditionalNotes] = useState("");
-    const [currentLocation, setCurrentLocation] = useState(officeId);
     const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    
 
     
 
@@ -114,7 +144,7 @@ export default function FoundItemModal({
         dateFound &&
         timeFound &&
         dateValid &&
-        currentLocation &&
+        officeId &&
         timeValid;
 
     const resetForm = () => {
@@ -126,11 +156,9 @@ export default function FoundItemModal({
         setDescription("");
         setContents("");
         setLocationFound("");
-        setDateFound("");
-        setTimeFound("");
+        setDateTimeToNow();
         setSurrenderedBy("");
         setAdditionalNotes("");
-        setCurrentLocation("");
         setSpecificLocation("");
         setPrefilledImageUrl(null);
         setPrefilledQrData(null);
@@ -140,21 +168,25 @@ export default function FoundItemModal({
         }
     };
 
-    const hasChanges = [
-    selectedFile,
-    itemName,
-    category,
-    description,
-    contents,
-    locationFound,
-    dateFound,
-    timeFound,
-    surrenderedBy,
-    additionalNotes,
-    specificLocation,
-].some((value) =>
-    typeof value === "string" ? value.trim() !== "" : value != null
-);
+const dateTimeChanged =
+    dateFound !== defaultDateTimeRef.current.date ||
+    timeFound !== defaultDateTimeRef.current.time;
+
+const hasChanges =
+    dateTimeChanged ||
+    [
+        selectedFile,
+        itemName,
+        category,
+        description,
+        contents,
+        locationFound,
+        surrenderedBy,
+        additionalNotes,
+        specificLocation,
+    ].some((value) =>
+        typeof value === "string" ? value.trim() !== "" : value != null
+    );
 
 useUnsavedChangesWarning(open && hasChanges);
 
@@ -280,7 +312,7 @@ const analyzeFile = async () => {
             formData.append("found_date", `${dateFound} ${timeFound}`);
             formData.append("reported_by", surrenderedBy);
             formData.append("additional_notes", additionalNotes);
-            formData.append("office_id", currentLocation);
+            formData.append("office_id", officeId);
             formData.append("user_id", userId);
 
             if (prefilledQrData) {
@@ -492,16 +524,10 @@ const analyzeFile = async () => {
                             onChange={setAdditionalNotes}
                             disabled={isSubmitting}
                         />
-                        <AdminLocationDropDown
-                            hidden={true}
-                            disabled={true}
+                        <AdminTextField
                             title="Current Location"
-                            placeholder="Select Current Location"
-                            value={currentLocation}
-                            onChange={setCurrentLocation}
-                            options={locations}
-                            reqField={true}
-                            disableField={true}
+                            value={officeName}
+                            disabled={true}
                         />
                     </div>
 

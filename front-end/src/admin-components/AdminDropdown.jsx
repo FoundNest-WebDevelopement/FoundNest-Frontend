@@ -20,7 +20,7 @@ export default function AdminDropDown({title,
       )}
 
       <select
-        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black" 
+        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black disabled:opacity-60 disabled:cursor-not-allowed" 
         value={value}
         onChange={(e) =>{ onChange(e.target.value)}}
         disabled={disabled}

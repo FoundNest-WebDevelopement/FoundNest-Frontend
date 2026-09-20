@@ -16,7 +16,7 @@ export default function AdminTextField({
                 </legend>
                 <div className={`rounded-md ${error? "p-1  border border-red-600":""} `}>
                     <input type="text" 
-                        className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full disabled:opacity-40" 
+                        className="input border border-[#DDD9CF] bg-white rounded-md text-sm w-full disabled:opacity-60" 
                         disabled={disabled}
                         placeholder={placeholder} 
                         value={value} 

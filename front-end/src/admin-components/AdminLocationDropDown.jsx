@@ -22,7 +22,7 @@ export default function AdminLocationDropDown({
       )}
 
       <select
-        className="select bg-white rounded-md text- w-full border border-[#DDD9CF] text-black disabled:opacity-40" 
+        className="select bg-white rounded-md text- w-full border border-[#DDD9CF] text-black disabled:opacity-60 disabled:cursor-not-allowed" 
         value={value}
         disabled={disableField}
         onChange={(e) =>{ onChange(e.target.value)}}

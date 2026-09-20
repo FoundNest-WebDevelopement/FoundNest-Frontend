@@ -60,7 +60,7 @@ export default function AdminDateInput({
         <input
           ref={inputRef}
           type="date"
-          className="input bg-white text-sm rounded-md w-full border border-[#DDD9CF] cursor-pointer"
+          className="input bg-white text-sm rounded-md w-full border border-[#DDD9CF] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           value={value || ""}
           disabled={disabled}
           onChange={handleChange}

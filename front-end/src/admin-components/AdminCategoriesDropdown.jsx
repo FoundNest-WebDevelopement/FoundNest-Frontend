@@ -20,7 +20,7 @@ export default function AdminCategoriesDropdown({
       )}
 
       <select
-        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black disabled:opacity-40 disabled:cursor-not-allowed" 
+        className="select bg-white rounded-md text-sm w-full border border-[#DDD9CF] text-black disabled:opacity-60 disabled:cursor-not-allowed" 
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
