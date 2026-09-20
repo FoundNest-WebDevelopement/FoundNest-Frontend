@@ -13,7 +13,18 @@
 }
 
 body{
-  font-family: "Poppins", sans-serif; 
+  font-family: "Poppins", sans-serif;
+}
+
+/* Native buttons don't get a hand cursor by default; every button in the
+   app should look clickable unless explicitly disabled. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: default;
 }
 .leaflet-control-attribution {
   display: none !important;

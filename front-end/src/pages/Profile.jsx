@@ -591,8 +591,14 @@ export default function Profile() {
 
         {/* Discard Modal */}
         {showDiscardModal && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
-            <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
+          <div
+            className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 px-8"
+            onClick={() => setShowDiscardModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-6 py-6">
                 <p className="text-[#4B2D23] font-bold text-base text-center">
                   Discard changes? Unsaved edits will be lost.
@@ -642,8 +648,14 @@ export default function Profile() {
 
         {/* Edit Profile Picture Modal */}
         {openEditPicture && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
-            <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm p-6 flex flex-col gap-5">
+          <div
+            className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 px-8"
+            onClick={() => !uploadingPicture && handleClosePictureModal()}
+          >
+            <div
+              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm p-6 flex flex-col gap-5"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-[#4B2D23] text-base">
                   Edit Profile Picture

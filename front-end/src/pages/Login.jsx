@@ -356,13 +356,6 @@ const DesktopLogin = (
   const MobileLogin = (
     <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
-        <button
-          onClick={() => navigate("/")}
-          className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: "#D9D9D9" }}
-        >
-          <span className="text-[#333333] text-lg font-bold">←</span>
-        </button>
         <img src={rafiki} alt="Login Illustration" className="w-4/5 h-4/5 object-contain object-center" />
       </div>
 

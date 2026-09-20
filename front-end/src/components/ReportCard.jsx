@@ -117,8 +117,12 @@ function CancelReasonModal({ open, selectedReason, onSelect, onKeep, onConfirm, 
       className="fixed inset-0 bg-black/20 flex items-center justify-center z-2000 px-4"
       role="dialog"
       aria-modal="true"
+      onClick={() => !isCancelling && onKeep()}
     >
-      <div className="w-70 max-w-full bg-white rounded-xl overflow-hidden">
+      <div
+        className="w-70 max-w-full bg-white rounded-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <p className="text-lg font-medium">Wait! May we know why you are cancelling?</p>
           <hr className="border-(--color-tertiary) opacity-30 my-2" />

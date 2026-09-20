@@ -9,8 +9,14 @@ export default function RestoreDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
-      <div className="relative bg-white rounded-lg w-100 h-fit flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020"
+      onClick={() => !isRestoring && onClose()}
+    >
+      <div
+        className="relative bg-white rounded-lg w-100 h-fit flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
           <p className="font-semibold">Restore Listing</p>
 

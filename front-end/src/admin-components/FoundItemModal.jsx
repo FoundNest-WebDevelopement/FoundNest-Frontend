@@ -324,9 +324,12 @@ const analyzeFile = async () => {
 
     return (
         <>
-            <dialog className={`modal ${open ? "modal-open" : ""}`}>
+            <dialog className={`modal ${open ? "modal-open" : ""}`} onClick={handleCancelForm}>
 
-                <div className="bg-white flex flex-col w-full max-w-3xl h-[80vh] rounded-2xl">
+                <div
+                    className="bg-white flex flex-col w-full max-w-3xl h-[80vh] rounded-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                >
 
                     {/* HEADER */}
                     <div className="h-15 w-full bg-primary flex items-center justify-between px-6 rounded-t-2xl shrink-0">
@@ -529,9 +532,15 @@ const analyzeFile = async () => {
             (
                 
                 <>
-                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+                 <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020"
+                    onClick={() => !isSubmitting && setOpenListConfirmation(false)}
+                 >
 
-                        <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                        <div
+                            className="relative bg-white  rounded-lg w-100 h-fit flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                                 <p className="font-semibold">Review Listing</p>
                                 <button onClick={() => setOpenListConfirmation(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>

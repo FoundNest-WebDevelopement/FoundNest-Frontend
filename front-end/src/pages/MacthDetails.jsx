@@ -301,10 +301,13 @@ export default function MatchDetails() {
             </div>
 
             {howToClaim && (
-                <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-10">
+                <div
+                    className="fixed inset-0 bg-black/20 flex items-end justify-center z-10"
+                    onClick={() => setHowToClaim(false)}
+                >
                     <div
                         ref={sheetRef}
-
+                        onClick={(e) => e.stopPropagation()}
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}

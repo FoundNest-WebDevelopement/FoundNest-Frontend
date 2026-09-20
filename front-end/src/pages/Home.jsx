@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, ChevronRight, Calendar, MapPin } from "lucide-react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -31,23 +32,21 @@ export default function Home() {
   const navigate = useNavigate();
   const firstName = localStorage.getItem("first_name") || "User";
   const user_id = localStorage.getItem("user_id");
-  const token = localStorage.getItem("token");
 
   const [recentFinds, setRecentFinds] = useState([]);
   const [latestReport, setLatestReport] = useState(null);
   const [loadingFinds, setLoadingFinds] = useState(true);
   const [loadingReport, setLoadingReport] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch recent found items
   useEffect(() => {
     const fetchRecentFinds = async () => {
       try {
-        const res = await fetch(`${API_URL}/found-reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchWithAuth(`${API_URL}/api/found-reports/public`);
         const data = await res.json();
         if (res.ok) {
-          setRecentFinds(data.slice(0, 3));
+          setRecentFinds(data.slice(0, 6));
         }
       } catch (err) {
         console.error(err);
@@ -58,21 +57,21 @@ export default function Home() {
     fetchRecentFinds();
   }, []);
 
-  // Fetch user's latest lost report
+  // Fetch user's lost reports and surface whichever is most relevant:
+  // a report with a recent update (e.g. resolved) takes priority over one
+  // that's merely newest by creation date.
   useEffect(() => {
     const fetchLatestReport = async () => {
       try {
-        const res = await fetch(`${API_URL}/lost-reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchWithAuth(`${API_URL}/api/lost-reports/user/${user_id}`);
         const data = await res.json();
         if (res.ok) {
-          // Filter by user and get latest
-          const userReports = data.filter(
-            (r) => String(r.user_id) === String(user_id)
-          );
-          if (userReports.length > 0) {
-            setLatestReport(userReports[0]);
+          const activeReports = data.filter((r) => r.status !== "archived");
+          const lastActivity = (r) =>
+            new Date(r.date_resolved || r.date_reported).getTime();
+          activeReports.sort((a, b) => lastActivity(b) - lastActivity(a));
+          if (activeReports.length > 0) {
+            setLatestReport(activeReports[0]);
           }
         }
       } catch (err) {
@@ -83,6 +82,11 @@ export default function Home() {
     };
     fetchLatestReport();
   }, []);
+
+  const handleSearch = () => {
+    const query = searchQuery.trim();
+    navigate(query ? `/find?q=${encodeURIComponent(query)}` : "/find");
+  };
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "—";
@@ -120,11 +124,18 @@ export default function Home() {
 
         {/* Search Bar */}
         <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-          <Search size={16} color="#990000" />
+          <button onClick={handleSearch} className="cursor-pointer">
+            <Search size={16} color="#990000" />
+          </button>
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearch();
+            }}
             placeholder="Search the Nest (e.g., Wallet, Bag...)"
-            className="flex-1 text-sm text-gray-400 outline-none bg-transparent"
+            className="flex-1 text-sm text-gray-700 outline-none bg-transparent"
           />
         </div>
       </div>
@@ -189,7 +200,7 @@ export default function Home() {
         <div className="flex justify-between items-center mb-2">
           <p className="text-white font-bold text-base">Lost Item Report</p>
           <button
-            onClick={() => navigate("/report")}
+            onClick={() => navigate(`/profile/report-history/${user_id}`)}
             className="text-xs flex items-center gap-1 font-semibold"
             style={{ color: "#F9E055" }}
           >
@@ -276,11 +287,11 @@ export default function Home() {
             <p className="text-white text-xs opacity-70">No recent finds yet.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-5 px-5 pb-1">
             {recentFinds.map((item) => (
               <div
                 key={item.found_report_id}
-                className="relative rounded-2xl overflow-hidden h-52"
+                className="relative rounded-2xl overflow-hidden h-52 w-[78%] shrink-0 snap-center"
                 style={{ backgroundColor: "#7B1F1F", border: "1px solid rgba(255,255,255,0.2)" }}
               >
                 {item.image_url ? (

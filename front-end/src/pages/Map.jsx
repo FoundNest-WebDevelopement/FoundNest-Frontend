@@ -510,7 +510,7 @@ const handlePostReview = async () => {
 
       {/* Delete Review Confirmation */}
       {showDeleteReviewModal && (
-        <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-8">
+        <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 px-8">
           <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
             <div className="px-6 py-6">
               <p className="text-[#4B2D23] font-bold text-base text-center">

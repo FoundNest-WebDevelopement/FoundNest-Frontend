@@ -346,8 +346,14 @@ export default function AdminProfile() {
 
       {/* ── Edit Profile Image Modal ───────────────────────────────────────── */}
       {openEditImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-5">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => !uploading && handleCloseModal()}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
 
             {/* Modal Header */}
             <div className="flex items-center justify-between">
@@ -433,8 +439,14 @@ export default function AdminProfile() {
 
       {/* ── Change Password Modal ─────────────────────────────────────────── */}
       {openChangePassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => !changingPassword && handleClosePasswordModal()}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
 
             {/* Modal Header */}
             <div className="flex items-center justify-between">

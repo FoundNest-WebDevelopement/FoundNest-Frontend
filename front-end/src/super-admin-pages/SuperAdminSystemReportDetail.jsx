@@ -512,8 +512,14 @@ export default function SuperAdminSystemReportDetail() {
 
             {/* View Item/Report Detail Modal */}
             {viewingLog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                    onClick={handleCloseView}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center justify-between">
                             <p className="font-semibold text-[#1A1208] text-base">
                                 {viewingLog.record_type === "report" ? "Lost Report Details" : "Item Details"}

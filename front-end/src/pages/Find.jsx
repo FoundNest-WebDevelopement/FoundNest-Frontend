@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PageLabel from "../components/PageLabel";
 import Loading from "../components/Loading";
 import formatDateTime from "../utils/formatDateTime";
@@ -143,7 +143,8 @@ export default function Find() {
   const [error, setError] = useState(null);
 
   // ---- filters ----
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [selectedCategories, setSelectedCategories] = useState([]); // category ids
   const [selectedLocations, setSelectedLocations] = useState([]); // location names
   const [showClaimed, setShowClaimed] = useState(false);

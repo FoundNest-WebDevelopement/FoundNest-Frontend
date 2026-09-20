@@ -210,15 +210,18 @@ const handlePointerDown = (e) => {
                  </div>
                   </div>
                   {howToClaim && (
-      <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-10">
+      <div
+        className="fixed inset-0 bg-black/20 flex items-end justify-center z-10"
+        onClick={() => setHowToClaim(false)}
+      >
           <div
             ref={sheetRef}
-         
+            onClick={(e) => e.stopPropagation()}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp} 
-            
+            onPointerCancel={handlePointerUp}
+
             className="bg-white w-full max-w-full p-4 rounded-t-4xl flex flex-col gap-2 pb-22"
             style={{
               transform: `translateY(${dragY}px)`,

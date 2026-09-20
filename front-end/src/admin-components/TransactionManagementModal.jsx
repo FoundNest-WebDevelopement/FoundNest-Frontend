@@ -320,9 +320,15 @@ export default function TransactionManagementModal(
             {openRevertDialog &&
                 (
                     <>
-                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020">
+                        <div
+                            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1020"
+                            onClick={() => !isReverting && setOpenRevertDialog(false)}
+                        >
 
-                            <div className="relative bg-white  rounded-lg w-100 h-fit flex flex-col">
+                            <div
+                                className="relative bg-white  rounded-lg w-100 h-fit flex flex-col"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
                                     <p className="font-semibold">Revert Transaction</p>
                                     <button onClick={() => setOpenRevertDialog(false)}><i className="fa-solid fa-x text-xs xl:text-sm text-white"></i></button>
@@ -369,8 +375,14 @@ export default function TransactionManagementModal(
 
             {/* Image Modal */}
             {selectedImage && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000">
-                    <div className="relative rounded-2xl h-125">
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-1000"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div
+                        className="relative rounded-2xl h-125"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             className="absolute -top-10 -right-10 btn btn-sm btn-circle text-white "
                             onClick={() => setSelectedImage(null)}
