@@ -72,6 +72,7 @@ export default function CategoryEditTab({
             const data = await response.json();
 
             if (!response.ok) {
+    
                 throw new Error(data.message || "Failed to update category");
             }
 
@@ -85,7 +86,6 @@ export default function CategoryEditTab({
             toast.success(`Successfully updated ${catLabel}.`);
             onSaved?.();
         } catch (error) {
-            console.error(error);
             toast.error(error.message);
         } finally {
             setIsSaving(false);
