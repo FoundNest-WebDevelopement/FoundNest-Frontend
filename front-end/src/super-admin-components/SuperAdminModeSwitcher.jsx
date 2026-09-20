@@ -3,6 +3,7 @@ import { ChevronDown, Building2, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
 
 export default function SuperAdminModeSwitcher() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -14,6 +15,7 @@ export default function SuperAdminModeSwitcher() {
     const [offices, setOffices] = useState([]);
     const [selectedOfficeId, setSelectedOfficeId] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null); // null | "user" | "admin"
 
     useEffect(() => {
         function handleClickOutside(e) {
@@ -63,6 +65,7 @@ export default function SuperAdminModeSwitcher() {
             toast.error(err.message || "Failed to switch mode.");
         } finally {
             setIsLoading(false);
+            setPendingAction(null);
         }
     };
 
@@ -94,8 +97,11 @@ export default function SuperAdminModeSwitcher() {
             toast.error(err.message || "Failed to switch mode.");
         } finally {
             setIsLoading(false);
+            setPendingAction(null);
         }
     };
+
+    const selectedOfficeName = offices.find((o) => String(o.office_id) === String(selectedOfficeId))?.office_name;
 
     return (
         <div className="relative" ref={containerRef}>
@@ -132,7 +138,10 @@ export default function SuperAdminModeSwitcher() {
                             </button>
                             <button
                                 type="button"
-                                onClick={handleSwitchToUser}
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    setPendingAction("user");
+                                }}
                                 disabled={isLoading}
                                 className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F5F3] text-left cursor-pointer disabled:opacity-50"
                             >
@@ -168,7 +177,10 @@ export default function SuperAdminModeSwitcher() {
                             </select>
                             <button
                                 type="button"
-                                onClick={handleSwitchToAdmin}
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    setPendingAction("admin");
+                                }}
                                 disabled={isLoading || !selectedOfficeId}
                                 className="w-full h-9 bg-primary rounded-md text-white text-sm font-medium cursor-pointer
                                     disabled:opacity-40 disabled:cursor-not-allowed"
@@ -178,6 +190,32 @@ export default function SuperAdminModeSwitcher() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {pendingAction === "user" && (
+                <AdminConfirmDialog
+                    title="Switch Mode"
+                    description="Switch to the End User view?"
+                    message="You'll leave the Super Admin dashboard and see the app as a regular user."
+                    confirmText={isLoading ? "Switching..." : "Switch"}
+                    cancelText="Cancel"
+                    disabled={isLoading}
+                    onClose={() => setPendingAction(null)}
+                    onConfirm={handleSwitchToUser}
+                />
+            )}
+
+            {pendingAction === "admin" && (
+                <AdminConfirmDialog
+                    title="Switch Mode"
+                    description={`Switch to Admin view for ${selectedOfficeName || "the selected center"}?`}
+                    message="You'll manage that center's items and reports until you switch back."
+                    confirmText={isLoading ? "Switching..." : "Switch"}
+                    cancelText="Cancel"
+                    disabled={isLoading}
+                    onClose={() => setPendingAction(null)}
+                    onConfirm={handleSwitchToAdmin}
+                />
             )}
         </div>
     );
