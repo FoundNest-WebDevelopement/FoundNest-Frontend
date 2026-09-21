@@ -208,7 +208,8 @@ export default function ExportModal({
                         <button
                             type="button"
                             className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
-                                transition-transform duration-100 active:scale-95"
+                                transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={isExporting}
                             onClick={onClose}
                         >
                             Cancel

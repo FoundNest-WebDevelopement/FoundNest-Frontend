@@ -614,6 +614,7 @@ const analyzeFile = async () => {
                     }
                     cancelText="Keep Editing"
                     confirmText="Save Changes"
+                    disabled={isSaving}
                     onClose={() => setOpenSaveDialog(false)}
                     onConfirm={handleSubmit}
                 />

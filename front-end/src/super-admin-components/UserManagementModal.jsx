@@ -527,6 +527,7 @@ export default function UserManagementModal(
                     }
                     cancelText="Cancel"
                     confirmText="Confirm Revoke"
+                    disabled={isRevoking}
                     message={"This action will be permanently logged in the action log."}
 
                 />

@@ -364,6 +364,7 @@ export default function DisposeFoundReportTab({
                     onClose={() => setOpenConfirmDesiposed(false)}
                     onConfirm={handleDisposedItem}
                     confirmText="Confirm Disposal"
+                    disabled={isDisposing}
                     cancelText="Cancel"
                 />
             )}

@@ -799,6 +799,7 @@ const handleRemoveImage = () => {
                 and owner details to ensure everything is accurate before submitting the report."`}
                         cancelText="Cancel"
                         confirmText="Confirm"
+                        disabled={isSubmitting}
                         onClose={() => setOpenConfirmReportDialog(false)}
                         onConfirm={handleSubmit}
                     />

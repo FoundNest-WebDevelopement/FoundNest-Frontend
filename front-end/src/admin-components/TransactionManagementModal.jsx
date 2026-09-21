@@ -356,7 +356,8 @@ export default function TransactionManagementModal(
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+                                            className="w-full h-10 flex-1 bg-white  rounded-lg text-primary border border-primary text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            disabled={isReverting}
                                             onClick={() => setOpenRevertDialog(false)}
                                         >Cancel</button>
                                         <button

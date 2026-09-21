@@ -587,6 +587,7 @@ const analyzeFile = async () => {
                                     <div className="flex gap-2">
                                     <button
                                         className="w-full h-10 flex-1 bg-white  rounded-lg  border border-primary text-primary  text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        disabled={isSubmitting}
                                         onClick={() => {setOpenListConfirmation(false)}}
                                     >Cancel</button>
                                     <button

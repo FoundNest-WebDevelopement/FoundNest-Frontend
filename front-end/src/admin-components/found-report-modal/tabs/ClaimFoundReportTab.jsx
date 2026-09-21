@@ -260,6 +260,7 @@ export default function ClaimFoundReportTab({
                     description={`Confirm release for ${formatItemId(selectedItem.item_id)}`}
                     cancelText="Cancel"
                     confirmText="Confirm Release"
+                    disabled={isReleasing}
                     onClose={() => setOpenConfirmRelease(false)}
                     onConfirm={handleItemRelease}
                 />
