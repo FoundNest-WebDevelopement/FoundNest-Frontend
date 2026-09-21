@@ -59,12 +59,8 @@ export const adminSendResetOTP = async (userId) => {
 };
 
 export const superAdminSendOTP = async ({ user_id, email }) => {
-  const res = await fetch(`${API_URL}/api/auth/super-admin-send-otp`, {
+  const res = await fetchWithAuth(`${API_URL}/api/auth/super-admin-send-otp`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
-    },
     body: JSON.stringify({ user_id, email }),
   });
 
