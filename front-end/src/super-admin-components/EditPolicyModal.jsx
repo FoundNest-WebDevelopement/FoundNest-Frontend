@@ -411,8 +411,9 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
                     <div className="flex gap-2">
                         <button
                             type="button"
+                            disabled={isSaving}
                             className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
-                                transition-transform duration-100 active:scale-95"
+                                transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                             onClick={requestClose}
                         >
                             Cancel
@@ -435,6 +436,7 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
 
         {openConfirmDialog && (
             <ConfirmDialog
+                disabled={isSaving}
                 title="Save Changes?"
                 cancelText="Cancel"
                 confirmText="Save"
