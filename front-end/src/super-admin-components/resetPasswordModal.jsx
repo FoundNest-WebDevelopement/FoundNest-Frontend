@@ -59,13 +59,13 @@ export default function ResetPasswordModal({ user, onClose }) {
         user_id: user.user_id,
         email,
       });
-      
+
       toast.success(`OTP sent to ${email}.`);
       setStep("verify");
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsSending(false);
+      setIsSending(false); 
     }
   };
 
