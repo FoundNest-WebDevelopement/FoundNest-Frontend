@@ -58,6 +58,21 @@ export const adminSendResetOTP = async (userId) => {
   return data;
 };
 
+export const superAdminSendOTP = async ({ user_id, email }) => {
+  const res = await fetch(`${API_URL}/api/auth/super-admin-send-otp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify({ user_id, email }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to send OTP.");
+  return data;
+};
+
 export const adminVerifyOTPAndResetPassword = async (userId, otp) => {
   const response = await fetchWithAuth(
     `${API_URL}/api/auth/admin/reset-password/${userId}`,
@@ -68,5 +83,20 @@ export const adminVerifyOTPAndResetPassword = async (userId, otp) => {
   );
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Failed to reset password.");
+  return data;
+};
+
+export const superAdminVerifyOTPAndResetPassword = async (userId, otp, email) => {
+  const res = await fetch(`${API_URL}/api/auth/super-admin-verify-otp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify({ user_id: userId, otp, email }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to reset password.");
   return data;
 };

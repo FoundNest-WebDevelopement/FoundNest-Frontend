@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TriangleAlert, Mail, KeyRound, AtSign } from "lucide-react";
 import { toast } from "react-toastify";
-import { adminSendResetOTP, adminVerifyOTPAndResetPassword } from "../utils/authApi";
+import { adminSendResetOTP, adminVerifyOTPAndResetPassword, superAdminSendOTP, superAdminVerifyOTPAndResetPassword } from "../utils/authApi";
 
 const STEPS = [
   { key: "email", label: "Email" },
@@ -54,7 +54,7 @@ export default function ResetPasswordModal({ user, onClose }) {
     try {
       setIsSending(true);
       setError("");
-      await adminSendResetOTP(user.user_id, email);
+      await superAdminSendOTP(user.user_id, email);
       toast.success(`OTP sent to ${email}.`);
       setStep("verify");
     } catch (err) {
@@ -73,7 +73,7 @@ export default function ResetPasswordModal({ user, onClose }) {
     try {
       setIsVerifying(true);
       setError("");
-      await adminVerifyOTPAndResetPassword(user.user_id, otp, email);
+      await superAdminVerifyOTPAndResetPassword(user.user_id, otp, email);
       toast.success(`Password reset. Temporary password sent to ${email}.`);
       handleClose();
     } catch (err) {
