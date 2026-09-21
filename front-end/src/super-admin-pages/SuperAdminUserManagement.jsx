@@ -173,12 +173,7 @@ const paddedUserId =
                     )
                     :
                     (
-                        <>
-                            <WebLoading
-                              
-                            />
-                            
-                        </>
+                            <WebLoading />
                     )
 
                 }

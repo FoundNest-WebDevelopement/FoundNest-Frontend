@@ -151,6 +151,9 @@ export default function UserManagementModal(
             setIsLocking(false);
             setIsActivating(false);
         }
+        finally{
+            setLockingReason("")
+        }
     };
 
     const [actionLogs, setActionLogs] = useState([]);
@@ -382,10 +385,10 @@ export default function UserManagementModal(
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-1 gap-2 text-[10px] xl:text-xs ">
-                                                            <button
+                                                            <div
                                                                 className="rounded-md bg-[#2E7D32] px-3  transition-transform duration-100 justify-center 
-                                                text-white font-medium flex-1 disabled:opacity-40 disabled:cursor-not-allowed
-                                                ">Active</button>
+                                                text-white font-medium flex-1 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center
+                                                ">Active</div>
                                                             <button
                                                                 className="rounded-md px-3 border border-primary transition-transform duration-100 justify-center 
                                                     text-primary font-medium flex-1 disabled:opacity-40 disabled:cursor-not-allowed enabled:active:scale-95"
@@ -421,7 +424,7 @@ export default function UserManagementModal(
                                                     </div>
                                                     <div className="text-xs xl:text-sm text-[#E65100] flex flex-col gap-2">
                                                         <p>This account was locked by the administrator.</p>
-                                                        <p>Lock on {formatDateTime((selectedUser.date_locked))}</p>
+                                                        <p>Locked on {formatDateTime((selectedUser.date_locked))}</p>
                                                     </div>
                                                 </div>
 
@@ -510,6 +513,7 @@ export default function UserManagementModal(
                     }
                     cancelText="Cancel"
                     confirmText="Confirm Revoke"
+                    disabled={isRevoking}
                     message={"This action will be permanently logged in the action log."}
 
                 />
@@ -583,6 +587,7 @@ export default function UserManagementModal(
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
+                                        disabled={isLocking}
                                         className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95"
                                         onClick={() => setOpenLockAccount(false)}
                                     >
