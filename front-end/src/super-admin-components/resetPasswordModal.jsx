@@ -12,6 +12,7 @@ const STEPS = [
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ResetPasswordModal({ user, onClose }) {
+  console.log(user)
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -54,7 +55,11 @@ export default function ResetPasswordModal({ user, onClose }) {
     try {
       setIsSending(true);
       setError("");
-      await superAdminSendOTP(user.user_id, email);
+      await superAdminSendOTP({
+        user_id: user.user_id,
+        email,
+      });
+
       toast.success(`OTP sent to ${email}.`);
       setStep("verify");
     } catch (err) {

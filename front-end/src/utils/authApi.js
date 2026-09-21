@@ -83,12 +83,8 @@ export const adminVerifyOTPAndResetPassword = async (userId, otp) => {
 };
 
 export const superAdminVerifyOTPAndResetPassword = async (userId, otp, email) => {
-  const res = await fetch(`${API_URL}/api/auth/super-admin-verify-otp`, {
+  const res = await fetchWithAuth(`${API_URL}/api/auth/super-admin-verify-otp`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
-    },
     body: JSON.stringify({ user_id: userId, otp, email }),
   });
 
