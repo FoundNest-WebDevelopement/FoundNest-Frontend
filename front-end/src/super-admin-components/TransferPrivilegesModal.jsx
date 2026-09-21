@@ -125,10 +125,8 @@ export default function TransferPrivilegesModal({ onClose }) {
 
             toast.success(data.message || "Privileges transferred successfully. Logging out...");
 
-            setTimeout(() => {
-                localStorage.clear();
-                navigate("/login");
-            }, 1500);
+            localStorage.clear();
+            navigate("/login", { replace: true });
         } catch (err) {
             console.error(err);
             setError(err.message || "Failed to transfer privileges.");
