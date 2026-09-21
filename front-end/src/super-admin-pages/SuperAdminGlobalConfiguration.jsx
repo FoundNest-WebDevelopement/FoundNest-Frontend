@@ -63,31 +63,42 @@ export default function SuperAdminGlobalConfiguration() {
     const [openAddCenter, setOpenAddCenter] = useState(false);
 
 
-    const mapPolicy = (row) => {
-        let value = row.policy_value;
+  const mapPolicy = (row) => {
+    let value = row.policy_value;
 
-        if (row.value_type === "steps") {
-            try {
-                value = JSON.parse(row.policy_value);
-            } catch (err) {
-                console.error(`Failed to parse steps for policy ${row.policy_id}`, err);
-                value = [];
-            }
-        } else if (row.value_type !== "text") {
-            value = Number(row.policy_value);
+    if (row.value_type === "steps") {
+        try {
+            value = JSON.parse(row.policy_value);
+        } catch (err) {
+            console.error(`Failed to parse steps for policy ${row.policy_id}`, err);
+            value = [];
         }
+    } else if (row.value_type !== "text") {
+        value = Number(row.policy_value);
+    }
 
-        return {
-            id: row.policy_id,
-            title: row.policy_name,
-            description: row.policy_details,
-            valueType: row.value_type,
-            unit: row.unit,
-            value,
-            updatedAt: row.last_action_at ? formatDate(row.last_action_at) : formatDate(row.created_at),
-            updatedBy: row.first_name ? `${row.first_name} ${row.last_name}` : "N/A",
-        };
+    const createdByName = row.created_by_name || "";
+    const updatedByName = row.updated_by_name || "";
+
+    return {
+        id: row.policy_id,
+        title: row.policy_name,
+        description: row.policy_details,
+        valueType: row.value_type,
+        unit: row.unit,
+        value,
+
+        // Used by PolicyCard (same keys as before)
+        updatedAt: formatDate(row.updated_at || row.created_at),
+        // If it has never been updated, the last person to touch it is the creator
+        updatedBy: updatedByName || createdByName || "N/A",
+
+        // Used by EditPolicyModal
+        createdByName,
+        updatedByName,
+        updatedAtRaw: row.updated_at || row.created_at,
     };
+};
 
     const fetchPolicies = async () => {
         try {

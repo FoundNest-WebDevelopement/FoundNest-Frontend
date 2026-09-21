@@ -12,7 +12,6 @@ const STEPS = [
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ResetPasswordModal({ user, onClose }) {
-  console.log(user)
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");

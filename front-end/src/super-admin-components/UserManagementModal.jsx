@@ -151,7 +151,7 @@ export default function UserManagementModal(
             setIsLocking(false);
             setIsActivating(false);
         }
-        finally{
+        finally {
             setLockingReason("")
         }
     };
@@ -291,11 +291,11 @@ export default function UserManagementModal(
                                             </div>
                                         </div>
                                         <div className="flex flex-col flex-1">
-                                                <p className="text-xs text-[#6B5C42]">COLLEGE</p>
-                                                <p className="text-xs">{selectedUser.college_name || "N/A"}</p>
-                                            </div>
+                                            <p className="text-xs text-[#6B5C42]">COLLEGE</p>
+                                            <p className="text-xs">{selectedUser.college_name || "N/A"}</p>
+                                        </div>
                                         <div className="flex  gap-2">
-                                            
+
                                             <div className="flex flex-col flex-1">
                                                 <p className="text-xs text-[#6B5C42]">COURSE & SECTION</p>
                                                 <p className="text-xs">{selectedUser.course_section || "N/A"}</p>
@@ -402,13 +402,15 @@ export default function UserManagementModal(
                                                     <p className="text-[10px] xl:text-xs text-[#C0392B]">Locking prevents user from logging in.</p>
                                                 </div>
                                                 <div className="flex flex-col h-fit gap-2 w-full my-4">
+                                                    {selectedUser.status === true &&
                                                     <Button
 
                                                         isSolid={true}
                                                         label={"Reset Password"}
-                                                        onClick={()=>setOpenResetPassword(true)}
+                                                        onClick={() => setOpenResetPassword(true)}
 
                                                     />
+}
                                                 </div>
 
                                             </>
@@ -434,14 +436,6 @@ export default function UserManagementModal(
                                                         disabled={isActivating}
                                                         label={isActivating ? "Unlocking..." : "Unlock Account"}
                                                         onClick={() => setOpenActivateAccount(true)}
-                                                    />
-                                                    <Button
-                                                        isBorder={true}
-                                                        isSolid={false}
-                                                        label={"Reset Password"}
-                                                        onClick={()=>setOpenResetPassword(true)}
-                                                   
-
                                                     />
                                                 </div>
 
@@ -631,19 +625,19 @@ export default function UserManagementModal(
             }
             {openExportActivity &&
                 <ExportModal
-                title="Export Action Logs"
-                endpoint="/api/export/action-logs"
-                queryParams={{ userId }}
-                filenamePrefix="ACTION_LOGS"
-                onClose={() => setOpenExportActivity(false)}
-             
+                    title="Export Action Logs"
+                    endpoint="/api/export/action-logs"
+                    queryParams={{ userId }}
+                    filenamePrefix="ACTION_LOGS"
+                    onClose={() => setOpenExportActivity(false)}
+
                 />
             }
             {openResetPassword &&
-            <ResetPasswordModal
-                user={selectedUser}
-                onClose={()=>setOpenResetPassword(false)}
-            />
+                <ResetPasswordModal
+                    user={selectedUser}
+                    onClose={() => setOpenResetPassword(false)}
+                />
 
             }
         </>
