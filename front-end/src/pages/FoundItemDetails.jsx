@@ -188,7 +188,11 @@ const handlePointerDown = (e) => {
                         <button className="border border-primary rounded-lg h-10 text-white bg-primary text-xs w-full "
                                 onClick={() => {setHowToClaim(true)}}
                             >How to claim?</button>
-                    <button className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full ">View Office Location</button>
+                    <button
+                        className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!report.office_id}
+                        onClick={() => navigate(`/map?officeId=${report.office_id}`)}
+                    >View Office Location</button>
                     </div>
                 </div>
                 </div>
