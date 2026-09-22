@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import { useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -39,11 +40,26 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
+function FlyToOffice({ office }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (office) {
+      map.flyTo([office.lat, office.lng], 19, { duration: 1 });
+    }
+  }, [office, map]);
+
+  return null;
+}
+
 export default function Map() {
   const user_id = localStorage.getItem("user_id");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusOfficeId = searchParams.get("officeId");
 
   const [offices, setOffices] = useState([]);
   const [selectedOffice, setSelectedOffice] = useState(null);
+  const [flyToOffice, setFlyToOffice] = useState(null);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -121,6 +137,24 @@ export default function Map() {
     fetchMyReview(office.office_id);
     fetchReviews(office.office_id);
   };
+
+  // "View Office Location" quick link (e.g. from Found Item Details) lands
+  // here as /map?officeId=X — once offices are loaded, jump straight to that
+  // office's pin and open its info sheet, same as clicking the marker.
+  useEffect(() => {
+    if (!focusOfficeId || offices.length === 0) return;
+
+    const office = offices.find((o) => String(o.office_id) === String(focusOfficeId));
+    if (office) {
+      handleMarkerClick(office);
+      setSelectedLabel(office.office_name);
+      setFlyToOffice(office);
+    }
+
+    searchParams.delete("officeId");
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offices, focusOfficeId]);
 
   const handleClose = () => {
     setSelectedOffice(null);
@@ -298,6 +332,7 @@ const handlePostReview = async () => {
           maxZoom={19}
         />
         <MapClickHandler onMapClick={handleClose} />
+        <FlyToOffice office={flyToOffice} />
 
         {/* BulSU Label */}
         <Marker

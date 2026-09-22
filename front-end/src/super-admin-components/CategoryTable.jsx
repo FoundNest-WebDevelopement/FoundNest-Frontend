@@ -12,8 +12,8 @@ export default function CategoryTable(
 ){
 
     const [currentPage, setCurrentPage] = useState(1);
-        const [tableHeight, setTableHeight] = useState("");
-        const [itemsPerPage, setItemsPerPage] = useState();
+        const [tableHeight, setTableHeight] = useState(() => (window.innerHeight > 732 ? "min-h-150" : "min-h-102"));
+        const [itemsPerPage, setItemsPerPage] = useState(() => (window.innerHeight > 732 ? 9 : 6));
         const safeCategories = Array.isArray(categories) ? categories : [];
         const totalPages = Math.max(1, Math.ceil(safeCategories.length / itemsPerPage));
         const activePage = Math.min(currentPage, totalPages);
@@ -59,7 +59,6 @@ export default function CategoryTable(
 
                         <thead className="bg-primary text-white text-center">
                             <tr>
-                                <th className="w-5"></th>
                                 <th className="w-20">CAT ID</th>
                                 <th className="w-48">NAME</th>
                                 <th className="w-32">ITEMS COUNT</th>
@@ -79,9 +78,7 @@ export default function CategoryTable(
                                     }
                                 >
 
-                                    <td className="align-middle h-15">{startIndex + index + 1}</td>
-
-                                    <td className="w-28 align-middle text-center">{formatCatId(cat.category_id)}</td>
+                                    <td className="w-28 align-middle h-15 text-center">{formatCatId(cat.category_id)}</td>
 
                     
 
@@ -117,7 +114,7 @@ export default function CategoryTable(
                             ))}
                             {paginatedCategories.length === 0 && (
                                 <tr>
-                                    <td colSpan={11} className="text-center py-8 text-[#6B5C42]">
+                                    <td colSpan={5} className="text-center py-8 text-[#6B5C42]">
                                         No Records to display.
                                     </td>
                                 </tr>

@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import Button from "../global-components/Button";
+import ConfirmDialog from "../global-components/ConfirmDialog";
+import { TriangleAlert, Power } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
-import ConfirmDialog from "../global-components/ConfirmDialog";
+import LocationEditTab from "./LocationEditTab";
 
 const TYPE_LABELS = {
     COLLEGE: "College Building",
@@ -10,45 +12,65 @@ const TYPE_LABELS = {
     GATE: "Gates",
 };
 
-export default function LocationManagementModal({ selectedLocation, setSelectedLocation, onUpdated }) {
+export default function LocationManagementModal({
+    selectedLocation,
+    setSelectedLocation,
+    onUpdated,
+}) {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const [name, setName] = useState(selectedLocation.location_name || "");
-    const [description, setDescription] = useState(selectedLocation.description || "");
-    const [status, setStatus] = useState(selectedLocation.status);
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState("");
+    const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
-    const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-    const [openCancelConfirmDialog, setOpenCancelConfirmDialog] = useState(false);
+    // Edit mode: LocationEditTab owns the form, saving, and its own confirmations
+    const [isEditing, setIsEditing] = useState(false);
+    const [isEditDirty, setIsEditDirty] = useState(false);
 
-    const hasChanges =
-        name !== (selectedLocation.location_name || "") ||
-        description !== (selectedLocation.description || "") ||
-        status !== selectedLocation.status;
+    const [openDeactivate, setOpenDeactivate] = useState(false);
+    const [openActivate, setOpenActivate] = useState(false);
+    const [openCancelEdit, setOpenCancelEdit] = useState(false);
 
-    const handleClose = () => setSelectedLocation(null);
+    const formatLocId = (type, id) => `${type}-${String(id).padStart(5, "0")}`;
 
-    const handleSubmit = async () => {
-        setOpenConfirmDialog(false);
+    const refreshLocations = async () => {
+        const response = await fetchWithAuth(`${API_URL}/api/locations/private`);
+        const data = await response.json();
 
-        if (!name.trim()) {
-            setError("Location name is required.");
-            return;
+        if (Array.isArray(data)) {
+            onUpdated?.(data);
         }
 
+        return data.find(
+            (loc) =>
+                loc.location_id === selectedLocation.location_id &&
+                loc.location_type === selectedLocation.location_type
+        );
+    };
+
+    const closeEditMode = () => {
+        setIsEditing(false);
+        setIsEditDirty(false);
+    };
+
+    const handleClosePanel = () => {
+        if (isEditing && isEditDirty) {
+            setOpenCancelEdit(true);
+        } else {
+            setSelectedLocation(null);
+        }
+    };
+
+    const handleToggleStatus = async (status) => {
         try {
-            setIsSaving(true);
-            setError("");
+            setIsTogglingStatus(true);
+            setOpenDeactivate(false);
+            setOpenActivate(false);
 
             const response = await fetchWithAuth(
-                `${API_URL}/api/locations/${selectedLocation.location_id}`,
+                `${API_URL}/api/locations/${selectedLocation.location_id}/status`,
                 {
                     method: "PUT",
                     body: JSON.stringify({
                         type: selectedLocation.location_type,
-                        name: name.trim(),
-                        description: description.trim(),
                         status,
                     }),
                 }
@@ -57,164 +79,223 @@ export default function LocationManagementModal({ selectedLocation, setSelectedL
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to update location.");
+                throw new Error(data.message || "Failed to update location status");
             }
 
-            const listResponse = await fetchWithAuth(`${API_URL}/api/locations/private`);
-            const listData = await listResponse.json();
+            const updatedLocation = await refreshLocations();
+            setSelectedLocation(updatedLocation);
 
-            if (Array.isArray(listData)) {
-                onUpdated?.(listData);
-            }
-
-            toast.success(`Successfully updated "${name.trim()}".`);
-            handleClose();
-        } catch (err) {
-            console.error(err);
-            setError(err.message || "Failed to update location.");
-            toast.error(err.message || "Failed to update location.");
+            toast.success(
+                status
+                    ? `Location ${formatLocId(selectedLocation.location_type, selectedLocation.location_id)} activated.`
+                    : `Location ${formatLocId(selectedLocation.location_type, selectedLocation.location_id)} deactivated.`
+            );
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message);
         } finally {
-            setIsSaving(false);
+            setIsTogglingStatus(false);
         }
     };
 
     return (
         <>
-            <div
-                className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
-                onClick={() => (hasChanges ? setOpenCancelConfirmDialog(true) : handleClose())}
-            >
+            <div className="fixed inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
                 <div
-                    className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                    className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                        <p className="font-semibold">Edit Location</p>
-                        <button
-                            onClick={() => {
-                                if (hasChanges) {
-                                    setOpenCancelConfirmDialog(true);
-                                } else {
-                                    handleClose();
-                                }
-                            }}
-                        >
-                            <i className="fa-solid fa-x text-sm text-white" />
-                        </button>
+                    <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0">
+                        <p className="text-white font-semibold text-md xl:text-lg pl-2">
+                            {isEditing ? "Edit Location" : "Location Details"}
+                        </p>
+                        <div className="ml-auto pr-6">
+                            <button onClick={handleClosePanel}>
+                                <i className="fa-solid fa-x text-xs xl:text-sm text-white"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="p-4">
-                        <div className="flex justify-center mb-4">
-                            <MapPin size={40} className="text-primary" />
-                        </div>
+                    <div className="h-full w-full p-5 overflow-auto flex flex-col gap-6">
+                        {isEditing ? (
+                            <LocationEditTab
+                                selectedLocation={selectedLocation}
+                                setSelectedLocation={setSelectedLocation}
+                                refreshLocations={refreshLocations}
+                                locLabel={formatLocId(selectedLocation.location_type, selectedLocation.location_id)}
+                                disabled={isTogglingStatus}
+                                onDirtyChange={setIsEditDirty}
+                                onSaved={closeEditMode}
+                                onCancel={closeEditMode}
+                            />
+                        ) : (
+                            <>
+                                {/* Location Details (view only) */}
+                                <div className="flex flex-col gap-4">
+                                    <p className="font-semibold text-sm xl:text-base">Location Details</p>
 
-                        <div className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-sm font-medium text-[#1A1208]">
-                                    Type
-                                </label>
-                                <input
-                                    type="text"
-                                    disabled
-                                    value={TYPE_LABELS[selectedLocation.location_type] || selectedLocation.location_type}
-                                    className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm bg-[#F5F5F5] text-[#6B5C42]"
-                                />
-                            </div>
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-[#6B5C42]">LOCATION ID</p>
+                                        <p className="text-xs">
+                                            {formatLocId(selectedLocation.location_type, selectedLocation.location_id)}
+                                        </p>
+                                    </div>
 
-                            <div className="flex flex-col gap-1">
-                                <label className="text-sm font-medium text-[#1A1208]">
-                                    Location Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none
-                                        focus:border-primary"
-                                />
-                            </div>
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-[#6B5C42]">LOCATION NAME</p>
+                                        <p className="text-xs">{selectedLocation.location_name || "N/A"}</p>
+                                    </div>
 
-                            <div className="flex flex-col gap-1">
-                                <label className="text-sm font-medium text-[#1A1208]">
-                                    Description
-                                </label>
-                                <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={2}
-                                    className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none resize-none
-                                        focus:border-primary"
-                                />
-                            </div>
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-[#6B5C42]">DESCRIPTION</p>
+                                        <p className="text-xs whitespace-pre-wrap">
+                                            {selectedLocation.description || "No description provided."}
+                                        </p>
+                                    </div>
 
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-[#1A1208]">
-                                    Status
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setStatus((prev) => !prev)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-transform active:scale-95
-                                        ${status ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}
-                                >
-                                    {status ? "Active" : "Inactive"}
-                                </button>
-                            </div>
+                                    <div className="flex">
+                                        <div className="flex flex-col gap-1 flex-1">
+                                            <p className="text-xs text-[#6B5C42]">TYPE</p>
+                                            <p className="text-xs">
+                                                {TYPE_LABELS[selectedLocation.location_type] || selectedLocation.location_type}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col gap-1 flex-1">
+                                            <p className="text-xs text-[#6B5C42]">STATUS</p>
+                                            <div
+                                                className={`px-3 py-1 rounded-full text-xs font-medium w-fit
+                                                    ${selectedLocation.status === true && "bg-green-100 text-green-700"}
+                                                    ${selectedLocation.status === false && "bg-gray-200 text-gray-700"}
+                                                `}
+                                            >
+                                                <p>
+                                                    {selectedLocation.status === true && "Active"}
+                                                    {selectedLocation.status === false && "Inactive"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {error && (
-                                <p className="text-xs text-[#C0392B]">{error}</p>
-                            )}
-                        </div>
+                                {/* Actions */}
+                                <div className="flex flex-col gap-4 mt-auto">
+                                    <hr className="border-(--color-tertiary) opacity-30" />
 
-                        <hr className="border-(--color-tertiary) my-4 opacity-30" />
+                                    {selectedLocation.status === true && (
+                                        <div className="flex w-full gap-2 h-10">
+                                            <div className="flex-1 h-full">
+                                                <div className="flex flex-col h-full">
+                                                    <Button
+                                                        isSolid={true}
+                                                        disabled={isTogglingStatus}
+                                                        label="Edit Location"
+                                                        onClick={() => setIsEditing(true)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 h-full">
+                                                <div className="flex flex-col h-full">
+                                                    <Button
+                                                        isBorder={true}
+                                                        isSolid={false}
+                                                        disabled={isTogglingStatus}
+                                                        label={isTogglingStatus ? "Deactivating..." : "Deactivate Location"}
+                                                        onClick={() => setOpenDeactivate(true)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
-                                    transition-transform duration-100 active:scale-95"
-                                onClick={() => {
-                                    if (hasChanges) {
-                                        setOpenCancelConfirmDialog(true);
-                                    } else {
-                                        handleClose();
-                                    }
-                                }}
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
-                                    transition-transform duration-100 enabled:active:scale-95
-                                    disabled:opacity-40 disabled:cursor-not-allowed"
-                                disabled={isSaving || !hasChanges}
-                                onClick={() => setOpenConfirmDialog(true)}
-                            >
-                                {isSaving ? "Saving..." : "Save Changes"}
-                            </button>
-                        </div>
+                                    {selectedLocation.status === false && (
+                                        <>
+                                            <p className="text-xs text-[#6B5C42]">
+                                                This location is currently inactive and hidden from item listings.
+                                            </p>
+                                            <div className="flex w-full gap-2">
+                                                <div className="flex-1">
+                                                    <div className="flex flex-col">
+                                                        <Button
+                                                            isBorder={true}
+                                                            isSolid={false}
+                                                            disabled={isTogglingStatus}
+                                                            label="Edit Location"
+                                                            onClick={() => setIsEditing(true)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex flex-col">
+                                                        <Button
+                                                            isSolid={true}
+                                                            disabled={isTogglingStatus}
+                                                            label={isTogglingStatus ? "Activating..." : "Activate Location"}
+                                                            onClick={() => setOpenActivate(true)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {openConfirmDialog && (
+            {openDeactivate && (
                 <ConfirmDialog
-                    title="Save Changes?"
+                    Icon={TriangleAlert}
+                    iconColor="text-(--color-quaternary)"
+                    title="Deactivate Location"
+                    description={
+                        <>
+                            Are you sure you want to deactivate{" "}
+                            <span className="font-bold">{selectedLocation.location_name}</span>?
+                        </>
+                    }
+                    message={"This action will be permanently logged in the action log."}
                     cancelText="Cancel"
-                    confirmText="Save"
-                    description={"Do you want to save changes for this location?"}
-                    onClose={() => setOpenConfirmDialog(false)}
-                    onConfirm={handleSubmit}
+                    confirmText={isTogglingStatus ? "Deactivating..." : "Deactivate"}
+                    onClose={() => setOpenDeactivate(false)}
+                    onConfirm={() => handleToggleStatus(false)}
+                    disabled={isTogglingStatus}
                 />
             )}
 
-            {openCancelConfirmDialog && (
+            {openActivate && (
                 <ConfirmDialog
-                    description={"Do you want to discard progress in this edit location form?"}
-                    onClose={() => setOpenCancelConfirmDialog(false)}
-                    onConfirm={handleClose}
+                    Icon={Power}
+                    iconColor="text-primary"
+                    title="Activate Location"
+                    description={
+                        <>
+                            Are you sure you want to activate{" "}
+                            <span className="font-bold">{selectedLocation.location_name}</span>?
+                        </>
+                    }
+                    message={"This action will be permanently logged in the action log."}
+                    cancelText="Cancel"
+                    confirmText={isTogglingStatus ? "Activating..." : "Activate"}
+                    onClose={() => setOpenActivate(false)}
+                    onConfirm={() => handleToggleStatus(true)}
+                    disabled={isTogglingStatus}
+                />
+            )}
+
+            {/* Closing the panel while there are unsaved edits */}
+            {openCancelEdit && (
+                <ConfirmDialog
+                    description={
+                        <>
+                            Are you sure you want to discard your edits to{" "}
+                            <span className="font-semibold">{selectedLocation.location_name}</span>?
+                        </>
+                    }
+                    onClose={() => setOpenCancelEdit(false)}
+                    onConfirm={() => setSelectedLocation(null)}
+                    disabled={isTogglingStatus}
                 />
             )}
         </>
