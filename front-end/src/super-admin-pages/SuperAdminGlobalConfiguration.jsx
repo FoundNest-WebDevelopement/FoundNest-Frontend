@@ -391,9 +391,7 @@ export default function SuperAdminGlobalConfiguration() {
                     </div>
 
                     {isLoadingLocations && (
-                        <p className="text-sm text-[#6B5C42] text-center py-10">
-                            Loading locations...
-                        </p>
+                        <WebLoading marginBottom="mb-90" />
                     )}
 
                     {!isLoadingLocations && filteredLocations.length === 0 && (
@@ -500,9 +498,7 @@ export default function SuperAdminGlobalConfiguration() {
                     </div>
 
                     {isLoadingCenters && (
-                        <p className="text-sm text-[#6B5C42] text-center py-10">
-                            Loading centers...
-                        </p>
+                        <WebLoading marginBottom="mb-90" />
                     )}
 
                     {!isLoadingCenters && filteredCenters.length === 0 && (
