@@ -11,14 +11,14 @@ import Toast from "../components/Toast";
 import InfoIcon from "../assets/info_icon.png";
 import heart from "../assets/heart.png";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import UploadCard from "../components/report_components/UploadCard";
+import LocationGroup from "../components/report_components/LocationGroup";
+import PhotoSheet from "../components/report_components/PhotoSheet";
+import Field from "../components/report_components/Field";
+import ActionButton from "../components/report_components/ActionButton";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-/* -------------------------------------------------------------------------- */
-/* Limits                                                                     */
-/* -------------------------------------------------------------------------- */
-
-// Change these in one place; inputs, counters, validation and AI output all use them.
 const LIMITS = {
   itemName: 50,
   description: 500,
@@ -28,13 +28,8 @@ const LIMITS = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
-
 const showToast = (message) => toast.custom(() => <Toast icon={InfoIcon} message={message} />);
 
-// Strips < >, collapses whitespace, and enforces the max length
 const sanitizeInput = (value, maxLength) =>
   String(value ?? "")
     .replace(/\s+/g, " ")
@@ -48,7 +43,6 @@ async function fetchJson(url) {
   return data;
 }
 
-// Page 1 validation: returns { valid, errors } like the mobile form
 function validatePage1({ categoryId, itemName, description, contents }) {
   const errors = {};
 
@@ -70,8 +64,6 @@ function validatePage1({ categoryId, itemName, description, contents }) {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-// Date helpers use LOCAL time. The old version compared UTC dates, which made
-// "today" unselectable for users ahead of UTC (e.g. the Philippines, before 8am).
 const pad = (n) => String(n).padStart(2, "0");
 
 const todayLocalISO = () => {
@@ -100,23 +92,10 @@ const isTimeNotFuture = (dateStr, timeStr) => {
   return !!chosen && chosen <= new Date();
 };
 
-/* -------------------------------------------------------------------------- */
-/* UI pieces                                                                  */
-/* -------------------------------------------------------------------------- */
-
-// Shared look for inputs, selects and textareas (same as the mobile form)
 const fieldClass = (hasError, extra = "") =>
-  `w-full rounded-lg border px-3 text-base text-[#333] bg-white outline-none placeholder:text-[#8C7A70] focus:border-primary disabled:bg-white disabled:opacity-80 ${
-    hasError ? "border-[#C62828]" : "border-[#DDD9CF]"
+  `w-full rounded-lg border px-3 text-base text-[#333] bg-white outline-none placeholder:text-[#8C7A70] focus:border-primary disabled:bg-white disabled:opacity-80 ${hasError ? "border-[#C62828]" : "border-[#DDD9CF]"
   } ${extra}`;
 
-function Spinner({ className = "h-8 w-8" }) {
-  return (
-    <span
-      className={`inline-block animate-spin rounded-full border-[3px] border-primary border-t-transparent ${className}`}
-    />
-  );
-}
 
 function SectionHeading({ children }) {
   return (
@@ -126,214 +105,6 @@ function SectionHeading({ children }) {
   );
 }
 
-// Label + control + error message + optional character counter
-function Field({ label, htmlFor, required, error, hint, count, max, children }) {
-  return (
-    <div className="mt-5">
-      <label htmlFor={htmlFor} className="block text-[17px] font-extrabold mb-2">
-        {label}
-        {required && <span className="text-primary"> *</span>}
-      </label>
-      {children}
-      <div className="flex items-start justify-between gap-2 mt-1 min-h-4">
-        {error ? (
-          <p role="alert" className="text-[13px] text-[#C62828]">
-            {error}
-          </p>
-        ) : (
-          <p className="text-[13px] text-[#8C7A70]">{hint}</p>
-        )}
-        {max != null && (
-          <p className={`text-xs shrink-0 ml-auto ${count >= max ? "text-[#C62828]" : "text-[#8C7A70]"}`}>
-            {count}/{max}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Toggle({ checked, onChange, disabled, label }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-        checked ? "bg-primary" : "bg-[#CCCCCC]"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-5" : ""
-        }`}
-      />
-    </button>
-  );
-}
-
-function ActionButton({ variant = "solid", danger = false, disabled = false, onClick, children }) {
-  const look =
-    variant === "solid"
-      ? "bg-primary text-white px-8 disabled:bg-[#A0A0A0]"
-      : danger
-      ? "border border-[#C62828] text-[#C62828] px-5 disabled:opacity-50"
-      : "border border-primary text-primary px-5 disabled:opacity-50";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-[10px] py-2.5 text-sm font-semibold transition-transform duration-100 enabled:active:scale-95 ${look}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function UploadCard({ image, isLoading, viewOnly, useAi, onToggleAi, onOpenPicker }) {
-  const hasImage = image && image !== "REMOVE";
-
-  return (
-    <div className="flex justify-center pb-2.5">
-      <div className="w-full max-w-[450px] bg-white rounded-[28px] py-5 px-5 flex flex-col items-center shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
-        <button
-          type="button"
-          onClick={onOpenPicker}
-          disabled={isLoading || viewOnly}
-          aria-label={hasImage ? "Change photo" : "Add photo"}
-          className="mb-5 flex items-center justify-center disabled:cursor-default"
-        >
-          {isLoading ? (
-            <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#CCC] flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : hasImage ? (
-            <div className="relative h-[110px] w-[110px]">
-              <img src={image} alt="Item" className="h-full w-full rounded-[20px] object-cover" />
-              {!viewOnly && (
-                <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary border-2 border-white flex items-center justify-center">
-                  <i className="fa-solid fa-pen text-white text-[11px]" />
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-primary flex items-center justify-center">
-              <div className="h-[60px] w-[60px] rounded-full bg-primary flex items-center justify-center">
-                <i className="fa-solid fa-plus text-white text-2xl" />
-              </div>
-            </div>
-          )}
-        </button>
-
-        <p className="text-[17px] font-semibold text-[#6B5A52] text-center mb-3.5">
-          {isLoading ? "Analyzing image..." : "Upload Item Photo (Optional)"}
-        </p>
-        <p className="text-[13px] text-[#8C7A70] text-center leading-[22px] px-3">
-          *FoundNest AI will help auto-fill details based on your photo.
-        </p>
-        <p className="text-xs text-[#8C7A70] text-center mt-1">PNG, JPG or WEBP up to 10MB</p>
-
-        {!viewOnly && (
-          <div className="flex items-center justify-center gap-2.5 mt-3.5">
-            <span className="text-sm font-semibold">Use AI to describe image</span>
-            <Toggle
-              checked={useAi}
-              onChange={onToggleAi}
-              disabled={isLoading}
-              label="Use AI to describe image"
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PhotoSheet({ hasPhoto, onTake, onChoose, onRemove, onClose }) {
-  const row =
-    "w-full flex items-center gap-3 rounded-xl border border-[#eee] px-4 py-3 text-sm font-semibold text-left";
-
-  return (
-    <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white w-full rounded-t-3xl p-4 pb-25 flex flex-col gap-2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button type="button" className={row} onClick={onTake}>
-          <i className="fa-solid fa-camera w-5 text-center text-primary" />
-          Take Photo
-        </button>
-        <button type="button" className={row} onClick={onChoose}>
-          <i className="fa-regular fa-image w-5 text-center text-primary" />
-          Choose from Library
-        </button>
-        {hasPhoto && (
-          <button type="button" className={`${row} text-[#C62828]`} onClick={onRemove}>
-            <i className="fa-regular fa-trash-can w-5 text-center" />
-            Remove Photo
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl py-3 text-sm font-semibold text-primary"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LocationGroup({ group, selectedLocations, open, onToggleOpen, onToggleItem, disabled, readOnly }) {
-  const count = group.items.filter((i) => selectedLocations.includes(i.name)).length;
-
-  return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        onClick={onToggleOpen}
-        disabled={disabled}
-        className="flex items-center justify-between p-2.5 text-xs font-medium bg-[#F2F2F2] rounded-md disabled:opacity-40"
-      >
-        <span>
-          {group.title}
-          {count > 0 && ` (${count})`}
-        </span>
-        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} text-[10px] text-primary`} />
-      </button>
-
-      {open && (
-        <div className="flex flex-wrap gap-2 pt-2 px-1">
-          {group.items.map((item) => (
-            <label
-              key={item.key}
-              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border border-[#eee] has-[:checked]:border-primary"
-            >
-              <input
-                type="checkbox"
-                checked={selectedLocations.includes(item.name)}
-                onChange={() => onToggleItem(item.name)}
-                disabled={readOnly}
-                className="w-3.5 h-3.5 accent-primary cursor-pointer"
-              />
-              {item.name}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Page                                                                       */
-/* -------------------------------------------------------------------------- */
 
 export default function Report() {
   const navigate = useNavigate();
@@ -341,15 +112,13 @@ export default function Report() {
   const viewOnly = mode === "view";
   const userID = localStorage.getItem("user_id");
 
-  // ---- lookups ----
   const [categories, setCategories] = useState([]);
   const [offices, setOffices] = useState([]);
   const [sharedSpaces, setSharedSpaces] = useState([]);
   const [gates, setGates] = useState([]);
 
-  // ---- page 1 fields ----
-  const [image, setImage] = useState(null); // preview url | existing url | "REMOVE" | null
-  const [selectedFile, setSelectedFile] = useState(null); // File | "REMOVE" | null
+  const [image, setImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [categoryID, setCategoryID] = useState("");
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
@@ -357,7 +126,6 @@ export default function Report() {
   const [errors, setErrors] = useState({});
   const [useAiDescribe, setUseAiDescribe] = useState(false);
 
-  // ---- page 2 fields ----
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
   const [selectedLocations, setSelectedLocations] = useState([]);
@@ -367,7 +135,6 @@ export default function Report() {
   const [openLocations, setOpenLocations] = useState(false);
   const [openGroups, setOpenGroups] = useState({ college: false, shared: false, gates: false });
 
-  // ---- flow / ui ----
   const [createdReportID, setCreatedReportID] = useState(null);
   const [nextPage, setNextPage] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -418,14 +185,11 @@ export default function Report() {
     return `Locations (${totalLocations})`;
   })();
 
-  /* ------------------------------- navigation ------------------------------ */
-
   const navBack = () => {
     if (mode === "view" && reportId) navigate(`/notifications/${reportId}/verify`);
     else navigate(`/profile/report-history/${userID}`);
   };
 
-  /* ------------------------------ data loading ----------------------------- */
 
   useEffect(() => {
     (async () => {
@@ -453,18 +217,28 @@ export default function Report() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Cannot fetch lost report");
 
+      if (String(data.user_id) !== String(userID)) {
+        showToast("Item is not yours");
+
+        navigate(`/home`);
+
+        return;
+      }
+
+
+
       setItemName(data.item_name || "");
       setDescription(data.description || "");
       setContents(data.contents || "");
       setCategoryID(String(data.category_id || ""));
       setSpecificLocation(data.specific_location || "");
 
-      if (data.image_url) setImage(data.image_url); // existing photo; replaced only if user picks a new one
+      if (data.image_url) setImage(data.image_url);
 
       if (data.lost_date) {
         const [datePart, timePart] = data.lost_date.split(/[T ]/);
         setDateLost(datePart || "");
-        setTimeLost(timePart?.slice(0, 5) || ""); // "14:30:00" -> "14:30"
+        setTimeLost(timePart?.slice(0, 5) || "");
       }
 
       if (data.location_lost) {
@@ -520,8 +294,6 @@ export default function Report() {
     []
   );
 
-  /* -------------------------------- photo + AI ----------------------------- */
-
   const setPhoto = (file) => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
     const url = URL.createObjectURL(file);
@@ -530,7 +302,6 @@ export default function Report() {
     setSelectedFile(file);
   };
 
-  // When editing, "REMOVE" tells the server to drop the saved photo
   const clearPhoto = () => {
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current);
@@ -554,7 +325,6 @@ export default function Report() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "AI analysis failed");
 
-      // AI text is cut to the same limits as typed text
       setItemName(sanitizeInput(data.itemName, LIMITS.itemName));
       setDescription(sanitizeInput(data.detailedDescription, LIMITS.description));
       setContents(sanitizeInput(data.contents, LIMITS.contents));
@@ -573,7 +343,7 @@ export default function Report() {
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // lets the same file be picked again
+    e.target.value = "";
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE) {
@@ -586,20 +356,8 @@ export default function Report() {
     }
 
     setPhoto(file);
-    if (useAiDescribe) analyzeImage(file);
   };
 
-  // Same rule as the mobile form: turning AI on clears the photo so the
-  // next one the user adds is scanned
-  const handleAiToggle = (value) => {
-    setUseAiDescribe(value);
-    if (value && hasPhoto) {
-      clearPhoto();
-      showToast("Photo removed. Please insert an image again to use AI.");
-    }
-  };
-
-  /* ------------------------------ page 1 actions --------------------------- */
 
   const clearError = (key) => errors[key] && setErrors((prev) => ({ ...prev, [key]: undefined }));
 
@@ -636,8 +394,6 @@ export default function Report() {
     setNextPage(true);
   };
 
-  /* ------------------------------ page 2 actions --------------------------- */
-
   const handleDateChange = (value) => {
     setDateLost(value);
     setTimeLost("");
@@ -653,8 +409,6 @@ export default function Report() {
     setSelectedLocations([]); // "Can't remember" replaces any other choice
     setOpenGroups({ college: false, shared: false, gates: false });
   };
-
-  /* --------------------------------- saving -------------------------------- */
 
   const buildFormData = () => {
     const formData = new FormData();
@@ -701,8 +455,6 @@ export default function Report() {
     }
   };
 
-  /* ---------------------------- cancel / edit flow ------------------------- */
-
   const handleDiscard = () => {
     if (reportId) {
       navigate(`/notifications/${reportId}/verify`);
@@ -722,8 +474,6 @@ export default function Report() {
     setIsEdit(true);
   };
 
-  /* --------------------------------- render -------------------------------- */
-
   return (
     <>
       <div className={submitted ? "hidden" : ""}>
@@ -735,13 +485,11 @@ export default function Report() {
       </div>
 
       <div
-        className={`${
-          submitted
-            ? "bg-(--color-primary) flex flex-col items-center justify-center"
-            : "bg-(--color-secondary)"
-        } min-h-screen px-4`}
+        className={`${submitted
+          ? "bg-(--color-primary) flex flex-col items-center justify-center"
+          : "bg-(--color-secondary)"
+          } min-h-screen px-4`}
       >
-        {/* ---------------------------- PAGE 1 ---------------------------- */}
         {!nextPage && (
           <div className="pb-24">
             <SectionHeading>Item Description</SectionHeading>
@@ -750,8 +498,8 @@ export default function Report() {
               image={image}
               isLoading={isAnalyzing}
               viewOnly={viewOnly}
-              useAi={useAiDescribe}
-              onToggleAi={handleAiToggle}
+              canScan={selectedFile instanceof File && !isAnalyzing}
+              onScan={() => analyzeImage(selectedFile)}
               onOpenPicker={() => setShowImageOptions(true)}
             />
 
@@ -776,14 +524,15 @@ export default function Report() {
                 <select
                   id="category"
                   value={categoryID}
-                  disabled={viewOnly || categories.length === 0}
+                  disabled={viewOnly || categories.length === 0 || isAnalyzing}
                   onChange={(e) => {
                     setCategoryID(e.target.value);
                     clearError("category");
                   }}
                   className={fieldClass(
                     !!errors.category,
-                    `h-[50px] appearance-none pr-10 ${categoryID ? "" : "text-[#8C7A70]"}`
+                    `h-[50px] appearance-none pr-10 ${categoryID ? "" : "text-[#8C7A70]"}
+                    disabled:opacity-60`
                   )}
                 >
                   <option value="">
@@ -812,7 +561,7 @@ export default function Report() {
                 type="text"
                 value={itemName}
                 maxLength={LIMITS.itemName}
-                disabled={viewOnly}
+                disabled={viewOnly || isAnalyzing}
                 placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
                 onChange={(e) => {
                   setItemName(sanitizeInput(e.target.value, LIMITS.itemName));
@@ -834,7 +583,7 @@ export default function Report() {
                 id="description"
                 value={description}
                 maxLength={LIMITS.description}
-                disabled={viewOnly}
+                disabled={viewOnly || isAnalyzing}
                 placeholder="Brand, Model, Size, Color, Material, etc."
                 onChange={(e) => {
                   setDescription(sanitizeInput(e.target.value, LIMITS.description));
@@ -856,7 +605,7 @@ export default function Report() {
                 type="text"
                 value={contents}
                 maxLength={LIMITS.contents}
-                disabled={viewOnly}
+                disabled={viewOnly || isAnalyzing}
                 placeholder="e.g., Cash amount, ID name"
                 onChange={(e) => {
                   setContents(sanitizeInput(e.target.value, LIMITS.contents));
@@ -960,9 +709,8 @@ export default function Report() {
                   <hr className="my-1 border-gray-200" />
 
                   <label
-                    className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full ${
-                      cantRemember ? "bg-[#e5d4b8] text-primary" : "bg-[#F2F2F2]"
-                    }`}
+                    className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full ${cantRemember ? "bg-[#e5d4b8] text-primary" : "bg-[#F2F2F2]"
+                      }`}
                   >
                     <input
                       type="checkbox"
@@ -1081,7 +829,6 @@ export default function Report() {
         )}
 
         {/* ------------------------ overlays & dialogs ------------------------ */}
-        {isAnalyzing && <Loading label="Analyzing Image" />}
         {isSubmitting && <Loading label="Creating Lost Report" />}
         {isUpdating && <Loading label="Updating Lost Report" />}
 

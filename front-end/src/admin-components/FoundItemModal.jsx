@@ -381,7 +381,7 @@ const analyzeFile = async () => {
                     {/* SCROLLABLE CONTENT */}
                     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
 
-                        <div>
+                        <div >
                             <p className="font-medium text-sm ">
                                 Surrendered Item Photo <span className="text-primary">*</span>
                             </p>
