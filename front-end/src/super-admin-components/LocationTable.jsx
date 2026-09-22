@@ -1,5 +1,5 @@
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LocationManagementModal from "./LocationManagementModal";
 
 const TYPE_LABELS = {
@@ -10,7 +10,8 @@ const TYPE_LABELS = {
 
 export default function LocationTable({ locations, onUpdated, selectedLocation, setSelectedLocation }) {
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const [tableHeight, setTableHeight] = useState(() => (window.innerHeight > 732 ? "min-h-150" : "min-h-102"));
+    const [itemsPerPage, setItemsPerPage] = useState(() => (window.innerHeight > 732 ? 9 : 6));
     const safeLocations = Array.isArray(locations) ? locations : [];
     const totalPages = Math.max(1, Math.ceil(safeLocations.length / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -19,16 +20,38 @@ export default function LocationTable({ locations, onUpdated, selectedLocation, 
 
     const formatLocId = (index) => `LOC-${String(index + 1).padStart(5, "0")}`;
 
+    useEffect(() => {
+        const updateTableSize = () => {
+            const height = window.innerHeight;
+
+            if (height > 732) {
+                setTableHeight("min-h-150");
+                setItemsPerPage(9);
+            } else {
+                setTableHeight("min-h-102");
+                setItemsPerPage(6);
+            }
+        };
+
+        updateTableSize();
+
+        window.addEventListener("resize", updateTableSize);
+
+        return () => {
+            window.removeEventListener("resize", updateTableSize);
+        };
+    }, []);
+
     return (
         <>
             <div>
-                <div className="h-fit w-full max-w-full min-w-0 min-h-100 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden">
+                <div className={`h-fit ${tableHeight} w-full max-w-full min-w-0 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden`}>
                     <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm">
                         <table className="table table-zebra table-sm min-w-295 [&_th]:px-2 [&_td]:px-2 text-center">
                             <thead className="bg-primary text-white text-center">
                                 <tr>
                                     <th className="w-20">LOC ID</th>
-                                    <th className="w-48">NAME</th>
+                                    <th className="w-64">NAME</th>
                                     <th className="w-40">TYPE</th>
                                     <th className="w-32">STATUS</th>
                                     <th className="w-24">ACTIONS</th>
@@ -45,11 +68,11 @@ export default function LocationTable({ locations, onUpdated, selectedLocation, 
                                                 : "bg-[#F5F5F5]"
                                         }
                                     >
-                                        <td className="w-28 align-middle text-center">
+                                        <td className="w-28 align-middle h-15 text-center">
                                             {formatLocId(startIndex + index)}
                                         </td>
 
-                                        <td className="truncate max-w-48 align-middle text-center">
+                                        <td className="truncate max-w-64 align-middle text-center">
                                             {loc.location_name ? loc.location_name : "N/A"}
                                         </td>
 
