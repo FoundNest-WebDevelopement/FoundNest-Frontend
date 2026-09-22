@@ -137,7 +137,7 @@ export default function RoleSelectionModal({ onClose }) {
                     </p>
                     {step === "pickOffice" && (
                         <button onClick={() => setStep("choose")}>
-                            <i className="fa-solid fa-arrow-left text-sm text-white" />
+                            <i className="fa-solid fa-x text-sm text-white" />
                         </button>
                     )}
                 </div>
