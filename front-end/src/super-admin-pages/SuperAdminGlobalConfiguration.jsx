@@ -53,6 +53,7 @@ export default function SuperAdminGlobalConfiguration() {
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [isLoadingLocations, setIsLoadingLocations] = useState(false);
     const [locationSearch, setLocationSearch] = useState("");
+    const [locationStatusFilter, setLocationStatusFilter] = useState("ALL");
     const [openAddLocation, setOpenAddLocation] = useState(false);
 
     const [centers, setCenters] = useState([]);
@@ -228,9 +229,16 @@ export default function SuperAdminGlobalConfiguration() {
     return matchesSearch && matchesStatus;
 });
 
-    const filteredLocations = locations.filter((loc) =>
-        loc.location_name?.toLowerCase().includes(locationSearch.toLowerCase())
-    );
+    const filteredLocations = locations.filter((loc) => {
+        const matchesSearch = loc.location_name?.toLowerCase().includes(locationSearch.toLowerCase());
+
+        const matchesStatus =
+            locationStatusFilter === "ALL" ||
+            (locationStatusFilter === "ACTIVE" && loc.status === true) ||
+            (locationStatusFilter === "INACTIVE" && loc.status === false);
+
+        return matchesSearch && matchesStatus;
+    });
 
     const filteredCenters = centers.filter((center) =>
         center.office_name?.toLowerCase().includes(centerSearch.toLowerCase())
@@ -369,15 +377,26 @@ export default function SuperAdminGlobalConfiguration() {
             {activeTab === "LOCATIONS" && (
                 <>
                     <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
-                            <Search size={16} className="text-[#9A8F7C]" />
-                            <input
-                                type="text"
-                                placeholder="Search locations..."
-                                value={locationSearch}
-                                onChange={(e) => setLocationSearch(e.target.value)}
-                                className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
-                            />
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 min-w-100 shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                                <Search size={16} className="text-[#9A8F7C]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search locations..."
+                                    value={locationSearch}
+                                    onChange={(e) => setLocationSearch(e.target.value)}
+                                    className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
+                                />
+                            </div>
+                            <select
+                                value={locationStatusFilter}
+                                onChange={(e) => setLocationStatusFilter(e.target.value)}
+                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
                         </div>
 
                         <Button

@@ -10,10 +10,12 @@ export default function SwitchBackButton() {
     const [isLoading, setIsLoading] = useState(false);
     const [openConfirm, setOpenConfirm] = useState(false);
 
-    const actingAsSuperAdmin = localStorage.getItem("acting_as_super_admin") === "true";
     const actingAsAdmin = localStorage.getItem("acting_as_admin") === "true";
 
-    if (!actingAsSuperAdmin && !actingAsAdmin) return null;
+    // The acting_as_super_admin case (Super Admin who switched down to Admin
+    // or User) is handled by ActingSuperAdminSwitcher instead, since it needs
+    // a dropdown with lateral-switch options, not just a single "back" button.
+    if (!actingAsAdmin) return null;
 
     const handleSwitchBack = async () => {
         try {
@@ -52,7 +54,7 @@ export default function SwitchBackButton() {
         }
     };
 
-    const label = actingAsSuperAdmin ? "Back to Super Admin" : "Back to Admin";
+    const label = "Back to Admin";
 
     return (
         <>

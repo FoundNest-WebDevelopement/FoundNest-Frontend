@@ -6,6 +6,7 @@ import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SwitchBackButton from "../global-components/SwitchBackButton";
 import SwitchToUserButton from "../global-components/SwitchToUserButton";
+import ActingSuperAdminSwitcher from "../global-components/ActingSuperAdminSwitcher";
 
 export default function AdminTopBar({ tabName }) {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -132,6 +133,7 @@ export default function AdminTopBar({ tabName }) {
             <p>{tabName}</p>
           </div>
           <div className="flex items-center gap-2 ">
+            <ActingSuperAdminSwitcher />
             <SwitchBackButton />
             <SwitchToUserButton />
             <div className="relative group flex items-center justify-center">
