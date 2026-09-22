@@ -531,7 +531,7 @@ export default function Report() {
                   }}
                   className={fieldClass(
                     !!errors.category,
-                    `h-[50px] appearance-none pr-10 ${categoryID ? "" : "text-[#8C7A70]"}
+                    `h-12.5 appearance-none pr-10 ${categoryID ? "" : "text-[#8C7A70]"}
                     disabled:opacity-60`
                   )}
                 >
@@ -567,7 +567,7 @@ export default function Report() {
                   setItemName(sanitizeInput(e.target.value, LIMITS.itemName));
                   clearError("itemName");
                 }}
-                className={fieldClass(!!errors.itemName, "h-[50px]")}
+                className={fieldClass(!!errors.itemName, "h-12.5")}
               />
             </Field>
 
@@ -589,7 +589,7 @@ export default function Report() {
                   setDescription(sanitizeInput(e.target.value, LIMITS.description));
                   clearError("description");
                 }}
-                className={fieldClass(!!errors.description, "h-[140px] py-3 resize-none")}
+                className={fieldClass(!!errors.description, "h-35 py-3 resize-none")}
               />
             </Field>
 
@@ -611,11 +611,11 @@ export default function Report() {
                   setContents(sanitizeInput(e.target.value, LIMITS.contents));
                   clearError("contents");
                 }}
-                className={fieldClass(!!errors.contents, "h-[50px]")}
+                className={fieldClass(!!errors.contents, "h-12.5")}
               />
             </Field>
 
-            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/[0.24]">
+            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/24">
               <p className="text-sm font-bold">Page 1 out of 2</p>
 
               <div className="flex gap-2.5">
@@ -654,7 +654,7 @@ export default function Report() {
                 max={todayLocalISO()}
                 disabled={viewOnly}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className={fieldClass(!!dateLost && !dateValid, "h-[50px]")}
+                className={fieldClass(!!dateLost && !dateValid, "h-12.5")}
               />
             </Field>
 
@@ -671,7 +671,7 @@ export default function Report() {
                 value={timeLost}
                 disabled={!dateValid || viewOnly}
                 onChange={(e) => setTimeLost(e.target.value)}
-                className={fieldClass(dateValid && !!timeLost && !timeValid, "h-[50px]")}
+                className={fieldClass(dateValid && !!timeLost && !timeValid, "h-12.5")}
               />
             </Field>
 
@@ -679,7 +679,7 @@ export default function Report() {
               <button
                 type="button"
                 onClick={() => setOpenLocations((prev) => !prev)}
-                className={fieldClass(false, "h-[50px] flex items-center justify-between text-left text-sm")}
+                className={fieldClass(false, "h-12.5 flex items-center justify-between text-left text-sm")}
               >
                 <span className={`truncate ${totalLocations === 0 ? "text-[#8C7A70]" : ""}`}>
                   {locationLabel}
@@ -741,7 +741,7 @@ export default function Report() {
                 onChange={(e) =>
                   setSpecificLocation(sanitizeInput(e.target.value, LIMITS.specificLocation))
                 }
-                className={fieldClass(false, "h-[50px]")}
+                className={fieldClass(false, "h-12.5")}
               />
             </Field>
 
@@ -758,7 +758,7 @@ export default function Report() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/[0.24]">
+            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/24">
               <p className="text-sm font-bold">Page 2 out of 2</p>
 
               <div className="flex gap-2.5">

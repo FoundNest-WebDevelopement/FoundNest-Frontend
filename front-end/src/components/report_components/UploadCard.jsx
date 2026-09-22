@@ -15,7 +15,7 @@ export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan
 
   return (
     <div className="flex justify-center pb-2.5">
-      <div className="w-full max-w-[450px] bg-white rounded-[28px] py-5 px-5 flex flex-col items-center shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
+      <div className="w-full max-w-112.5 bg-white rounded-[28px] py-5 px-5 flex flex-col items-center shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
         <button
           type="button"
           onClick={onOpenPicker}
@@ -28,7 +28,7 @@ export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan
               <Spinner />
             </div>
           ) : hasImage ? (
-            <div className="relative h-[110px] w-[110px]">
+            <div className="relative h-27.5 w-27.5">
               <img src={image} alt="Item" className="h-full w-full rounded-[20px] object-cover" />
               {!viewOnly && (
                 <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary border-2 border-white flex items-center justify-center">
@@ -38,7 +38,7 @@ export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan
             </div>
           ) : (
             <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-primary flex items-center justify-center">
-              <div className="h-[60px] w-[60px] rounded-full bg-primary flex items-center justify-center">
+              <div className="h-15 w-15 rounded-full bg-primary flex items-center justify-center">
                 <i className="fa-solid fa-plus text-white text-2xl" />
               </div>
             </div>
@@ -47,7 +47,7 @@ export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan
         <p className="text-[17px] font-semibold text-[#6B5A52] text-center mb-3.5">
           {isLoading ? "Analyzing image..." : "Upload Item Photo (Optional)"}
         </p>
-        <p className="text-[13px] text-[#8C7A70] text-center leading-[22px] px-3">
+        <p className="text-[13px] text-[#8C7A70] text-center leading-5.5 px-3">
           *FoundNest AI will help auto-fill details based on your photo.
         </p>
         <p className="text-xs text-[#8C7A70] text-center mt-1">PNG, JPG or WEBP up to 10MB</p>

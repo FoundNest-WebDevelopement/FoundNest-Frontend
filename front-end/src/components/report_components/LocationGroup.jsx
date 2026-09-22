@@ -21,7 +21,7 @@ export default function LocationGroup({ group, selectedLocations, open, onToggle
           {group.items.map((item) => (
             <label
               key={item.key}
-              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border border-[#eee] has-[:checked]:border-primary"
+              className="cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-fit bg-[#f9f9f9] border border-[#eee] has-checked:border-primary"
             >
               <input
                 type="checkbox"
