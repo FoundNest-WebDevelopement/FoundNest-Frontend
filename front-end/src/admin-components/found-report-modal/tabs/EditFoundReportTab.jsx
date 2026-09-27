@@ -242,6 +242,7 @@ const analyzeFile = async () => {
             // Assume the refresh updates the parent state, optionally you can pass specific updated data
             setOriginalFormData({ ...formData });
             setIsEditing(false);
+            setHasChanges(false)
             toast.success(`Successfully updated item details`);
             
         } catch (error) {
