@@ -22,6 +22,8 @@ import MatchDetails from "./pages/MacthDetails";
 import VerifyMatch from "./pages/VerifyMatch";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserLayout from "./layout/UserLayout";
+import { useEffect } from "react";
+import { initAuthSync } from "./utils/authSync";
 
 
 function Layout() {
@@ -92,6 +94,10 @@ function Layout() {
 }
 
 function App() {
+  useEffect(() => {
+    return initAuthSync();
+  }, []);
+
   return (
     <BrowserRouter>
       <Layout />
