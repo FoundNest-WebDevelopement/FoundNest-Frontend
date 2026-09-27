@@ -150,6 +150,7 @@ export default function DisposeFoundReportTab({
             
             toast.success("Item disposed successfully.");
             
+            setHasChanges(false)
             resetDisposalForm();
             setDisposalMethod("");
             onCancel(); // Switches back to the details tab

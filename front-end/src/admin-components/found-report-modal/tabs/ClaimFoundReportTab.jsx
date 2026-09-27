@@ -128,6 +128,7 @@ export default function ClaimFoundReportTab({
             await refreshReports();
             toast.success(`Successfully marked ${formatItemId(selectedItem.item_id)} as Claimed.`);
 
+            setHasChanges(false)
             // Pass the claimId and fullName back to the parent to show the success dialog
             onSuccess(data.claim.claim_id, fullName);
 
