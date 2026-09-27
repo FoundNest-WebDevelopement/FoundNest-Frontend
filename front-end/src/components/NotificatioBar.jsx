@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SwitchBackButton from "../global-components/SwitchBackButton";
+import ActingSuperAdminSwitcher from "../global-components/ActingSuperAdminSwitcher";
 
 
 
@@ -54,6 +55,7 @@ export default function NotificationBar() {
       </div>
 
       <div className="navbar-end mx-2 flex items-center gap-2">
+        <ActingSuperAdminSwitcher />
         <SwitchBackButton />
 
         <NavLink
