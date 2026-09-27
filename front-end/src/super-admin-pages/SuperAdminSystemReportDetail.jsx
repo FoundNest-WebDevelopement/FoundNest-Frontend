@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Search, Filter, ChevronDown, ArrowLeft, Download, Package, CheckCircle2, AlertTriangle, Trash2, Eye, X } from "lucide-react";
+import { Search, Filter, ChevronDown, ArrowLeft, Download, FileText, Package, CheckCircle2, AlertTriangle, Trash2, Eye, X } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatItemId, formatReportId } from "../utils/formatId";
 import WebLoading from "../global-components/WebLoading";
+import GenerateReportModal from "../super-admin-components/GenerateReportModal";
 
 function StatCard({ icon: Icon, iconBg, iconColor, label, value }) {
     return (
@@ -68,6 +69,8 @@ export default function SuperAdminSystemReportDetail() {
     const [isLoadingOverview, setIsLoadingOverview] = useState(true);
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
+    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    const [openGenerateReport, setOpenGenerateReport] = useState(false);
 
     const [search, setSearch] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -173,9 +176,10 @@ export default function SuperAdminSystemReportDetail() {
         setCurrentPage(1);
     };
 
-    const handleExport = async () => {
+    const handleExport = async (format = "csv") => {
         try {
             setIsExporting(true);
+            setIsExportMenuOpen(false);
 
             const params = new URLSearchParams();
             if (search.trim()) params.set("search", search.trim());
@@ -183,6 +187,7 @@ export default function SuperAdminSystemReportDetail() {
             if (dateFrom) params.set("date_from", dateFrom);
             if (dateTo) params.set("date_to", dateTo);
             if (selectedAdmin !== "all") params.set("admin_id", selectedAdmin);
+            params.set("format", format);
 
             const response = await fetchWithAuth(`${API_URL}/api/system-reports/office/${officeId}/export?${params.toString()}`);
 
@@ -195,7 +200,7 @@ export default function SuperAdminSystemReportDetail() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `office-${officeId}-activity-log.csv`;
+            link.download = `office-${officeId}-activity-log.${format}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -275,14 +280,48 @@ export default function SuperAdminSystemReportDetail() {
                     </button>
                     <button
                         type="button"
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                            transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={() => setOpenGenerateReport(true)}
+                        className="flex items-center gap-2 bg-white border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium
+                            transition-transform duration-100 active:scale-95"
                     >
-                        <Download size={16} />
-                        {isExporting ? "Exporting..." : "Export Log"}
+                        <FileText size={16} />
+                        Generate Report
                     </button>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setIsExportMenuOpen((o) => !o)}
+                            disabled={isExporting}
+                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
+                                transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <Download size={16} />
+                            {isExporting ? "Exporting..." : "Export Log"}
+                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExportMenuOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isExportMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
+                                <div className="absolute right-0 mt-2 w-40 bg-white border border-[#DDD9CF] rounded-lg shadow-lg z-50 overflow-hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleExport("csv")}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-[#1A1208] hover:bg-[#F5F5F5] cursor-pointer"
+                                    >
+                                        Export as CSV
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleExport("pdf")}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-[#1A1208] hover:bg-[#F5F5F5] cursor-pointer"
+                                    >
+                                        Export as PDF
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -611,6 +650,15 @@ export default function SuperAdminSystemReportDetail() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {openGenerateReport && (
+                <GenerateReportModal
+                    centers={[office]}
+                    defaultOfficeId={office.office_id}
+                    lockOffice
+                    onClose={() => setOpenGenerateReport(false)}
+                />
             )}
         </div>
     );
