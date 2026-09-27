@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export default function ConfirmDialog({
   title = "Discard Changes?",
@@ -13,9 +14,9 @@ export default function ConfirmDialog({
   disabled,
   
 }) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
       onClick={() => !disabled && onClose()}
     >
       <div
@@ -69,6 +70,7 @@ export default function ConfirmDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

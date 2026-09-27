@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -122,9 +123,9 @@ export default function RoleSelectionModal({ onClose }) {
         }
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
             onClick={() => !isLoading && onClose()}
         >
             <div
@@ -222,6 +223,7 @@ export default function RoleSelectionModal({ onClose }) {
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

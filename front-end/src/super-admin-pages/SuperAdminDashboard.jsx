@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2, Gift } from "lucide-react";
+import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2, Gift, Trash2 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import WebLoading from "../global-components/WebLoading";
 import DateRangeFilter from "../global-components/DateRangeFilter";
+import TrendBadge from "../global-components/TrendBadge";
 
 const CENTER_COLORS = ["#7A0C0C", "#D4A017", "#8C7B6B", "#4A6FA5", "#5A8F5A", "#A55A8F"];
 
@@ -24,14 +25,19 @@ function formatPeriodLabel(period, granularity) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Manila" });
 }
 
-function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtextColor }) {
+function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtextColor, trend }) {
     return (
         <div className="bg-white rounded-xl border border-[#E5E1D8] shadow-[0_2px_6px_0px_rgba(0,0,0,0.06)] p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}>
-                    <Icon size={20} className={iconColor} />
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
+                        <Icon size={20} className={iconColor} />
+                    </div>
+                    <p className="text-sm text-[#6B5C42] min-w-0">{label}</p>
                 </div>
-                <p className="text-sm text-[#6B5C42]">{label}</p>
+                <div className="shrink-0">
+                    <TrendBadge percent={trend} />
+                </div>
             </div>
             <p className="text-3xl font-bold text-[#1A1208]">{value}</p>
             <p className={`text-xs font-medium ${subtextColor}`}>{subtext}</p>
@@ -99,6 +105,7 @@ export default function SuperAdminDashboard() {
     const [stats, setStats] = useState(null);
     const [centers, setCenters] = useState([]);
     const [statusTrend, setStatusTrend] = useState({ granularity: "day", points: [] });
+    const [comparison, setComparison] = useState(null);
     const [counters, setCounters] = useState(null);
     const [actionFeed, setActionFeed] = useState([]);
     const [aiSummary, setAiSummary] = useState("");
@@ -125,6 +132,7 @@ export default function SuperAdminDashboard() {
                 setStats(data.stats);
                 setCenters(data.centers);
                 setStatusTrend(data.statusTrend ?? { granularity: "day", points: [] });
+                setComparison(data.comparison ?? null);
                 setCounters(data.counters);
                 setActionFeed(data.actionFeed);
                 setAiSummary(data.aiSummary);
@@ -162,7 +170,7 @@ if (!stats || !counters) {
             </div>
 
             {/* STAT CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-5">
                 <StatCard
                     icon={Package}
                     iconBg="bg-[#FBEFD8]"
@@ -171,6 +179,7 @@ if (!stats || !counters) {
                     value={stats.total_items}
                     subtext="Surrendered Items"
                     subtextColor="text-green-700"
+                    trend={comparison?.total_items}
                 />
                 <StatCard
                     icon={CheckCircle2}
@@ -180,6 +189,7 @@ if (!stats || !counters) {
                     value={stats.total_claimed}
                     subtext={`Claim Rate ${stats.claim_rate}%`}
                     subtextColor="text-green-700"
+                    trend={comparison?.total_claimed}
                 />
                 <StatCard
                     icon={FileText}
@@ -189,6 +199,8 @@ if (!stats || !counters) {
                     value={stats.active_lost_reports}
                     subtext="Awaiting Verification"
                     subtextColor="text-blue-700"
+                    // No trend badge — this is a live snapshot of currently-open
+                    // reports, not scoped to the date filter.
                 />
                 <StatCard
                     icon={AlertTriangle}
@@ -198,6 +210,7 @@ if (!stats || !counters) {
                     value={stats.unclaimed_30_days}
                     subtext="To be donated"
                     subtextColor="text-[#C0392B]"
+                    // No trend badge — always a live backlog snapshot too.
                 />
                 <StatCard
                     icon={Gift}
@@ -207,6 +220,17 @@ if (!stats || !counters) {
                     value={stats.donated_items}
                     subtext="Given to charity"
                     subtextColor="text-blue-700"
+                    trend={comparison?.donated_items}
+                />
+                <StatCard
+                    icon={Trash2}
+                    iconBg="bg-[#F0EFEC]"
+                    iconColor="text-[#6B5C42]"
+                    label="Disposed Items"
+                    value={stats.disposed_items}
+                    subtext="Discarded as waste"
+                    subtextColor="text-[#6B5C42]"
+                    trend={comparison?.disposed_items}
                 />
             </div>
 

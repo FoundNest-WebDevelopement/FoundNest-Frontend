@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Tag } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -84,10 +85,11 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
     return(
         <>
 
-        
-        
+
+
+        {createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
             onClick={() => (checkProgress ? setOpenCancelAdd(true) : onClose())}
         >
             <div
@@ -172,7 +174,9 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
+        )}
 
         {openConfirmAdd &&
             <ConfirmDialog
