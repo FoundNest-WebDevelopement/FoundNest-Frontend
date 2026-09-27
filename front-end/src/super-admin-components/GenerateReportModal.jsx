@@ -1,15 +1,16 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 
-export default function GenerateReportModal({ centers, onClose }) {
+export default function GenerateReportModal({ centers, onClose, defaultOfficeId = "all", lockOffice = false }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const today = new Date().toISOString().split("T")[0];
 
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
-    const [officeId, setOfficeId] = useState("all");
+    const [officeId, setOfficeId] = useState(defaultOfficeId);
     const [format, setFormat] = useState("csv");
     const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState("");
@@ -74,9 +75,9 @@ export default function GenerateReportModal({ centers, onClose }) {
         }
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
             onClick={() => !isExporting && onClose()}
         >
             <div
@@ -126,10 +127,12 @@ export default function GenerateReportModal({ centers, onClose }) {
                         </label>
                         <select
                             value={officeId}
+                            disabled={lockOffice}
                             onChange={(e) => setOfficeId(e.target.value)}
-                            className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                            className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
+                                disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
                         >
-                            <option value="all">All Centers</option>
+                            {!lockOffice && <option value="all">All Centers</option>}
                             {centers.map((c) => (
                                 <option key={c.office_id} value={c.office_id}>
                                     {c.office_name}
@@ -184,6 +187,7 @@ export default function GenerateReportModal({ centers, onClose }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import ConfirmDialog from "../global-components/ConfirmDialog";
@@ -143,8 +144,9 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
 
     return (
         <>
+            {createPortal(
             <div
-                className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
                 onClick={() => !isSaving && onClose()}
             >
                 <div
@@ -337,7 +339,9 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
+            )}
 
             {openConfirmDialog && (
                 <ConfirmDialog

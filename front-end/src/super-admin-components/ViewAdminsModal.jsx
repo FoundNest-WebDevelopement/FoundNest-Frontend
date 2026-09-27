@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { MoreVertical, UserCircle2, Search } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -157,8 +158,9 @@ export default function ViewAdminsModal({ center, onClose }) {
 
   return (
     <>
+      {createPortal(
       <div
-        className="fixed inset-0 bg-black/60 flex items-center justify-end z-1040"
+        className="fixed inset-0 bg-black/60 flex items-center justify-end z-[1040]"
         onClick={() => onClose()}
       >
         <div
@@ -261,11 +263,13 @@ export default function ViewAdminsModal({ center, onClose }) {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
-      {openAddAdmin && (
+      {openAddAdmin && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-1050"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1050]"
           onClick={() => !isAssigning && setOpenAddAdmin(false)}
         >
           <div
@@ -351,7 +355,8 @@ export default function ViewAdminsModal({ center, onClose }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {confirmAssignUser && (

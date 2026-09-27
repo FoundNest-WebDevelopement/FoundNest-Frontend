@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { TriangleAlert, Mail, KeyRound, AtSign } from "lucide-react";
 import { toast } from "react-toastify";
 import { adminSendResetOTP, adminVerifyOTPAndResetPassword, superAdminSendOTP, superAdminVerifyOTPAndResetPassword } from "../utils/authApi";
@@ -94,9 +95,9 @@ export default function ResetPasswordModal({ user, onClose }) {
       </p>
     ) : null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
       onClick={() => !isSending && !isVerifying && handleClose()}
     >
       <div
@@ -323,6 +324,7 @@ export default function ResetPasswordModal({ user, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

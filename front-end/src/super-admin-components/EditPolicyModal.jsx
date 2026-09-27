@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Settings, Plus, Trash2, TriangleAlert } from "lucide-react";
 import ConfirmDialog from "../global-components/ConfirmDialog";
 
@@ -199,8 +200,9 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
 
     return (
         <>
+        {createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
             onClick={requestClose}
         >
             <div
@@ -432,7 +434,9 @@ export default function EditPolicyModal({ policy, onClose, onSave }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
+        )}
 
         {openConfirmDialog && (
             <ConfirmDialog

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import formatDate from "../utils/formatDate";
 import Button from "../global-components/Button";
 import ConfirmDialog from "../global-components/ConfirmDialog";
@@ -218,6 +219,7 @@ export default function UserManagementModal(
 
     return (
         <>
+            {createPortal(
             <div
                 className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center"
                 onClick={() => setSelectedUser(null)}
@@ -492,7 +494,9 @@ export default function UserManagementModal(
                         }
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
+            )}
             {openRevokePrivillege &&
                 <ConfirmDialog
                     Icon={TriangleAlert}
@@ -533,10 +537,10 @@ export default function UserManagementModal(
                 />
             }
             {openLockAccount &&
-                (
+                createPortal(
 
                     <div
-                        className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                        className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
                         onClick={() => !isLocking && setOpenLockAccount(false)}
                     >
                         <div
@@ -601,8 +605,8 @@ export default function UserManagementModal(
                                 </div>
                             </div>
                         </div>
-                    </div>
-
+                    </div>,
+                    document.body
                 )
 
             }

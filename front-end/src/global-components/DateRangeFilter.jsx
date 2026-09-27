@@ -9,8 +9,14 @@ const PRESETS = [
     { key: "custom", label: "Custom Range" },
 ];
 
+// Local calendar date as "YYYY-MM-DD" — NOT d.toISOString(), which converts
+// to UTC first and silently shifts the date back a day in any timezone ahead
+// of UTC (e.g. Manila, UTC+8: local midnight becomes "yesterday" in UTC).
 function toDateStr(d) {
-    return d.toISOString().slice(0, 10);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 function getPresetRange(key) {

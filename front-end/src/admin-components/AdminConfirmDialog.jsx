@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export default function AdminConfirmDialog({
   title = "Discard Changes?",
@@ -12,11 +13,11 @@ export default function AdminConfirmDialog({
   message,
   disabled,
   positiveBtnColor = "bg-primary"
-  
+
 }) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
       onClick={() => !disabled && onClose()}
     >
       <div
@@ -71,6 +72,7 @@ export default function AdminConfirmDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

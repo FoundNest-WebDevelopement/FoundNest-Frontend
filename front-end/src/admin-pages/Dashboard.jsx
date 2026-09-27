@@ -1,10 +1,27 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { ClipboardList, CheckCircle, AlertTriangle, Gift } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
+import { ClipboardList, CheckCircle, AlertTriangle, Gift, Trash2 } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import DateRangeFilter from "../global-components/DateRangeFilter";
+import TrendBadge from "../global-components/TrendBadge";
 
 const STATUS_COLORS = ["#4A6FA5", "#C0392B", "#5A8F5A", "#D4A017", "#8C7B6B"];
+
+// Fixed categorical order — color follows the series identity, never its rank.
+const TREND_SERIES = [
+    { key: "logged", label: "Logged", color: "#2a78d6" },
+    { key: "claimed", label: "Claimed", color: "#eb6834" },
+    { key: "donated", label: "Donated", color: "#1baf7a" },
+    { key: "disposed", label: "Disposed", color: "#eda100" },
+];
+
+function formatPeriodLabel(period, granularity) {
+    const date = new Date(period);
+    if (granularity === "month") {
+        return date.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "Asia/Manila" });
+    }
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Manila" });
+}
 
 export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -15,6 +32,8 @@ export default function Dashboard() {
 
     const [stats, setStats] = useState(null);
     const [statusBreakdown, setStatusBreakdown] = useState([]);
+    const [statusTrend, setStatusTrend] = useState({ granularity: "day", points: [] });
+    const [comparison, setComparison] = useState(null);
     const [recentActions, setRecentActions] = useState([]);
     const [recentFeedbacks, setRecentFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -34,6 +53,8 @@ export default function Dashboard() {
                 const data = await res.json();
                 setStats(data.stats);
                 setStatusBreakdown(data.statusBreakdown ?? []);
+                setStatusTrend(data.statusTrend ?? { granularity: "day", points: [] });
+                setComparison(data.comparison ?? null);
                 setRecentActions(data.recentActions);
                 setRecentFeedbacks(data.recentFeedbacks);
             } catch (err) {
@@ -66,6 +87,7 @@ export default function Dashboard() {
             sub: `Items This Month: ${stats?.items_this_month ?? "--"}`,
             icon: <ClipboardList size={28} className="text-yellow-500" />,
             bg: "bg-yellow-50",
+            trend: comparison?.items_logged,
         },
         {
             label: "Items Claimed",
@@ -73,6 +95,7 @@ export default function Dashboard() {
             sub: `Claim Rate ${stats?.claim_rate ?? "--"}%`,
             icon: <CheckCircle size={28} className="text-green-500" />,
             bg: "bg-green-50",
+            trend: comparison?.items_claimed,
         },
         {
             label: "Unclaimed Items (>30 days)",
@@ -80,6 +103,8 @@ export default function Dashboard() {
             sub: "To be donated",
             icon: <AlertTriangle size={28} className="text-red-400" />,
             bg: "bg-red-50",
+            // No trend badge here — this is always a live backlog snapshot,
+            // not scoped to the date filter, so "vs previous period" doesn't apply.
         },
         {
             label: "Donated Items",
@@ -87,6 +112,15 @@ export default function Dashboard() {
             sub: "Given to charity",
             icon: <Gift size={28} className="text-blue-500" />,
             bg: "bg-blue-50",
+            trend: comparison?.donated_items,
+        },
+        {
+            label: "Disposed Items",
+            value: stats?.disposed_items ?? "--",
+            sub: "Discarded as waste",
+            icon: <Trash2 size={28} className="text-gray-500" />,
+            bg: "bg-gray-100",
+            trend: comparison?.disposed_items,
         },
     ];
 
@@ -102,10 +136,17 @@ export default function Dashboard() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
                 {statCards.map((card, i) => (
                     <div key={i} className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5 flex flex-col gap-3">
-                        <p className="text-sm text-gray-500">{card.label}</p>
+                        <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm text-gray-500 min-w-0 flex-1">{card.label}</p>
+                            {!loading && (
+                                <div className="shrink-0">
+                                    <TrendBadge percent={card.trend} />
+                                </div>
+                            )}
+                        </div>
                         <div className="flex items-center gap-3">
                             <div className={`${card.bg} p-2 rounded-full`}>
                                 {card.icon}
@@ -134,6 +175,47 @@ export default function Dashboard() {
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Status Over Time */}
+            <div className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5">
+                <p className="font-semibold text-[#1A1208] text-base mb-4">Status Over Time</p>
+                <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={statusTrend.points} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                            <XAxis
+                                dataKey="period"
+                                tickFormatter={(value) => formatPeriodLabel(value, statusTrend.granularity)}
+                                tick={{ fontSize: 12 }}
+                            />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip
+                                labelFormatter={(value) => formatPeriodLabel(value, statusTrend.granularity)}
+                                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                            />
+                            {TREND_SERIES.map((series) => (
+                                <Line
+                                    key={series.key}
+                                    type="monotone"
+                                    dataKey={series.key}
+                                    name={series.label}
+                                    stroke={series.color}
+                                    strokeWidth={2}
+                                    dot={false}
+                                    activeDot={{ r: 5 }}
+                                />
+                            ))}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+                    {TREND_SERIES.map((series) => (
+                        <div key={series.key} className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: series.color }} />
+                            <span className="text-xs text-[#6B5C42]">{series.label}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 

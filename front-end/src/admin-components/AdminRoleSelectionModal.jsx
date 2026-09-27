@@ -2,6 +2,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 const AdminIcon = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#990000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -58,9 +59,9 @@ export default function AdminRoleSelectionModal({ onClose }) {
         }
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
             onClick={() => !isLoading && onClose()}
         >
             <div
@@ -104,6 +105,7 @@ export default function AdminRoleSelectionModal({ onClose }) {
                     {error && <p className="text-xs text-[#C0392B] text-center">{error}</p>}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
