@@ -1,10 +1,26 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { ClipboardList, CheckCircle, AlertTriangle, Gift } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import DateRangeFilter from "../global-components/DateRangeFilter";
 
 const STATUS_COLORS = ["#4A6FA5", "#C0392B", "#5A8F5A", "#D4A017", "#8C7B6B"];
+
+// Fixed categorical order — color follows the series identity, never its rank.
+const TREND_SERIES = [
+    { key: "logged", label: "Logged", color: "#2a78d6" },
+    { key: "claimed", label: "Claimed", color: "#eb6834" },
+    { key: "donated", label: "Donated", color: "#1baf7a" },
+    { key: "disposed", label: "Disposed", color: "#eda100" },
+];
+
+function formatPeriodLabel(period, granularity) {
+    const date = new Date(period);
+    if (granularity === "month") {
+        return date.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "Asia/Manila" });
+    }
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Manila" });
+}
 
 export default function Dashboard() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -15,6 +31,7 @@ export default function Dashboard() {
 
     const [stats, setStats] = useState(null);
     const [statusBreakdown, setStatusBreakdown] = useState([]);
+    const [statusTrend, setStatusTrend] = useState({ granularity: "day", points: [] });
     const [recentActions, setRecentActions] = useState([]);
     const [recentFeedbacks, setRecentFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -34,6 +51,7 @@ export default function Dashboard() {
                 const data = await res.json();
                 setStats(data.stats);
                 setStatusBreakdown(data.statusBreakdown ?? []);
+                setStatusTrend(data.statusTrend ?? { granularity: "day", points: [] });
                 setRecentActions(data.recentActions);
                 setRecentFeedbacks(data.recentFeedbacks);
             } catch (err) {
@@ -134,6 +152,47 @@ export default function Dashboard() {
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Status Over Time */}
+            <div className="bg-white rounded-xl border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] p-5">
+                <p className="font-semibold text-[#1A1208] text-base mb-4">Status Over Time</p>
+                <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={statusTrend.points} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                            <XAxis
+                                dataKey="period"
+                                tickFormatter={(value) => formatPeriodLabel(value, statusTrend.granularity)}
+                                tick={{ fontSize: 12 }}
+                            />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip
+                                labelFormatter={(value) => formatPeriodLabel(value, statusTrend.granularity)}
+                                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                            />
+                            {TREND_SERIES.map((series) => (
+                                <Line
+                                    key={series.key}
+                                    type="monotone"
+                                    dataKey={series.key}
+                                    name={series.label}
+                                    stroke={series.color}
+                                    strokeWidth={2}
+                                    dot={false}
+                                    activeDot={{ r: 5 }}
+                                />
+                            ))}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+                    {TREND_SERIES.map((series) => (
+                        <div key={series.key} className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: series.color }} />
+                            <span className="text-xs text-[#6B5C42]">{series.label}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
