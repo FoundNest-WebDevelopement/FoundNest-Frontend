@@ -7,7 +7,7 @@ import { UnsavedChangesProvider } from "../context/UnsavedChangesContext";
 function UserLayout() {
     return (
         <UnsavedChangesProvider>
-            <div>
+           
                 <NotificationBar />
 
                 <div className="max-w-3xl mx-auto w-full">
@@ -15,7 +15,7 @@ function UserLayout() {
                 </div>
 
                 <Dock />
-            </div>
+
         </UnsavedChangesProvider>
     );
 }

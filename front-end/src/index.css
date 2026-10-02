@@ -12,6 +12,18 @@
   themes: false;
 }
 
+@layer base {
+  body {
+    @apply bg-white; 
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      @apply bg-[#2B2B2B];
+    }
+  }
+}
+
 body{
   font-family: "Poppins", sans-serif;
 }
