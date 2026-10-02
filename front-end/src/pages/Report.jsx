@@ -8,7 +8,6 @@ import HorizontalBreak from "../components/HorizontalBreak";
 import Loading from "../components/Loading";
 import AlertDialog from "../components/AlertDialog";
 import Toast from "../components/Toast";
-import InfoIcon from "../assets/info_icon.png";
 import heart from "../assets/heart.png";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import UploadCard from "../components/report_components/UploadCard";
@@ -28,7 +27,7 @@ const LIMITS = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-const showToast = (message) => toast.custom(() => <Toast icon={InfoIcon} message={message} />);
+const showToast = (message) => toast.custom(() => <Toast  message={message} solid={true}/>);
 
 const sanitizeInput = (value, maxLength) =>
   String(value ?? "")
@@ -323,7 +322,7 @@ export default function Report() {
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "AI analysis failed");
+      if (!res.ok) throw new Error(data.message || "AI analysis failed");
 
       setItemName(sanitizeInput(data.itemName, LIMITS.itemName));
       setDescription(sanitizeInput(data.detailedDescription, LIMITS.description));
@@ -468,11 +467,38 @@ export default function Report() {
     showToast("Edit has been cancelled.");
   };
 
-  const handleEditReport = () => {
-    setNextPage(false);
-    setSubmitted(false);
-    setIsEdit(true);
+  const hasUnsavedChanges =
+  !viewOnly &&
+  !submitted &&
+  (
+    !!image ||
+    !!categoryID ||
+    !!itemName.trim() ||
+    !!description.trim() ||
+    !!contents.trim() ||
+    !!dateLost ||
+    !!timeLost ||
+    selectedLocations.length > 0 ||
+    cantRemember ||
+    !!specificLocation.trim()
+  );
+
+  useEffect(() => {
+  const handleBeforeUnload = (e) => {
+    if (!hasUnsavedChanges) return;
+
+    e.preventDefault();
+    e.returnValue = "";
   };
+
+  window.addEventListener("beforeunload", handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  };
+}, [hasUnsavedChanges]);
+
+
 
   return (
     <>
@@ -678,6 +704,7 @@ export default function Report() {
             <Field label="Location Lost" required>
               <button
                 type="button"
+                disabled={viewOnly}
                 onClick={() => setOpenLocations((prev) => !prev)}
                 className={fieldClass(false, "h-12.5 flex items-center justify-between text-left text-sm")}
               >
@@ -810,11 +837,7 @@ export default function Report() {
 
               <HorizontalBreak />
 
-              <div className="flex justify-between px-3 py-3">
-                <button type="button" className="flex items-center gap-1" onClick={handleEditReport}>
-                  <i className="fa-regular fa-pen-to-square text-primary" />
-                  <span className="text-xs text-primary">Edit Report</span>
-                </button>
+              <div className="flex justify-center items-center px-3 py-3">
                 <button
                   type="button"
                   className="flex items-center gap-1"

@@ -72,6 +72,8 @@ export default function ItemManagement() {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("unclaimed");
 
+  
+
 
 
   // SEARCH AND FILTER FUNCTION
@@ -91,6 +93,7 @@ export default function ItemManagement() {
       report.item_name?.toLowerCase().includes(query) ||
       report.category_name?.toLowerCase().includes(query) ||
       report.location_found?.toLowerCase().includes(query) ||
+      report.reported_by_full_name?.toLowerCase().includes(query) ||
       report.reported_by?.toLowerCase().includes(query);
 
     const matchesCategory =

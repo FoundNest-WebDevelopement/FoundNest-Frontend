@@ -242,7 +242,7 @@ const analyzeFile = async () => {
         formData.append("image", selectedFile);
 
         const response = await fetchWithAuth(
-            `${API_URL}/api/gemini-item-listing/describe-item`,
+            `${API_URL}/api/gemini-item-listing/describe-item/admin`,
             {
                 method: "POST",
                 body: formData,
@@ -252,7 +252,7 @@ const analyzeFile = async () => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || "AI analysis failed");
+            throw new Error(data.message || "AI analysis failed");
         }
 
         setItemName(data.itemName || "");

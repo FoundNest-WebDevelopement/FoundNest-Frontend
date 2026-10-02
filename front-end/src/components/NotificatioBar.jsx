@@ -40,7 +40,7 @@ export default function NotificationBar() {
 }, [userId]);
 
   return (
-    <div className="flex w-full shadow-sm fixed top-0 left-0 bg-white z-4000 py-2">
+    <div className="flex w-full max-w-3xl shadow-sm fixed top-0 inset-x-0 mx-auto bg-white z-4000 py-2">
 
       <div className="navbar-start">
         <img

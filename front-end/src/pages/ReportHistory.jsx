@@ -232,7 +232,9 @@ export default function ReportHistory() {
             dateReported={report.date_reported}
             status={getStatus(report)}
             dateCancelled={report.date_cancelled}
+            cancelReason={report.cancel_reason}
             onCancel={handleCancelled}
+
           />
         ))}
       </div>

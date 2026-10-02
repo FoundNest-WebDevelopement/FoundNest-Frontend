@@ -103,7 +103,7 @@ const analyzeFile = async () => {
         formDataObj.append("image", selectedFile);
 
         const response = await fetchWithAuth(
-            `${API_URL}/api/gemini-item-listing/describe-item`,
+            `${API_URL}/api/gemini-item-listing/describe-item/admin`,
             {
                 method: "POST",
                 body: formDataObj,

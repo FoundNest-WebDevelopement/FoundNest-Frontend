@@ -8,7 +8,9 @@ function UserLayout() {
         <div>
             <NotificationBar />
 
-            <Outlet />
+            <div className="max-w-3xl mx-auto w-full">
+                <Outlet />
+            </div>
 
             <Dock />
         </div>

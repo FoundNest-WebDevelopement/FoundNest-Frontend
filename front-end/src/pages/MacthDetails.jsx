@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Loading from "../components/Loading";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import HorizontalBreak from "../components/HorizontalBreak";
+import { Expand, X } from "lucide-react";
 
 export default function MatchDetails() {
 
@@ -157,7 +158,7 @@ export default function MatchDetails() {
         touchStartRef.current = e.clientY;
         isDraggingRef.current = true;
         setIsDragging(true);
-        e.target.setPointerCapture(e.pointerId); 
+        e.target.setPointerCapture(e.pointerId);
     };
 
     const handlePointerMove = (e) => {
@@ -194,11 +195,11 @@ export default function MatchDetails() {
         { label: "Time Lost/Found", your: timeLost, match: timeFound },
         { label: "Lost/Found At", your: parseValue(match?.location_lost), match: parseValue(match?.location_found) },
         { label: "Specific Location", your: match?.lost_specific_location, match: match?.found_specific_location },
-        { label: "Currently At", your: match?.lost_office_name, match: match?.found_office_name },
+        { label: "Currently At", your: match?.lost_office_name, match: match?.office_name },
     ];
-    
 
-        if (loading) {
+
+    if (loading) {
         return (<>
             <PageLabelWithReturn />
             <div className="bg-(--color-secondary) min-h-screen p-4 flex flex-col gap-3 pb-25">
@@ -214,42 +215,48 @@ export default function MatchDetails() {
 
     return (
         <>
-            <PageLabelWithReturn label={`Potential Match ${formatItemId(match?.found_item_id)}`} onClick={() => {reportId? navigate(`/notifications/${reportId}/verify`) : navigate(`/profile/report-history/${userId}`)}} />
+            <PageLabelWithReturn label={`Potential Match ${formatItemId(match?.found_item_id)}`} onClick={() => { reportId ? navigate(`/notifications/${reportId}/verify`) : navigate(`/profile/report-history/${userId}`) }} />
             <div className="bg-(--color-secondary) min-h-screen p-4 flex flex-col gap-3 pb-25">
                 <div className="flex w-full my-2 items-center gap-3">
                     <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
                     <p className="w-fit  text-lg font-medium shrink-0">Image Comparison</p>
                     <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
                 </div>
-                <div className="w-full rounded-lg h-fit bg-white flex">
-                    <div className="flex-1 h-full flex flex-col items-center p-3 gap-2">
-                        <p className="font-medium">Your Image</p>
-                        <div className="w-full h-50 rounded-lg relative"
-                             onClick={()=>{setSelectedPhoto(match.found_image_url), setHowToClaim(true)}}>
-                            <img src={match.found_image_url} alt={match.found_item_name} className="w-full h-full rounded-lg" />
-                            <div className="text-lg rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white "></i>
+                <div className="grid grid-cols-2 gap-3 w-full rounded-lg bg-white p-3">
+                    {[
+                        { label: "Your Image", url: match.lost_image_url, alt: match.lost_item_name },
+                        { label: "Potential Match", url: match.found_image_url, alt: match.found_item_name },
+                    ].map(({ label, url, alt }) => (
+                        <div key={label} className="flex flex-col items-center gap-2 min-w-0">
+                            <p className="font-medium text-sm">{label}</p>
+
+                            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-[#EDE0D4]">
+                                {url ? (
+                                    <>
+                                        <img
+                                            onClick={() => setSelectedPhoto(url)}
+                                            src={url}
+                                            alt={alt || label}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedPhoto(url)}
+                                            className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/70 text-white text-xs"
+                                            aria-label={`Enlarge ${label}`}
+                                        >
+                                            <Expand size={16} className="text-white" />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                        <i className="fa-regular fa-image text-[#B0A09A] text-3xl" />
+                                        <span className="text-xs text-[#B0A09A]">No image</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                    </div>
-
-                    <div className="flex-1 h-full flex flex-col items-center p-3 gap-2">
-                        <p className="font-medium">Potential Match</p>
-                        <div className="w-full h-50 rounded-lg relative"
-                            onClick={()=>{setSelectedPhoto(match.lost_image_url), setHowToClaim(true)}}>
-                            <img src={match.lost_image_url} alt={match.lost_item_name} className="w-full h-full rounded-lg" />
-                            <div className="text-lg rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                                <i className="fa-solid fa-up-right-and-down-left-from-center text-white"></i>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div>
-
-                    </div>
-
+                    ))}
                 </div>
                 <div className="flex w-full my-2 items-center gap-3">
                     <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
@@ -292,7 +299,7 @@ export default function MatchDetails() {
                     <button className="border border-primary rounded-lg h-10 text-white bg-primary text-xs w-full "
                         onClick={() => { setHowToClaim(true) }}
                     >How to claim?</button>
-                    <button className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full ">View Office Location</button>
+                    <button onClick={() => navigate(`/map?officeId=${match.office_id}`)} className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full ">View Office Location</button>
                 </div>
 
 
@@ -340,17 +347,24 @@ export default function MatchDetails() {
                 </div>
             )}
 
-            {selectedPhoto && 
-               <div className="fixed  inset-0 w-screen h-screen bg-black/75 flex items-center justify-center z-4001">
+            {selectedPhoto &&
+                <div className="fixed  inset-0 w-screen h-screen bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001">
                     <div className="relative w-full h-full flex items-center ">
-                        <button className="absolute top-2 right-2 text-3xl text-white"
-                            onClick={()=>{setSelectedPhoto(null), setHowToClaim(false)}}
-                        ><i className="fa-regular fa-circle-xmark"></i></button>
-                    <img src={selectedPhoto}  className="w-full h-100"/>
-                    </div>
-               </div>
+                        <button
+                            className="absolute top-2 right-2 text-3xl text-white z-10 rounded-full bg-black/20 p-2"
+                            onClick={() => setSelectedPhoto(null)}
+                        >
+                            <X />
+                        </button>
 
-              }
+                        <div className="w-full h-full flex items-center justify-center">
+                            <img src={selectedPhoto} className="max-w-100 h-100" />
+
+                        </div>
+                    </div>
+                </div>
+
+            }
 
         </>
     );

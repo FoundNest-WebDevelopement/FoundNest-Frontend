@@ -19,9 +19,6 @@ const BADGES = {
   match: { label: "Potential Match Found!", className: "bg-(--color-quaternary) text-[#1a1a1a]" },
 };
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
 
 const formatReportId = (id) => `RPT-${String(id).padStart(5, "0")}`;
 const formatItemId = (id) => `SI-${String(id).padStart(5, "0")}`;
@@ -34,11 +31,8 @@ const formatDate = (dateStr) => {
 };
 
 const showToast = (message) =>
-  toast.custom(() => <Toast icon={InfoIcon} message={message} />);
+  toast.custom(() => <Toast  message={message} solid={true} />);
 
-/* -------------------------------------------------------------------------- */
-/* Pieces                                                                     */
-/* -------------------------------------------------------------------------- */
 
 function ImageFallback({ className, iconClass }) {
   return (
@@ -48,14 +42,14 @@ function ImageFallback({ className, iconClass }) {
   );
 }
 
-function StatusBadge({ kind }) {
+function StatusBadge({ kind, reason }) {
   if (!kind) return null;
   const { label, className } = BADGES[kind];
   return (
     <span
       className={`self-start rounded-full px-2.5 py-0.5 mb-2 text-[11px] font-bold ${className}`}
     >
-      {label}
+      {label } {reason? (<span className="font-normal">: {reason}</span>) : ""}
     </span>
   );
 }
@@ -68,7 +62,7 @@ function MatchCard({ match, label, onClick }) {
       <button
         type="button"
         onClick={onClick}
-        className="block w-full text-left bg-[#FAF6F2] rounded-xl overflow-hidden border border-black/[0.06]"
+        className="block w-full text-left bg-[#FAF6F2] rounded-xl overflow-hidden border border-black/6"
       >
         <div className="relative w-full aspect-square">
           {match.found_image_url ? (
@@ -180,6 +174,7 @@ export default function ReportCard({
   dateCancelled, // kept so existing callers keep working
   onCancel, // called with (reportId, reason) after a successful cancel
   navBack = null,
+  cancelReason = null,
 }) {
   const navigate = useNavigate();
 
@@ -198,7 +193,11 @@ export default function ReportCard({
   const badgeKind = isCancelled ? "cancelled" : isResolved ? "resolved" : hasMatches ? "match" : null;
 
   // Routes (unchanged from the old card; navBack adds the extra path segment)
-  const viewPath = navBack ? `/report/${reportId}/mode/view/${reportId}` : `/report/${reportId}/mode/view`;
+  // const viewPath = navBack ? `/report/${reportId}/mode/view/${reportId}` : `profile/report/${reportId}/mode/view`;
+  const viewPath = navBack
+  ? `/report/${reportId}/mode/view/${reportId}`
+  : `/profile/report/${reportId}/mode/view`;
+
   const editPath = navBack ? `/report/${reportId}/${reportId}` : `/report/${reportId}`;
   const matchPath = (matchId) =>
     navBack ? `/profile/match-details/${matchId}/${reportId}` : `/profile/match-details/${matchId}`;
@@ -262,7 +261,6 @@ export default function ReportCard({
   return (
     <>
       <div className="w-full bg-white rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.07)]">
-        {/* Top: image + details, tap to view */}
         <button
           type="button"
           onClick={() => navigate(viewPath)}
@@ -282,7 +280,7 @@ export default function ReportCard({
           )}
 
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <StatusBadge kind={badgeKind} />
+            <StatusBadge kind={badgeKind} reason={cancelReason}/>
 
             <p className="text-xs text-[#4B2D23]/80 mt-0.5">Report ID:</p>
             <p className="text-sm font-bold mb-1">{formatReportId(reportId)}</p>
@@ -312,7 +310,6 @@ export default function ReportCard({
           </>
         )}
 
-        {/* Match cards */}
         {openMatches && hasMatches && !isCancelled && (
           <div className={`grid grid-cols-2 gap-2.5 px-3.5 ${isResolved ? "pb-[18px]" : "pb-1"}`}>
             {matches.map((match, index) => (
@@ -326,7 +323,6 @@ export default function ReportCard({
           </div>
         )}
 
-        {/* Footer actions */}
         {!isCancelled && !isResolved && (
           <div className="flex border-t border-black/[0.07] mt-3">
             <button

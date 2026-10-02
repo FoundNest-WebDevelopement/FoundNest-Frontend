@@ -1,7 +1,7 @@
 export default function Field({ label, htmlFor, required, error, hint, count, max, children }) {
   return (
     <div className="mt-5">
-      <label htmlFor={htmlFor} className="block text-[17px] font-extrabold mb-2">
+      <label htmlFor={htmlFor} className="block text-sm font-extrabold mb-2">
         {label}
         {required && <span className="text-primary"> *</span>}
       </label>
