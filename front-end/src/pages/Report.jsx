@@ -396,7 +396,6 @@ export default function Report() {
 
   const handleDateChange = (value) => {
     setDateLost(value);
-    setTimeLost("");
   };
 
   const toggleLocation = (name) =>
@@ -431,6 +430,16 @@ export default function Report() {
 
   const saveReport = async (isUpdate) => {
     setShowSubmitConfirmation(false);
+
+    if(timeValid){
+      showToast("Please input a valid time")
+      return
+    }
+
+    if(selectedLocations.length <= 0){
+      showToast("Please select location lost")
+      return
+    }
     if (isUpdate) setIsUpdating(true);
     else setIsSubmitting(true);
 
