@@ -1,7 +1,20 @@
 import { Link } from "react-router-dom";
 import image from "../assets/pana.png";
 
+// Sends a logged-in user back to their OWN dashboard instead of the public
+// login page, so hitting a bad URL inside /admin or /super_admin doesn't
+// look like it logged them out.
+function getHomePath() {
+    const role = localStorage.getItem("role");
+    if (role === "super_admin") return "/super_admin";
+    if (role === "admin") return "/admin";
+    if (role) return "/home";
+    return "/login";
+}
+
 export default function NotFoundPage() {
+    const homePath = getHomePath();
+
     return (
         <div className="relative min-h-screen overflow-hidden bg-primary px-6 flex items-center justify-center">
 
@@ -44,7 +57,7 @@ export default function NotFoundPage() {
                 </p>
 
                 <Link
-                    to="/"
+                    to={homePath}
                     className="
                         inline-flex items-center justify-center
                         mt-7 px-7 py-3

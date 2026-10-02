@@ -243,7 +243,7 @@ export default function TransferPrivilegesModal({ onClose }) {
                             <input
                                 type="text"
                                 value={confirmText}
-                                onChange={(e) => setConfirmText(e.target.value)}
+                                onChange={(e) => { setConfirmText(e.target.value); setError(""); }}
                                 placeholder={targetFullName}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
@@ -292,7 +292,7 @@ export default function TransferPrivilegesModal({ onClose }) {
                             <input
                                 type="text"
                                 value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
+                                onChange={(e) => { setOtp(e.target.value); setError(""); }}
                                 placeholder="6-digit code"
                                 maxLength={6}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary text-center tracking-widest"

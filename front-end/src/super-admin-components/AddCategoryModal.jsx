@@ -116,7 +116,10 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
                             <input
                                 type="text"
                                 value={categoryName}
-                                onChange={(e) => setCategoryName(e.target.value)}
+                                onChange={(e) => {
+                                    setCategoryName(e.target.value);
+                                    setError("");
+                                }}
                                 placeholder="e.g., Electronics"
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none
                                    "
@@ -129,7 +132,10 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
                             </label>
                             <textarea
                                 value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                onChange={(e) => {
+                                    setDescription(e.target.value);
+                                    setError("");
+                                }}
                                 placeholder="What kind of items belong in this category?"
                                 rows={3}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none resize-none

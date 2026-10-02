@@ -11,7 +11,7 @@ const TYPE_OPTIONS = [
     { value: "GATE", label: "Gates" },
 ];
 
-export default function AddLocationModal({ onClose, onUpdated }) {
+export default function AddLocationModal({ onClose, onUpdated, locations = [] }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [type, setType] = useState(TYPE_OPTIONS[0].value);
@@ -27,9 +27,22 @@ export default function AddLocationModal({ onClose, onUpdated }) {
     const [openConfirmAdd, setOpenConfirmAdd] = useState(false);
     const [openCancelAdd, setOpenCancelAdd] = useState(false);
 
+    const trimmedName = name.trim();
+
+    const isDuplicate = trimmedName
+        ? locations.some(
+              (loc) => loc.location_name?.trim().toLowerCase() === trimmedName.toLowerCase()
+          )
+        : false;
+
     const handleSubmit = async () => {
-        if (!name.trim()) {
+        if (!trimmedName) {
             setError("Location name is required.");
+            return;
+        }
+
+        if (isDuplicate) {
+            setError(`A location named "${trimmedName}" already exists.`);
             return;
         }
 
@@ -103,7 +116,7 @@ export default function AddLocationModal({ onClose, onUpdated }) {
                                 </label>
                                 <select
                                     value={type}
-                                    onChange={(e) => setType(e.target.value)}
+                                    onChange={(e) => { setType(e.target.value); setError(""); }}
                                     className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none"
                                 >
                                     {TYPE_OPTIONS.map((opt) => (
@@ -121,7 +134,7 @@ export default function AddLocationModal({ onClose, onUpdated }) {
                                 <input
                                     type="text"
                                     value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    onChange={(e) => { setName(e.target.value); setError(""); }}
                                     placeholder="e.g., Pimentel Hall"
                                     className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none"
                                 />
@@ -133,13 +146,18 @@ export default function AddLocationModal({ onClose, onUpdated }) {
                                 </label>
                                 <textarea
                                     value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
+                                    onChange={(e) => { setDescription(e.target.value); setError(""); }}
                                     placeholder="Brief description of this location"
                                     rows={3}
                                     className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none resize-none"
                                 />
                             </div>
 
+                            {!error && isDuplicate && (
+                                <p className="text-xs text-[#C0392B]">
+                                    A location named "{trimmedName}" already exists.
+                                </p>
+                            )}
                             {error && (
                                 <p className="text-xs text-[#C0392B]">{error}</p>
                             )}
@@ -168,7 +186,7 @@ export default function AddLocationModal({ onClose, onUpdated }) {
                                 className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                     transition-transform duration-100 enabled:active:scale-95
                                     disabled:opacity-40 disabled:cursor-not-allowed"
-                                disabled={isSaving || name === ""}
+                                disabled={isSaving || !trimmedName || isDuplicate}
                                 onClick={() => setOpenConfirmAdd(true)}
                             >
                                 {isSaving ? "Creating..." : "Add Location"}

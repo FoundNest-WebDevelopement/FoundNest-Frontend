@@ -34,9 +34,9 @@ function Admin() {
           <Route path="center_profile" element={<CenterProfile/>} />
           <Route path="feedbacks" element={<Feedbacks/>} />
           <Route path="transactions" element={<Transactions/>} />
-          <Route path="admin_profile" element={<AdminProfile/>} />   
+          <Route path="admin_profile" element={<AdminProfile/>} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="*" element={<NotFoundPage />}></Route>
       </Routes>
       </div>
       </>

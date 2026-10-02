@@ -161,7 +161,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     <input
                                         type="text"
                                         value={officeName}
-                                        onChange={(e) => setOfficeName(e.target.value)}
+                                        onChange={(e) => { setOfficeName(e.target.value); setError(""); }}
                                         placeholder="e.g. Pimentel Hall FoundNest Office"
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     />
@@ -174,7 +174,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     <input
                                         type="text"
                                         value={floor}
-                                        onChange={(e) => setFloor(e.target.value)}
+                                        onChange={(e) => { setFloor(e.target.value); setError(""); }}
                                         placeholder="e.g. 3rd Floor, Room B"
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     />
@@ -187,7 +187,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     <input
                                         type="text"
                                         value={operatingHours}
-                                        onChange={(e) => setOperatingHours(e.target.value)}
+                                        onChange={(e) => { setOperatingHours(e.target.value); setError(""); }}
                                         placeholder="e.g. Mon–Fri, 8AM–5PM"
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     />
@@ -200,7 +200,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     <input
                                         type="text"
                                         value={notes}
-                                        onChange={(e) => setNotes(e.target.value)}
+                                        onChange={(e) => { setNotes(e.target.value); setError(""); }}
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     />
                                 </div>
@@ -211,7 +211,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     </label>
                                     <select
                                         value={locationName}
-                                        onChange={(e) => setLocationName(e.target.value)}
+                                        onChange={(e) => { setLocationName(e.target.value); setError(""); }}
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     >
                                         <option value="">e.g. Pimentel Hall</option>
@@ -239,6 +239,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     onChange={(lat, lng) => {
                                         setLatitude(lat);
                                         setLongitude(lng);
+                                        setError("");
                                     }}
                                     referenceCenters={existingCenters}
                                     markerLabel={officeName || "New Center"}
@@ -250,7 +251,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
             type="number"
             step="0.00000001"
             value={latitude ?? ""}
-            onChange={(e) => setLatitude(e.target.value === "" ? null : parseFloat(e.target.value))}
+            onChange={(e) => { setLatitude(e.target.value === "" ? null : parseFloat(e.target.value)); setError(""); }}
             placeholder="e.g. 14.85707485"
             className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
         />
@@ -261,7 +262,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
             type="number"
             step="0.00000001"
             value={longitude ?? ""}
-            onChange={(e) => setLongitude(e.target.value === "" ? null : parseFloat(e.target.value))}
+            onChange={(e) => { setLongitude(e.target.value === "" ? null : parseFloat(e.target.value)); setError(""); }}
             placeholder="e.g. 120.81371264"
             className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
         />

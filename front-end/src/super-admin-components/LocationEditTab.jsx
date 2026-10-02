@@ -7,11 +7,17 @@ import { toast } from "react-toastify";
 
 const normalize = (value) => String(value ?? "").trim();
 
+const TYPE_OPTIONS = [
+    { value: "COLLEGE", label: "College Building" },
+    { value: "SHARED_SPACE", label: "Shared Student Spaces" },
+    { value: "GATE", label: "Gates" },
+];
+
 export default function LocationEditTab({
     selectedLocation,
     setSelectedLocation,
     refreshLocations,
-    locLabel,
+    locations = [],
     disabled = false,
     onDirtyChange,
     onSaved,
@@ -22,6 +28,7 @@ export default function LocationEditTab({
     const [isSaving, setIsSaving] = useState(false);
     const [locationName, setLocationName] = useState(selectedLocation.location_name || "");
     const [description, setDescription] = useState(selectedLocation.description || "");
+    const [type, setType] = useState(selectedLocation.location_type);
 
     const [openSaveChange, setOpenSaveChange] = useState(false);
     const [openDiscardEdits, setOpenDiscardEdits] = useState(false);
@@ -31,11 +38,20 @@ export default function LocationEditTab({
 
     const isNameEmpty = trimmedName === "";
 
+    const isDuplicate = trimmedName
+        ? locations.some(
+              (loc) =>
+                  loc.location_name?.trim().toLowerCase() === trimmedName.toLowerCase() &&
+                  !(loc.location_id === selectedLocation.location_id && loc.location_type === selectedLocation.location_type)
+          )
+        : false;
+
     const isChanged =
         trimmedName !== normalize(selectedLocation.location_name) ||
-        trimmedDescription !== normalize(selectedLocation.description);
+        trimmedDescription !== normalize(selectedLocation.description) ||
+        type !== selectedLocation.location_type;
 
-    const canSave = isChanged && !isNameEmpty;
+    const canSave = isChanged && !isNameEmpty && !isDuplicate;
 
     useEffect(() => {
         onDirtyChange?.(isChanged);
@@ -44,6 +60,7 @@ export default function LocationEditTab({
     const revertFields = () => {
         setLocationName(selectedLocation.location_name || "");
         setDescription(selectedLocation.description || "");
+        setType(selectedLocation.location_type);
     };
 
     const handleCancel = () => {
@@ -62,6 +79,11 @@ export default function LocationEditTab({
             return;
         }
 
+        if (isDuplicate) {
+            toast.error(`A location named "${trimmedName}" already exists.`);
+            return;
+        }
+
         if (!isChanged) {
             toast.info("No changes to save.");
             return;
@@ -75,7 +97,8 @@ export default function LocationEditTab({
                 {
                     method: "PUT",
                     body: JSON.stringify({
-                        type: selectedLocation.location_type,
+                        type,
+                        originalType: selectedLocation.location_type,
                         name: trimmedName,
                         description: trimmedDescription,
                         status: selectedLocation.status,
@@ -89,13 +112,18 @@ export default function LocationEditTab({
                 throw new Error(data.message || "Failed to update location");
             }
 
-            const updatedLocation = await refreshLocations();
-            setSelectedLocation(updatedLocation);
+            // `data` is already the normalized, up-to-date record — used directly
+            // instead of re-searching the refreshed list by the OLD id/type, which
+            // would no longer match if the type (and therefore the id) just changed.
+            await refreshLocations();
+            setSelectedLocation(data);
 
-            setLocationName(updatedLocation?.location_name || "");
-            setDescription(updatedLocation?.description || "");
+            setLocationName(data.location_name || "");
+            setDescription(data.description || "");
+            setType(data.location_type);
 
-            toast.success(`Successfully updated ${locLabel}.`);
+            const updatedLabel = `${data.location_type}-${String(data.location_id).padStart(5, "0")}`;
+            toast.success(`Successfully updated ${updatedLabel}.`);
             onSaved?.();
         } catch (error) {
             toast.error(error.message);
@@ -110,6 +138,23 @@ export default function LocationEditTab({
         <>
             <div className="flex flex-col gap-4 h-full">
                 <div className="flex flex-col gap-1">
+                    <label className="text-xs text-[#6B5C42]">TYPE</label>
+                    <select
+                        value={type}
+                        disabled={locked}
+                        onChange={(e) => setType(e.target.value)}
+                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none
+                            disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        {TYPE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
                     <label className="text-xs text-[#6B5C42]">LOCATION NAME</label>
                     <input
                         type="text"
@@ -119,6 +164,11 @@ export default function LocationEditTab({
                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none
                             disabled:cursor-not-allowed disabled:opacity-40"
                     />
+                    {isDuplicate && (
+                        <p className="text-xs text-[#C0392B]">
+                            A location named "{trimmedName}" already exists.
+                        </p>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -168,7 +218,11 @@ export default function LocationEditTab({
                             <span className="font-bold">{selectedLocation.location_name}</span>?
                         </>
                     }
-                    message={"This action will be seen to public by FoundNest users."}
+                    message={
+                        type !== selectedLocation.location_type
+                            ? "Changing the type assigns this location a new ID. This action will be seen by FoundNest users."
+                            : "This action will be seen to public by FoundNest users."
+                    }
                     cancelText="Cancel"
                     confirmText={"Save"}
                     onClose={() => setOpenSaveChange(false)}

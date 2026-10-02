@@ -54,7 +54,7 @@ export default function SwitchBackButton() {
         }
     };
 
-    const label = "Back to Admin";
+    const label = "Switch to Admin";
 
     return (
         <>

@@ -8,7 +8,7 @@ const TYPE_LABELS = {
     GATE: "Gates",
 };
 
-export default function LocationTable({ locations, onUpdated, selectedLocation, setSelectedLocation }) {
+export default function LocationTable({ locations, allLocations, onUpdated, selectedLocation, setSelectedLocation }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [tableHeight, setTableHeight] = useState(() => (window.innerHeight > 732 ? "min-h-150" : "min-h-102"));
     const [itemsPerPage, setItemsPerPage] = useState(() => (window.innerHeight > 732 ? 9 : 6));
@@ -18,7 +18,9 @@ export default function LocationTable({ locations, onUpdated, selectedLocation, 
     const startIndex = (activePage - 1) * itemsPerPage;
     const paginatedLocations = safeLocations.slice(startIndex, startIndex + itemsPerPage);
 
-    const formatLocId = (index) => `LOC-${String(index + 1).padStart(5, "0")}`;
+    // Type + real id, zero-padded — stable regardless of search/filter/pagination,
+    // unlike a row-index-based label which would change as the list is filtered.
+    const formatLocId = (type, id) => `${type}-${String(id).padStart(5, "0")}`;
 
     useEffect(() => {
         const updateTableSize = () => {
@@ -69,7 +71,7 @@ export default function LocationTable({ locations, onUpdated, selectedLocation, 
                                         }
                                     >
                                         <td className="w-28 align-middle h-15 text-center">
-                                            {formatLocId(startIndex + index)}
+                                            {formatLocId(loc.location_type, loc.location_id)}
                                         </td>
 
                                         <td className="truncate max-w-64 align-middle text-center">
@@ -161,6 +163,7 @@ export default function LocationTable({ locations, onUpdated, selectedLocation, 
                     selectedLocation={selectedLocation}
                     setSelectedLocation={setSelectedLocation}
                     onUpdated={onUpdated}
+                    locations={allLocations}
                 />
             )}
         </>
