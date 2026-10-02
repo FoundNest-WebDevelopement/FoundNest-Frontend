@@ -114,7 +114,7 @@ export default function SuperAdminModeSwitcher() {
                 className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
                     transition-transform duration-100 active:scale-95 cursor-pointer"
             >
-                Switch Mode
+                Switch Role
                 <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
@@ -194,7 +194,7 @@ export default function SuperAdminModeSwitcher() {
 
             {pendingAction === "user" && (
                 <AdminConfirmDialog
-                    title="Switch Mode"
+                    title="Switch Role"
                     description="Switch to the End User view?"
                     message="You'll leave the Super Admin dashboard and see the app as a regular user."
                     confirmText={isLoading ? "Switching..." : "Switch"}
@@ -207,7 +207,7 @@ export default function SuperAdminModeSwitcher() {
 
             {pendingAction === "admin" && (
                 <AdminConfirmDialog
-                    title="Switch Mode"
+                    title="Switch Role"
                     description={`Switch to Admin view for ${selectedOfficeName || "the selected center"}?`}
                     message="You'll manage that center's items and reports until you switch back."
                     confirmText={isLoading ? "Switching..." : "Switch"}

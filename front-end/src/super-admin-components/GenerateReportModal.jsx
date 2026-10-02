@@ -6,7 +6,15 @@ import { toast } from "react-toastify";
 export default function GenerateReportModal({ centers, onClose, defaultOfficeId = "all", lockOffice = false }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const today = new Date().toISOString().split("T")[0];
+    // Local calendar date — not toISOString(), which converts to UTC first and
+    // silently shifts the date back a day in timezones ahead of UTC (e.g. Manila).
+    const today = (() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+    })();
 
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
@@ -103,7 +111,7 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
                                 type="date"
                                 value={startDate}
                                 max={today}
-                                onChange={(e) => setStartDate(e.target.value)}
+                                onChange={(e) => { setStartDate(e.target.value); setError(""); }}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
                         </div>
@@ -115,7 +123,7 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
                                 type="date"
                                 value={endDate}
                                 max={today}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                onChange={(e) => { setEndDate(e.target.value); setError(""); }}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
                         </div>
@@ -128,7 +136,7 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
                         <select
                             value={officeId}
                             disabled={lockOffice}
-                            onChange={(e) => setOfficeId(e.target.value)}
+                            onChange={(e) => { setOfficeId(e.target.value); setError(""); }}
                             className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
                                 disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
                         >

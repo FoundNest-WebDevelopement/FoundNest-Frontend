@@ -62,10 +62,10 @@ export default function AdminRoleSelectionModal({ onClose }) {
     };
 
     return createPortal(
-        <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
-            onClick={() => !isLoading && onClose()}
-        >
+        // No backdrop-click-to-dismiss here on purpose: onClose() navigates straight
+        // into the Admin dashboard, so a stray click outside the modal must never be
+        // treated as an implicit "continue as Admin" choice.
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]">
             <div
                 className="relative bg-white rounded-lg w-100 max-w-[90vw]"
                 onClick={(e) => e.stopPropagation()}

@@ -16,6 +16,7 @@ export default function ActingSuperAdminSwitcher() {
 
     const actingAsSuperAdmin = localStorage.getItem("acting_as_super_admin") === "true";
     const currentRole = localStorage.getItem("role"); // "admin" | "user"
+    const currentOfficeId = localStorage.getItem("office_location");
 
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState("menu"); // menu | pickOffice
@@ -39,6 +40,7 @@ export default function ActingSuperAdminSwitcher() {
 
     const openAdminPicker = async () => {
         setView("pickOffice");
+        setSelectedOfficeId("");
         try {
             const response = await fetchWithAuth(`${API_URL}/api/offices`);
             const data = await response.json();
@@ -158,7 +160,7 @@ export default function ActingSuperAdminSwitcher() {
                 className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
                     transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                {isLoading ? "Switching..." : "Switch Mode"}
+                {isLoading ? "Switching..." : "Switch Role"}
                 <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
@@ -186,20 +188,33 @@ export default function ActingSuperAdminSwitcher() {
                             </button>
 
                             {currentRole === "admin" && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        setPendingAction("user");
-                                    }}
-                                    className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F5F3] text-left cursor-pointer"
-                                >
-                                    <UserRound size={16} className="text-[#6B5C42]" />
-                                    <div>
-                                        <p className="text-sm font-medium text-[#1A1208]">End User</p>
-                                        <p className="text-xs text-[#9A8F7C]">Browse and report items</p>
-                                    </div>
-                                </button>
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={openAdminPicker}
+                                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F5F3] text-left cursor-pointer"
+                                    >
+                                        <Building2 size={16} className="text-[#6B5C42]" />
+                                        <div>
+                                            <p className="text-sm font-medium text-[#1A1208]">Admin</p>
+                                            <p className="text-xs text-[#9A8F7C]">Switch to a different center</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            setPendingAction("user");
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F5F3] text-left cursor-pointer"
+                                    >
+                                        <UserRound size={16} className="text-[#6B5C42]" />
+                                        <div>
+                                            <p className="text-sm font-medium text-[#1A1208]">End User</p>
+                                            <p className="text-xs text-[#9A8F7C]">Browse and report items</p>
+                                        </div>
+                                    </button>
+                                </>
                             )}
 
                             {currentRole === "user" && (
@@ -233,11 +248,14 @@ export default function ActingSuperAdminSwitcher() {
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             >
                                 <option value="">Select a center</option>
-                                {offices.map((o) => (
-                                    <option key={o.office_id} value={o.office_id}>
-                                        {o.office_name}
-                                    </option>
-                                ))}
+                                {offices.map((o) => {
+                                    const isCurrent = currentRole === "admin" && String(o.office_id) === String(currentOfficeId);
+                                    return (
+                                        <option key={o.office_id} value={o.office_id} disabled={isCurrent}>
+                                            {o.office_name}{isCurrent ? " (current)" : ""}
+                                        </option>
+                                    );
+                                })}
                             </select>
                             <button
                                 type="button"
@@ -245,7 +263,7 @@ export default function ActingSuperAdminSwitcher() {
                                     setIsOpen(false);
                                     setPendingAction("admin");
                                 }}
-                                disabled={!selectedOfficeId}
+                                disabled={!selectedOfficeId || String(selectedOfficeId) === String(currentOfficeId)}
                                 className="w-full h-9 bg-primary rounded-md text-white text-sm font-medium cursor-pointer
                                     disabled:opacity-40 disabled:cursor-not-allowed"
                             >
@@ -258,7 +276,7 @@ export default function ActingSuperAdminSwitcher() {
 
             {pendingAction === "back" && (
                 <AdminConfirmDialog
-                    title="Switch Mode"
+                    title="Switch Role"
                     description="Back to Super Admin?"
                     message="You'll return to full system access."
                     confirmText={isLoading ? "Switching..." : "Switch"}
@@ -271,7 +289,7 @@ export default function ActingSuperAdminSwitcher() {
 
             {pendingAction === "user" && (
                 <AdminConfirmDialog
-                    title="Switch Mode"
+                    title="Switch Role"
                     description="Switch to the End User view?"
                     message="You'll leave the Admin dashboard and see the app as a regular user."
                     confirmText={isLoading ? "Switching..." : "Switch"}
@@ -284,7 +302,7 @@ export default function ActingSuperAdminSwitcher() {
 
             {pendingAction === "admin" && (
                 <AdminConfirmDialog
-                    title="Switch Mode"
+                    title="Switch Role"
                     description={`Switch to Admin view for ${selectedOfficeName || "the selected center"}?`}
                     message="You'll manage that center's items and reports until you switch back."
                     confirmText={isLoading ? "Switching..." : "Switch"}

@@ -54,6 +54,7 @@ export default function SuperAdminGlobalConfiguration() {
     const [isLoadingLocations, setIsLoadingLocations] = useState(false);
     const [locationSearch, setLocationSearch] = useState("");
     const [locationStatusFilter, setLocationStatusFilter] = useState("ALL");
+    const [locationTypeFilter, setLocationTypeFilter] = useState("ALL");
     const [openAddLocation, setOpenAddLocation] = useState(false);
 
     const [centers, setCenters] = useState([]);
@@ -230,14 +231,24 @@ export default function SuperAdminGlobalConfiguration() {
 });
 
     const filteredLocations = locations.filter((loc) => {
-        const matchesSearch = loc.location_name?.toLowerCase().includes(locationSearch.toLowerCase());
+        const query = locationSearch.toLowerCase();
+
+        const formattedLocId = `${loc.location_type}-${String(loc.location_id).padStart(5, "0")}`.toLowerCase();
+
+        const matchesSearch =
+            loc.location_name?.toLowerCase().includes(query) ||
+            formattedLocId.includes(query) ||
+            String(loc.location_id).includes(query);
 
         const matchesStatus =
             locationStatusFilter === "ALL" ||
             (locationStatusFilter === "ACTIVE" && loc.status === true) ||
             (locationStatusFilter === "INACTIVE" && loc.status === false);
 
-        return matchesSearch && matchesStatus;
+        const matchesType =
+            locationTypeFilter === "ALL" || loc.location_type === locationTypeFilter;
+
+        return matchesSearch && matchesStatus && matchesType;
     });
 
     const filteredCenters = centers.filter((center) =>
@@ -382,7 +393,7 @@ export default function SuperAdminGlobalConfiguration() {
                                 <Search size={16} className="text-[#9A8F7C]" />
                                 <input
                                     type="text"
-                                    placeholder="Search locations..."
+                                    placeholder="Search by ID or name..."
                                     value={locationSearch}
                                     onChange={(e) => setLocationSearch(e.target.value)}
                                     className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
@@ -396,6 +407,16 @@ export default function SuperAdminGlobalConfiguration() {
                                 <option value="ALL">All Status</option>
                                 <option value="ACTIVE">Active</option>
                                 <option value="INACTIVE">Inactive</option>
+                            </select>
+                            <select
+                                value={locationTypeFilter}
+                                onChange={(e) => setLocationTypeFilter(e.target.value)}
+                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+                            >
+                                <option value="ALL">All Types</option>
+                                <option value="COLLEGE">College Building</option>
+                                <option value="SHARED_SPACE">Shared Student Spaces</option>
+                                <option value="GATE">Gates</option>
                             </select>
                         </div>
 
@@ -422,6 +443,7 @@ export default function SuperAdminGlobalConfiguration() {
                     {!isLoadingLocations && filteredLocations.length > 0 && (
                         <LocationTable
                             locations={filteredLocations}
+                            allLocations={locations}
                             onUpdated={setLocations}
                             selectedLocation={selectedLocation}
                             setSelectedLocation={setSelectedLocation}
@@ -562,6 +584,7 @@ export default function SuperAdminGlobalConfiguration() {
                 <AddLocationModal
                     onClose={() => setOpenAddLocation(false)}
                     onUpdated={setLocations}
+                    locations={locations}
                 />
             )}
 

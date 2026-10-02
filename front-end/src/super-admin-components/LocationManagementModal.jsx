@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Button from "../global-components/Button";
 import ConfirmDialog from "../global-components/ConfirmDialog";
-import { TriangleAlert, Power } from "lucide-react";
+import { TriangleAlert, Power, Trash2 } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import LocationEditTab from "./LocationEditTab";
@@ -16,10 +16,12 @@ export default function LocationManagementModal({
     selectedLocation,
     setSelectedLocation,
     onUpdated,
+    locations = [],
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Edit mode: LocationEditTab owns the form, saving, and its own confirmations
     const [isEditing, setIsEditing] = useState(false);
@@ -28,6 +30,7 @@ export default function LocationManagementModal({
     const [openDeactivate, setOpenDeactivate] = useState(false);
     const [openActivate, setOpenActivate] = useState(false);
     const [openCancelEdit, setOpenCancelEdit] = useState(false);
+    const [openDelete, setOpenDelete] = useState(false);
 
     const formatLocId = (type, id) => `${type}-${String(id).padStart(5, "0")}`;
 
@@ -98,6 +101,39 @@ export default function LocationManagementModal({
         }
     };
 
+    const handleDelete = async () => {
+        try {
+            setIsDeleting(true);
+            setOpenDelete(false);
+
+            const response = await fetchWithAuth(
+                `${API_URL}/api/locations/${selectedLocation.location_id}?type=${selectedLocation.location_type}`,
+                { method: "DELETE" }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to delete location");
+            }
+
+            const listResponse = await fetchWithAuth(`${API_URL}/api/locations/private`);
+            const listData = await listResponse.json();
+
+            if (Array.isArray(listData)) {
+                onUpdated?.(listData);
+            }
+
+            toast.success(`Location "${selectedLocation.location_name}" deleted.`);
+            setSelectedLocation(null);
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <>
             <div className="fixed inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
@@ -122,7 +158,7 @@ export default function LocationManagementModal({
                                 selectedLocation={selectedLocation}
                                 setSelectedLocation={setSelectedLocation}
                                 refreshLocations={refreshLocations}
-                                locLabel={formatLocId(selectedLocation.location_type, selectedLocation.location_id)}
+                                locations={locations}
                                 disabled={isTogglingStatus}
                                 onDirtyChange={setIsEditDirty}
                                 onSaved={closeEditMode}
@@ -207,6 +243,18 @@ export default function LocationManagementModal({
                                         </div>
                                     )}
 
+                                    <button
+                                        type="button"
+                                        disabled={isTogglingStatus || isDeleting}
+                                        onClick={() => setOpenDelete(true)}
+                                        className="w-full h-10 flex items-center justify-center gap-2 border border-[#C0392B] text-[#C0392B]
+                                            rounded-md text-xs font-medium transition-transform duration-100 enabled:active:scale-95
+                                            disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Trash2 size={14} />
+                                        {isDeleting ? "Deleting..." : "Delete Location"}
+                                    </button>
+
                                     {selectedLocation.status === false && (
                                         <>
                                             <p className="text-xs text-[#6B5C42]">
@@ -281,6 +329,27 @@ export default function LocationManagementModal({
                     onClose={() => setOpenActivate(false)}
                     onConfirm={() => handleToggleStatus(true)}
                     disabled={isTogglingStatus}
+                />
+            )}
+
+            {openDelete && (
+                <ConfirmDialog
+                    Icon={Trash2}
+                    iconColor="text-[#C0392B]"
+                    title="Delete Location"
+                    description={
+                        <>
+                            Are you sure you want to delete{" "}
+                            <span className="font-bold">{selectedLocation.location_name}</span>?
+                        </>
+                    }
+                    message={"This cannot be undone. If any center currently uses this location, deletion will be blocked."}
+                    cancelText="Cancel"
+                    confirmText={isDeleting ? "Deleting..." : "Delete"}
+                    positiveBtnColor="bg-[#C0392B]"
+                    onClose={() => setOpenDelete(false)}
+                    onConfirm={handleDelete}
+                    disabled={isDeleting}
                 />
             )}
 

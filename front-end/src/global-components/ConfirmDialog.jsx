@@ -12,7 +12,7 @@ export default function ConfirmDialog({
   iconColor = "text-[#4A5568]" ,
   message,
   disabled,
-  
+  positiveBtnColor = "bg-primary",
 }) {
   return createPortal(
     <div
@@ -60,8 +60,8 @@ export default function ConfirmDialog({
 
             <button
               type="button"
-              className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40
-              disabled:cursor-not-allowed"
+              className={`flex-1 h-10 ${positiveBtnColor} rounded-lg text-white text-sm font-medium transition-transform duration-100 active:scale-95 disabled:opacity-40
+              disabled:cursor-not-allowed`}
               disabled={disabled}
               onClick={onConfirm}
             >
