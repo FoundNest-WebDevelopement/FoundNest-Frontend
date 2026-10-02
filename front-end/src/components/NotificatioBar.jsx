@@ -1,19 +1,34 @@
 import logo from "../assets/logo.png";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SwitchBackButton from "../global-components/SwitchBackButton";
 import ActingSuperAdminSwitcher from "../global-components/ActingSuperAdminSwitcher";
+import Toast from "./Toast";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
 
 
 export default function NotificationBar() {
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { requestNavigation } = useUnsavedChangesGuard();
 
   const API_URL = import.meta.env.VITE_API_URL;
   const [unreadCount, setUnreadCount] = useState(0);
   const userId = localStorage.getItem("user_id")
+
+  const guardedClick = (to) => (e) => {
+    if (to === location.pathname) return;
+    e.preventDefault();
+    const result = requestNavigation(() => navigate(to));
+    if (result === "blocked") {
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />);
+    }
+  };
 
  useEffect(() => {
   if (!userId) return;
@@ -60,6 +75,7 @@ export default function NotificationBar() {
 
         <NavLink
           to="/notifications"
+          onClick={guardedClick("/notifications")}
           className={({ isActive }) =>
             isActive
               ? "text-(--color-primary)"

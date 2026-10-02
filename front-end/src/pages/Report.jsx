@@ -13,9 +13,12 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import UploadCard from "../components/report_components/UploadCard";
 import LocationGroup from "../components/report_components/LocationGroup";
 import PhotoSheet from "../components/report_components/PhotoSheet";
+import WebcamCaptureModal from "../components/report_components/WebcamCaptureModal";
 import Field from "../components/report_components/Field";
 import ActionButton from "../components/report_components/ActionButton";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import { sanitizeText, minLengthMessage } from "../utils/textValidation";
+import { isMobileDevice } from "../utils/isMobileDevice";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -25,16 +28,16 @@ const LIMITS = {
   contents: 100,
   specificLocation: 100,
 };
+const MIN_LENGTHS = {
+  itemName: 2,
+  description: 10,
+};
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 const showToast = (message) => toast.custom(() => <Toast  message={message} solid={true}/>);
 
-const sanitizeInput = (value, maxLength) =>
-  String(value ?? "")
-    .replace(/\s+/g, " ")
-    .replace(/[<>]/g, "")
-    .slice(0, maxLength);
+const sanitizeInput = sanitizeText;
 
 async function fetchJson(url) {
   const res = await fetch(url);
@@ -50,11 +53,13 @@ function validatePage1({ categoryId, itemName, description, contents }) {
 
   const name = itemName.trim();
   if (!name) errors.itemName = "Item name is required.";
+  else if (name.length < MIN_LENGTHS.itemName) errors.itemName = minLengthMessage(MIN_LENGTHS.itemName);
   else if (name.length > LIMITS.itemName)
     errors.itemName = `Item name must be ${LIMITS.itemName} characters or less.`;
 
   const desc = description.trim();
   if (!desc) errors.description = "Description is required.";
+  else if (desc.length < MIN_LENGTHS.description) errors.description = minLengthMessage(MIN_LENGTHS.description);
   else if (desc.length > LIMITS.description)
     errors.description = `Description must be ${LIMITS.description} characters or less.`;
 
@@ -111,7 +116,7 @@ export default function Report() {
   const { id, reportId, mode } = useParams();
   const viewOnly = mode === "view";
   const userID = localStorage.getItem("user_id");
-  const { setDirty } = useUnsavedChangesGuard();
+  const { setDirty, setBlocking } = useUnsavedChangesGuard();
 
   const [categories, setCategories] = useState([]);
   const [offices, setOffices] = useState([]);
@@ -140,6 +145,7 @@ export default function Report() {
   const [submitted, setSubmitted] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showWebcamCapture, setShowWebcamCapture] = useState(false);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isCancel, setIsCancel] = useState(false);
@@ -151,6 +157,7 @@ export default function Report() {
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const blobUrlRef = useRef(null);
+  const [originalReport, setOriginalReport] = useState(null);
 
   const hasPhoto = !!image && image !== "REMOVE";
   const totalLocations = selectedLocations.length + (cantRemember ? 1 : 0);
@@ -235,12 +242,18 @@ export default function Report() {
 
       if (data.image_url) setImage(data.image_url);
 
+      let originalDateLost = "";
+      let originalTimeLost = "";
       if (data.lost_date) {
         const [datePart, timePart] = data.lost_date.split(/[T ]/);
-        setDateLost(datePart || "");
-        setTimeLost(timePart?.slice(0, 5) || "");
+        originalDateLost = datePart || "";
+        originalTimeLost = timePart?.slice(0, 5) || "";
+        setDateLost(originalDateLost);
+        setTimeLost(originalTimeLost);
       }
 
+      let originalCantRemember = false;
+      let originalLocations = [];
       if (data.location_lost) {
         let parsed;
         try {
@@ -250,10 +263,27 @@ export default function Report() {
         }
 
         if (Array.isArray(parsed)) {
-          if (parsed.includes("Can't Remember")) setCantRemember(true);
-          else setRawLocations(parsed);
+          if (parsed.includes("Can't Remember")) {
+            originalCantRemember = true;
+            setCantRemember(true);
+          } else {
+            originalLocations = parsed;
+            setRawLocations(parsed);
+          }
         }
       }
+
+      setOriginalReport({
+        itemName: data.item_name || "",
+        description: data.description || "",
+        contents: data.contents || "",
+        categoryID: String(data.category_id || ""),
+        specificLocation: data.specific_location || "",
+        dateLost: originalDateLost,
+        timeLost: originalTimeLost,
+        cantRemember: originalCantRemember,
+        locations: [...originalLocations].sort(),
+      });
 
       setIsEdit(true);
     } catch (err) {
@@ -431,12 +461,12 @@ export default function Report() {
   const saveReport = async (isUpdate) => {
     setShowSubmitConfirmation(false);
 
-    if(timeValid){
+    if(!timeValid){
       showToast("Please input a valid time")
       return
     }
 
-    if(selectedLocations.length <= 0){
+    if(selectedLocations.length <= 0 && !cantRemember){
       showToast("Please select location lost")
       return
     }
@@ -477,20 +507,46 @@ export default function Report() {
     showToast("Edit has been cancelled.");
   };
 
+  const hasChangedFromOriginal = () => {
+    const original = originalReport;
+    if (!original) return false;
+
+    if (selectedFile) return true; // new photo chosen or existing one removed
+
+    return (
+      itemName.trim() !== original.itemName.trim() ||
+      description.trim() !== original.description.trim() ||
+      contents.trim() !== original.contents.trim() ||
+      categoryID !== original.categoryID ||
+      specificLocation.trim() !== original.specificLocation.trim() ||
+      dateLost !== original.dateLost ||
+      timeLost !== original.timeLost ||
+      cantRemember !== original.cantRemember ||
+      JSON.stringify([...selectedLocations].sort()) !== JSON.stringify(original.locations)
+    );
+  };
+
   const hasUnsavedChanges =
   !viewOnly &&
   !submitted &&
   (
-    !!image ||
-    !!categoryID ||
-    !!itemName.trim() ||
-    !!description.trim() ||
-    !!contents.trim() ||
-    !!dateLost ||
-    !!timeLost ||
-    selectedLocations.length > 0 ||
-    cantRemember ||
-    !!specificLocation.trim()
+    isAnalyzing ||
+    (
+      isEdit
+        ? hasChangedFromOriginal()
+        : (
+          !!image ||
+          !!categoryID ||
+          !!itemName.trim() ||
+          !!description.trim() ||
+          !!contents.trim() ||
+          !!dateLost ||
+          !!timeLost ||
+          selectedLocations.length > 0 ||
+          cantRemember ||
+          !!specificLocation.trim()
+        )
+    )
   );
 
   useEffect(() => {
@@ -513,6 +569,12 @@ export default function Report() {
   }, [hasUnsavedChanges, setDirty, isAnalyzing]);
 
   useEffect(() => () => setDirty(false), [setDirty]);
+
+  useEffect(() => {
+    setBlocking(isAnalyzing);
+  }, [isAnalyzing, setBlocking]);
+
+  useEffect(() => () => setBlocking(false), [setBlocking]);
 
 
 
@@ -662,12 +724,16 @@ export default function Report() {
 
               <div className="flex gap-2.5">
                 {isEdit && !mode ? (
-                  <ActionButton variant="outline" onClick={() => setIsCancel(true)}>
+                  <ActionButton
+                    variant="outline"
+                    disabled={isAnalyzing}
+                    onClick={() => (hasUnsavedChanges ? setIsCancel(true) : handleDiscard())}
+                  >
                     Cancel
                   </ActionButton>
                 ) : (
                   !viewOnly && (
-                    <ActionButton variant="outline" danger onClick={() => setShowClearConfirm(true)}>
+                    <ActionButton variant="outline" danger disabled={isAnalyzing} onClick={() => setShowClearConfirm(true)}>
                       Clear All
                     </ActionButton>
                   )
@@ -810,7 +876,7 @@ export default function Report() {
                 </ActionButton>
                 {!viewOnly && (
                   <ActionButton
-                    disabled={isEdit ? !timeValid : !timeValid || totalLocations === 0}
+                    disabled={isEdit ? !timeValid || !hasUnsavedChanges : !timeValid || totalLocations === 0}
                     onClick={() => setShowSubmitConfirmation(true)}
                   >
                     {isEdit ? "Confirm" : "Submit"}
@@ -907,7 +973,11 @@ export default function Report() {
             onClose={() => setShowImageOptions(false)}
             onTake={() => {
               setShowImageOptions(false);
-              cameraInputRef.current?.click();
+              if (isMobileDevice()) {
+                cameraInputRef.current?.click();
+              } else {
+                setShowWebcamCapture(true);
+              }
             }}
             onChoose={() => {
               setShowImageOptions(false);
@@ -916,6 +986,16 @@ export default function Report() {
             onRemove={() => {
               setShowImageOptions(false);
               clearPhoto();
+            }}
+          />
+        )}
+
+        {showWebcamCapture && (
+          <WebcamCaptureModal
+            onClose={() => setShowWebcamCapture(false)}
+            onCapture={(file) => {
+              setShowWebcamCapture(false);
+              setPhoto(file);
             }}
           />
         )}

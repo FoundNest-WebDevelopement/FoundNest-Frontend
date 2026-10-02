@@ -17,6 +17,25 @@ import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import ScaleImage from "../../ScaleImage.jsx";
 import AdminTextField from "../../AdminTextField.jsx";
 import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning.js";
+import { sanitizeText, minLengthMessage } from "../../../utils/textValidation.js";
+
+const LIMITS = {
+    itemName: 50,
+    description: 500,
+    contents: 100,
+    specificLocation: 100,
+    reportedBy: 100,
+    additionalNotes: 300,
+};
+const MIN_LENGTHS = { itemName: 2, description: 10 };
+const SANITIZED_FIELD_LIMITS = {
+    item_name: LIMITS.itemName,
+    description: LIMITS.description,
+    contents: LIMITS.contents,
+    specific_location: LIMITS.specificLocation,
+    reported_by: LIMITS.reportedBy,
+    additional_notes: LIMITS.additionalNotes,
+};
 
 export default function EditFoundReportTab({
     selectedItem,
@@ -128,8 +147,8 @@ export default function EditFoundReportTab({
     useEffect(() => {
         const imageChanged = selectedFile !== null;
         const formChanged = JSON.stringify(formData) !== JSON.stringify(originalFormData);
-        setHasChanges(imageChanged || formChanged);
-    }, [formData, originalFormData, selectedFile]);
+        setHasChanges(imageChanged || formChanged || isAnalyzing);
+    }, [formData, originalFormData, selectedFile, isAnalyzing]);
 
     useUnsavedChangesWarning(selectedItem && hasChanges);
 
@@ -143,11 +162,14 @@ export default function EditFoundReportTab({
 
     // === HANDLERS ===
     const handleChange = (name, value) => {
+        const sanitizedValue =
+            SANITIZED_FIELD_LIMITS[name] != null ? sanitizeText(value, SANITIZED_FIELD_LIMITS[name]) : value;
+
         setFormData(prev => ({
             ...prev,
-            [name]: value,
+            [name]: sanitizedValue,
             // If date changes, reset time to ensure validation re-runs properly
-            ...(name === "found_date" && { found_time: "" }) 
+            ...(name === "found_date" && { found_time: "" })
         }));
     };
 
@@ -255,8 +277,21 @@ const analyzeFile = async () => {
     const editDateValid = isValidPastOrToday(formData.found_date);
     const editTimeValid = editDateValid && isTimeNotFuture(formData.found_date, formData.found_time);
     
+    const itemNameTrimmed = formData.item_name.trim();
+    const descriptionTrimmed = formData.description.trim();
+
+    const itemNameError =
+        itemNameTrimmed && itemNameTrimmed.length < MIN_LENGTHS.itemName
+            ? minLengthMessage(MIN_LENGTHS.itemName)
+            : "";
+    const descriptionError =
+        descriptionTrimmed && descriptionTrimmed.length < MIN_LENGTHS.description
+            ? minLengthMessage(MIN_LENGTHS.description)
+            : "";
+
     const isFormValid =
-        formData.item_name.trim() !== "" &&
+        itemNameTrimmed.length >= MIN_LENGTHS.itemName &&
+        descriptionTrimmed.length >= MIN_LENGTHS.description &&
         formData.category_id !== "" &&
         formData.location_found.trim() !== "" &&
         formData.found_date !== "" &&
@@ -346,6 +381,7 @@ const analyzeFile = async () => {
                         title="Item Name"
                         reqField={true}
                         value={formData.item_name}
+                        error={itemNameError}
                         disabled={isSavingEdit || isAnalyzing}
                         onChange={(value) => handleChange("item_name", value)}
                     />
@@ -416,6 +452,7 @@ const analyzeFile = async () => {
                         title="Description"
                         disabled={isSavingEdit || isAnalyzing}
                         value={formData.description}
+                        error={descriptionError}
                         onChange={(value) => handleChange("description", value)}
                     />
 

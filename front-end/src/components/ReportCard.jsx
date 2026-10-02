@@ -108,7 +108,7 @@ function CancelReasonModal({ open, selectedReason, onSelect, onKeep, onConfirm, 
 
   return (
     <div
-      className="fixed inset-0 bg-black/20 flex items-center justify-center z-2000 px-4"
+      className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-center justify-center z-2000 px-4"
       role="dialog"
       aria-modal="true"
       onClick={() => !isCancelling && onKeep()}

@@ -3,7 +3,7 @@ export default function PhotoSheet({ hasPhoto, onTake, onChoose, onRemove, onClo
     "w-full flex items-center gap-3 rounded-xl border border-[#eee] px-4 py-3 text-sm font-semibold text-left";
 
   return (
-    <div className="fixed inset-0 bg-black/20 flex items-end justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-end justify-center z-50" onClick={onClose}>
       <div
         className="bg-white w-full rounded-t-3xl p-4 pb-25 flex flex-col gap-2"
         onClick={(e) => e.stopPropagation()}

@@ -14,6 +14,10 @@ import { Upload, CircleMinus, Image, Astroid } from "lucide-react"
 import { toast } from "react-toastify";
 import { updateLostReport, getLostReports } from "../services/LostReportModalService";
 import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning";
+import { sanitizeText, minLengthMessage } from "../../../utils/textValidation";
+
+const LIMITS = { itemName: 50, description: 500, contents: 100, specificLocation: 100, ownerName: 100 };
+const MIN_LENGTHS = { itemName: 2, description: 10 };
 export default function EditTab({
     hasChanges,
     setHasChanges,
@@ -286,8 +290,8 @@ const analyzeFile = async () => {
         const formChanged =
             JSON.stringify(formData) !== JSON.stringify(originalFormData);
 
-        setHasChanges(imageChanged || formChanged);
-    }, [formData, originalFormData, selectedFile]);
+        setHasChanges(imageChanged || formChanged || isAnalyzing);
+    }, [formData, originalFormData, selectedFile, isAnalyzing]);
 
     const handleCancel = () => {
         if (hasChanges) {
@@ -297,8 +301,21 @@ const analyzeFile = async () => {
         setEditTab(false);
     };
 
+    const itemNameTrimmed = formData.item_name.trim();
+    const descriptionTrimmed = formData.description.trim();
+
+    const itemNameError =
+        itemNameTrimmed && itemNameTrimmed.length < MIN_LENGTHS.itemName
+            ? minLengthMessage(MIN_LENGTHS.itemName)
+            : "";
+    const descriptionError =
+        descriptionTrimmed && descriptionTrimmed.length < MIN_LENGTHS.description
+            ? minLengthMessage(MIN_LENGTHS.description)
+            : "";
+
     const isFormValid =
-    formData.item_name.trim() !== "" &&
+    itemNameTrimmed.length >= MIN_LENGTHS.itemName &&
+    descriptionTrimmed.length >= MIN_LENGTHS.description &&
     formData.category_id !== "" &&
     formData.lost_date !== "" &&
     formData.location_lost.length > 0 &&
@@ -403,10 +420,11 @@ const analyzeFile = async () => {
                         title="Item Name"
                         reqField={true}
                         value={formData?.item_name ?? ""}
+                        error={itemNameError}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
-                                item_name: value
+                                item_name: sanitizeText(value, LIMITS.itemName)
                             }))
                         }
                     />
@@ -429,10 +447,11 @@ const analyzeFile = async () => {
                     <AdminTextArea
                         title="Description"
                         value={formData.description ?? ""}
+                        error={descriptionError}
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
-                                description: value
+                                description: sanitizeText(value, LIMITS.description)
                             }))
                         }
                     />
@@ -444,7 +463,7 @@ const analyzeFile = async () => {
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
-                                contents: value
+                                contents: sanitizeText(value, LIMITS.contents)
                             }))
                         }
                     />
@@ -512,7 +531,7 @@ const analyzeFile = async () => {
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
-                                specific_location: value
+                                specific_location: sanitizeText(value, LIMITS.specificLocation)
                             }))
                         }
                     />
@@ -523,7 +542,7 @@ const analyzeFile = async () => {
                         onChange={(value) =>
                             setFormData(prev => ({
                                 ...prev,
-                                owner_name: value
+                                owner_name: sanitizeText(value, LIMITS.ownerName)
                             }))
                         }
                     />

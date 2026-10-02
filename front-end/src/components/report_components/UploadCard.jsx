@@ -115,7 +115,7 @@ const [selectedPhoto, setSelectedPhoto] = useState(null)
         }
       </div>
        {selectedPhoto &&
-                <div className="fixed  inset-0 w-screen h-screen bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001">
+                <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001">
                     <div className="relative w-full h-full flex items-center ">
                         <button
                             className="absolute top-2 right-2 text-3xl text-white z-10 rounded-full bg-black/20 p-2"

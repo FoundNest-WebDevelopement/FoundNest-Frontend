@@ -221,7 +221,7 @@ export default function FoundItemDetails() {
       </div>
       {howToClaim && (
         <div
-          className="fixed inset-0 bg-black/20 flex items-end justify-center z-10"
+          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-end justify-center z-10"
           onClick={() => setHowToClaim(false)}
         >
           <div
@@ -262,7 +262,7 @@ export default function FoundItemDetails() {
 
       {selectedPhoto && (
         <div
-          className="fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-sm flex items-center justify-center z-[4001]"
+          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[4001]"
           onClick={() => setSelectedPhoto(null)}
         >
           <button

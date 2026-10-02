@@ -15,7 +15,7 @@ export default function FoundReportDetailsTab({
     isClaimRecordLoading,
     disposedDetails,
     setSelectedImage,
-    
+
     // Action Callbacks passed from Parent
     onEdit,
     onClaim,
@@ -24,6 +24,12 @@ export default function FoundReportDetailsTab({
     onRestore
 }) {
     const navigate = useNavigate();
+    const officeId = localStorage.getItem("office_location")
+    const isUnauthorizedAdmin =
+        String(officeId) !== String(selectedItem.office_id);
+
+
+
 
     // Local UI States
     const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
@@ -118,8 +124,8 @@ export default function FoundReportDetailsTab({
             )}
 
             {/* ITEM IMAGE */}
-            <div 
-                className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden cursor-pointer" 
+            <div
+                className="relative w-full h-50 bg-[#F5F5F5] border border-[#DDD9CF] rounded-lg overflow-hidden cursor-pointer"
                 onClick={() => setSelectedImage(selectedItem?.image_url)}
             >
                 <img src={selectedItem.image_url} alt={selectedItem.item_name} className="w-full h-full object-contain" />
@@ -227,11 +233,11 @@ export default function FoundReportDetailsTab({
                                 <p>{claimRecord?.claimant_status && "Completed"}</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex flex-col text-[10px] xl:text-xs justify-center">
                             <p className="font-semibold">Proof of Claim</p>
                         </div>
-                        
+
                         <div className="flex flex-col gap-2">
                             {claimRecord?.claimant_photo_url && (
                                 <div className="relative w-full h-40 rounded-lg bg-[#F0EDE6] border border-[#DDD9CF] cursor-pointer" onClick={() => setSelectedImage(claimRecord?.claimant_photo_url)}>
@@ -250,7 +256,7 @@ export default function FoundReportDetailsTab({
                                 <p className="text-[#6B5C42]">Processed on {formatDateTime(claimRecord?.claim_date)}</p>
                             </div>
                         </div>
-                        
+
                         <button
                             className="bg-green-700 text-white text-[10px] xl:text-xs flex items-center font-medium border mt-2 cursor-pointer w-fit py-1 px-2 rounded-md hover:opacity-90 transition"
                             onClick={() => navigate(`/admin/transactions?claimId=${claimRecord?.claim_id}`)}
@@ -264,11 +270,10 @@ export default function FoundReportDetailsTab({
 
             {/* DISPOSAL SECTION (If Disposed) */}
             {disposedDetails && (
-                <div className={`w-full gap-3 flex rounded-lg mt-8 border-l-4 text-xs p-4 flex-col ${
-                    disposedDetails?.disposal_method === "DONATED" 
-                        ? "bg-green-50 border-l-green-700 text-green-700" 
+                <div className={`w-full gap-3 flex rounded-lg mt-8 border-l-4 text-xs p-4 flex-col ${disposedDetails?.disposal_method === "DONATED"
+                        ? "bg-green-50 border-l-green-700 text-green-700"
                         : "bg-gray-100 border-l-gray-700 text-gray-700"
-                }`}>
+                    }`}>
                     <div className="flex items-center gap-1">
                         {disposedDetails?.disposal_method === "DONATED" ? (
                             <i className="fa-regular fa-heart text-sm"></i>
@@ -279,15 +284,15 @@ export default function FoundReportDetailsTab({
                             {disposedDetails?.disposal_method === "DONATED" ? "Donated" : "Disposed as waste"}
                         </p>
                     </div>
-                    
+
                     <div className="text-[10px] xl:text-xs flex flex-col gap-1">
                         <p className="text-gray-600">Disposed by: <span className="font-medium text-black">{disposedDetails.disposed_by_admin_name}</span></p>
                         <p className="text-gray-600">Disposed on: {formatDateTime(disposedDetails.created_at)}</p>
                     </div>
-                    
+
                     <hr className="border-gray-300 my-1" />
-                    
-                    <button 
+
+                    <button
                         className="text-left font-semibold text-[10px] xl:text-xs cursor-pointer hover:underline flex justify-between items-center"
                         onClick={() => setOpenDisposedDetails(!openDisposedDetails)}
                     >
@@ -300,7 +305,7 @@ export default function FoundReportDetailsTab({
                             <div className="relative w-full h-40 rounded-lg bg-white border border-gray-300 cursor-pointer" onClick={() => setSelectedImage(disposedDetails?.proof_img)}>
                                 <img src={disposedDetails.proof_img} alt="Proof" className="h-full w-full object-contain" />
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-3 text-black text-[10px] xl:text-xs mt-2">
                                 <div className="flex flex-col">
                                     <p className="text-gray-500 font-medium">DISPOSAL METHOD</p>
@@ -336,7 +341,7 @@ export default function FoundReportDetailsTab({
                             <p className="text-[#6B5C42]">Archived on {formatDateTime(selectedItem.date_archived)}</p>
                         </div>
                     </div>
-                    
+
                     <button
                         type="button"
                         className="flex gap-3 mt-4 p-3 rounded-md items-center cursor-pointer transition-transform duration-100 enabled:active:scale-95 bg-primary text-white w-full justify-center"
@@ -359,11 +364,11 @@ export default function FoundReportDetailsTab({
                             type="button"
                             className="h-full border-primary border px-5 py-3 rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform enabled:active:scale-95 disabled:cursor-not-allowed"
                             onClick={onEdit}
-                            disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed"}
+                            disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed" || isUnauthorizedAdmin}
                         >
                             Edit Item Details
                         </button>
-                        
+
                         <div className="relative">
                             {/* The Dropdown Menu */}
                             {openUpdateStatus && (
@@ -374,7 +379,7 @@ export default function FoundReportDetailsTab({
                                     >
                                         Mark as Claimed
                                     </button>
-                                    
+
                                     {selectedItem.status === "to_be_disposed" && (
                                         <button
                                             className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
@@ -383,7 +388,7 @@ export default function FoundReportDetailsTab({
                                             Mark as Disposed
                                         </button>
                                     )}
-                                    
+
                                     <button
                                         className="text-xs p-3 w-full text-left text-red-600 hover:bg-red-50 transition rounded-b-md"
                                         onClick={() => { onArchive(); setOpenUpdateStatus(false); }}
@@ -392,24 +397,24 @@ export default function FoundReportDetailsTab({
                                     </button>
                                 </div>
                             )}
-                            
+
                             <button
                                 className="h-full border-primary py-3 border px-5 rounded-md bg-primary text-white xl:px-7 disabled:opacity-40 cursor-pointer transition-transform enabled:active:scale-95 disabled:cursor-not-allowed flex items-center gap-2"
                                 onClick={() => setOpenUpdateStatus(!openUpdateStatus)}
-                                disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed"}
+                                disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed" || isUnauthorizedAdmin}
                             >
-                                Update Status 
+                                Update Status
                                 <i className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white transition-transform`}></i>
                             </button>
                         </div>
                     </div>
-                    
+
                     {/* QR Code Print Button */}
                     <div className="mt-3 w-full flex flex-col gap-1 text-[9px] xl:text-xs">
                         <button
                             type="button"
                             onClick={handlePrintQRCode}
-                            disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed" || isPrintingQR}
+                            disabled={selectedItem.status === "claimed" || selectedItem.status === "disposed" || isPrintingQR || isUnauthorizedAdmin}
                             className="flex gap-3 p-3 rounded-md items-center cursor-pointer transition-transform active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <QrCode size="20" />
@@ -423,9 +428,14 @@ export default function FoundReportDetailsTab({
                     </div>
                 </>
             )}
-            
+
+            {isUnauthorizedAdmin &&
+
+                <span className="text-primary italic text-[10px]  mt-1">Item is not in your offce</span>
+            }
             {/* Bottom Padding */}
             <div className="h-5"></div>
+
         </div>
     );
 }

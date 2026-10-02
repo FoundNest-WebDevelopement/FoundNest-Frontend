@@ -1,8 +1,10 @@
 import { MapPin, Search } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import reportIconInactive from "../assets/report_icon_inactive.png";
 import reportIconActive from "../assets/report_icon_active.png";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import Toast from "./Toast";
 
 export default function Dock() {
   const navigate = useNavigate();
@@ -12,7 +14,10 @@ export default function Dock() {
   const guardedClick = (to) => (e) => {
     if (to === location.pathname) return;
     e.preventDefault();
-    requestNavigation(() => navigate(to));
+    const result = requestNavigation(() => navigate(to));
+    if (result === "blocked") {
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />);
+    }
   };
 
   return (
