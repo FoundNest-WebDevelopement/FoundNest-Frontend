@@ -15,6 +15,7 @@ import LocationGroup from "../components/report_components/LocationGroup";
 import PhotoSheet from "../components/report_components/PhotoSheet";
 import Field from "../components/report_components/Field";
 import ActionButton from "../components/report_components/ActionButton";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -110,6 +111,7 @@ export default function Report() {
   const { id, reportId, mode } = useParams();
   const viewOnly = mode === "view";
   const userID = localStorage.getItem("user_id");
+  const { setDirty } = useUnsavedChangesGuard();
 
   const [categories, setCategories] = useState([]);
   const [offices, setOffices] = useState([]);
@@ -123,7 +125,6 @@ export default function Report() {
   const [description, setDescription] = useState("");
   const [contents, setContents] = useState("");
   const [errors, setErrors] = useState({});
-  const [useAiDescribe, setUseAiDescribe] = useState(false);
 
   const [dateLost, setDateLost] = useState("");
   const [timeLost, setTimeLost] = useState("");
@@ -497,6 +498,12 @@ export default function Report() {
     window.removeEventListener("beforeunload", handleBeforeUnload);
   };
 }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    setDirty(hasUnsavedChanges);
+  }, [hasUnsavedChanges, setDirty, isAnalyzing]);
+
+  useEffect(() => () => setDirty(false), [setDirty]);
 
 
 

@@ -1,4 +1,5 @@
-import { Astroid, Image, ImageOff, ImageOffIcon } from "lucide-react";
+import { Astroid, Expand, Image, ImageOff, ImageOffIcon, X } from "lucide-react";
+import { useState } from "react";
 
 function Spinner({ className = "h-8 w-8" }) {
   return (
@@ -10,7 +11,7 @@ function Spinner({ className = "h-8 w-8" }) {
 
 export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan, onOpenPicker }) {
   const hasImage = image && image !== "REMOVE";
-
+const [selectedPhoto, setSelectedPhoto] = useState(null)
 
 
   return (
@@ -67,21 +68,70 @@ export default function UploadCard({ image, isLoading, viewOnly, canScan, onScan
           </>
         )}
         {viewOnly && (
-          <>
-       <div className="flex flex-col gap-2 items-center justify-center">
-        <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-(--color-tertiary)/40 flex items-center justify-center">
-                  <div className="h-15 w-15 rounded-full  flex items-center justify-center">
-                      <ImageOffIcon strokeWidth={2} className="text-(--color-tertiary)/40"/>
-                  </div>
-                  
-                </div>
-                <p className="font-medium text-(--color-tertiary)">No Photo Attached</p>
-       </div>
+
           
+          <>
+
+          {isLoading ? (
+                <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#CCC] flex items-center justify-center">
+                  <Spinner />
+                </div>
+              ) : hasImage? 
+          (
+            <>
+            <div className=" flex flex-col gap-4 items-center justify-center">
+              <div className="relative h-27.5 w-27.5" onClick={() => setSelectedPhoto(image)}>
+                  <img src={image} alt="Item" className="h-full w-full rounded-[20px] object-cover" />
+                  <button
+                                            type="button"
+                                            onClick={() => setSelectedPhoto(image)}
+                                            className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/70 text-white text-xs"
+                                        >
+                                            <Expand size={16} className="text-white" />
+                                        </button>
+                </div>
+                <p className="font-medium text-(--color-tertiary)">Item Photo</p>
+            </div>
+            </>
+          )
+          :
+          (
+            <>
+            <div className="flex flex-col gap-2 items-center justify-center">
+                    <div className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-(--color-tertiary)/40 flex items-center justify-center">
+                      <div className="h-15 w-15 rounded-full  flex items-center justify-center">
+                        <ImageOffIcon strokeWidth={2} className="text-(--color-tertiary)/40" />
+                      </div>
+
+                    </div>
+                    <p className="font-medium text-(--color-tertiary)">No Photo Attached</p>
+                  </div>
+            </>
+          )
+
+          }
           </>
         )
         }
       </div>
+       {selectedPhoto &&
+                <div className="fixed  inset-0 w-screen h-screen bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001">
+                    <div className="relative w-full h-full flex items-center ">
+                        <button
+                            className="absolute top-2 right-2 text-3xl text-white z-10 rounded-full bg-black/20 p-2"
+                            onClick={() => setSelectedPhoto(null)}
+                        >
+                            <X />
+                        </button>
+
+                        <div className="w-full h-full flex items-center justify-center">
+                            <img src={selectedPhoto} className="max-w-100 h-100" />
+
+                        </div>
+                    </div>
+                </div>
+
+            }
     </div>
   );
 }
