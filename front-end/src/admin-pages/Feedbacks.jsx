@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, X, Pencil, Search, Download } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ConfirmDialog from "../global-components/ConfirmDialog";
+
+const toLocalISODate = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
 export default function Feedbacks() {
     const API_URL = import.meta.env.VITE_API_URL;
     const officeId = localStorage.getItem("office_location");
+    const today = toLocalISODate();
+
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState("pdf");
+    const [exportStartDate, setExportStartDate] = useState("");
+    const [exportEndDate, setExportEndDate] = useState("");
+    const [exportTouched, setExportTouched] = useState({ start: false, end: false });
 
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,14 +35,16 @@ export default function Feedbacks() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
 
-    // Search & Filters
+    // Search & Filters — applied live, no separate "Apply" step
     const [searchText, setSearchText] = useState("");
-    const [starFilterTemp, setStarFilterTemp] = useState("");
-    const [statusFilterTemp, setStatusFilterTemp] = useState("");
-    const [dateFilterTemp, setDateFilterTemp] = useState("");
     const [starFilter, setStarFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
-    const [dateFilter, setDateFilter] = useState("");
+    const [dateFilterFrom, setDateFilterFrom] = useState("");
+    const [dateFilterTo, setDateFilterTo] = useState("");
+
+    // Archive/unarchive confirmation
+    const [pendingArchiveAction, setPendingArchiveAction] = useState(null); // null | "archive" | "unarchive"
+    const [isArchiving, setIsArchiving] = useState(false);
 
     const getStatus = (review) => {
         if (review.response_text) return "responded";
@@ -39,11 +58,14 @@ export default function Feedbacks() {
         const studentId = (review.student_number || review.email || "").toLowerCase();
         const status = getStatus(review);
 
+        const subject = (review.review_text || "").toLowerCase();
+
         const matchesSearch =
             !query ||
             feedbackId.includes(query) ||
             studentId.includes(query) ||
-            status.includes(query);
+            status.includes(query) ||
+            subject.includes(query);
 
         const matchesStar = !starFilter || String(review.rating) === starFilter;
 
@@ -54,10 +76,32 @@ export default function Feedbacks() {
                 ? status === statusFilter && !review.is_archived
                 : !review.is_archived;
 
-        const reviewDate = new Date(review.created_at).toISOString().split("T")[0];
-        const matchesDate = !dateFilter || reviewDate === dateFilter;
+        const reviewDate = toLocalISODate(new Date(review.created_at));
+        const matchesDate =
+            (!dateFilterFrom || reviewDate >= dateFilterFrom) &&
+            (!dateFilterTo || reviewDate <= dateFilterTo);
 
         return matchesSearch && matchesStar && matchesStatus && matchesDate;
+    });
+
+    const exportErrors = { start: "", end: "" };
+    if (!exportStartDate) {
+        if (exportTouched.start) exportErrors.start = "Start date is required.";
+    } else if (exportStartDate > today) {
+        exportErrors.start = "Start date cannot be in the future.";
+    }
+    if (!exportEndDate) {
+        if (exportTouched.end) exportErrors.end = "End date is required.";
+    } else if (exportEndDate > today) {
+        exportErrors.end = "End date cannot be in the future.";
+    } else if (exportStartDate && exportStartDate > exportEndDate) {
+        exportErrors.end = "End date must be on or after the start date.";
+    }
+    const isExportValid = Boolean(exportStartDate && exportEndDate && !exportErrors.start && !exportErrors.end);
+
+    const reviewsToExport = visibleReviews.filter((review) => {
+        const reviewDate = toLocalISODate(new Date(review.created_at));
+        return reviewDate >= exportStartDate && reviewDate <= exportEndDate;
     });
 
     useEffect(() => {
@@ -108,6 +152,11 @@ export default function Feedbacks() {
                 }
             );
             const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to submit response.");
+            }
+
             setReviews((prev) =>
                 prev.map((r) =>
                     r.review_id === selectedReview.review_id ? { ...r, ...data.review } : r
@@ -115,8 +164,10 @@ export default function Feedbacks() {
             );
             setSelectedReview((prev) => ({ ...prev, ...data.review }));
             setIsEditingResponse(false);
+            toast.success("Response submitted successfully.");
         } catch (err) {
             console.error(err);
+            toast.error(err.message || "Failed to submit response.");
         } finally {
             setSubmitting(false);
         }
@@ -128,54 +179,69 @@ export default function Feedbacks() {
     };
 
     const handleArchive = async () => {
+        setIsArchiving(true);
         try {
-            await fetchWithAuth(
+            const res = await fetchWithAuth(
                 `${API_URL}/api/reviews/${selectedReview.review_id}/archive`,
                 { method: "PATCH" }
             );
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to archive feedback.");
+            }
+
             setReviews((prev) =>
                 prev.map((r) =>
                     r.review_id === selectedReview.review_id ? { ...r, is_archived: true } : r
                 )
             );
+            toast.success("Feedback archived.");
             setSelectedReview(null);
         } catch (err) {
             console.error(err);
+            toast.error(err.message || "Failed to archive feedback.");
+        } finally {
+            setIsArchiving(false);
+            setPendingArchiveAction(null);
         }
     };
 
     const handleUnarchive = async () => {
+        setIsArchiving(true);
         try {
-            await fetchWithAuth(
+            const res = await fetchWithAuth(
                 `${API_URL}/api/reviews/${selectedReview.review_id}/unarchive`,
                 { method: "PATCH" }
             );
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to unarchive feedback.");
+            }
+
             setReviews((prev) =>
                 prev.map((r) =>
                     r.review_id === selectedReview.review_id ? { ...r, is_archived: false } : r
                 )
             );
+            toast.success("Feedback unarchived.");
             setSelectedReview(null);
         } catch (err) {
             console.error(err);
+            toast.error(err.message || "Failed to unarchive feedback.");
+        } finally {
+            setIsArchiving(false);
+            setPendingArchiveAction(null);
         }
-    };
-
-    const handleApplyFilters = () => {
-        setStarFilter(starFilterTemp);
-        setStatusFilter(statusFilterTemp);
-        setDateFilter(dateFilterTemp);
-        setCurrentPage(1);
     };
 
     const handleClearFilters = () => {
         setSearchText("");
-        setStarFilterTemp("");
-        setStatusFilterTemp("");
-        setDateFilterTemp("");
         setStarFilter("");
         setStatusFilter("");
-        setDateFilter("");
+        setDateFilterFrom("");
+        setDateFilterTo("");
         setCurrentPage(1);
     };
 
@@ -196,7 +262,7 @@ export default function Feedbacks() {
             22
         );
 
-        const tableRows = visibleReviews.map((review) => [
+        const tableRows = reviewsToExport.map((review) => [
             `FB-${String(review.review_id).padStart(5, "0")}`,
             review.student_number || review.email,
             "★".repeat(review.rating) + "☆".repeat(5 - review.rating),
@@ -213,7 +279,59 @@ export default function Feedbacks() {
             headStyles: { fillColor: [153, 0, 0] },
         });
 
-        doc.save(`feedbacks-report-${new Date().toISOString().split("T")[0]}.pdf`);
+        doc.save(`feedbacks-report-${exportStartDate}-to-${exportEndDate}.pdf`);
+    };
+
+    const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const handleExportCSV = () => {
+        const header = ["Feedback ID", "From", "Rating", "Subject", "Date Submitted", "Status"];
+
+        const rows = reviewsToExport.map((review) => [
+            `FB-${String(review.review_id).padStart(5, "0")}`,
+            review.student_number || review.email,
+            review.rating,
+            review.review_text || "",
+            formatDate(review.created_at),
+            getStatus(review).charAt(0).toUpperCase() + getStatus(review).slice(1),
+        ]);
+
+        const csvContent = [header, ...rows]
+            .map((row) => row.map(csvEscape).join(","))
+            .join("\r\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `feedbacks-report-${exportStartDate}-to-${exportEndDate}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExport = () => {
+        if (!isExportValid) {
+            setExportTouched({ start: true, end: true });
+            return;
+        }
+
+        if (exportFormat === "pdf") {
+            handleExportPDF();
+        } else {
+            handleExportCSV();
+        }
+
+        setIsExportModalOpen(false);
+        setExportStartDate("");
+        setExportEndDate("");
+        setExportTouched({ start: false, end: false });
+    };
+
+    const handleCloseExportModal = () => {
+        setIsExportModalOpen(false);
+        setExportStartDate("");
+        setExportEndDate("");
+        setExportTouched({ start: false, end: false });
     };
 
     const renderStars = (rating) => {
@@ -258,26 +376,26 @@ export default function Feedbacks() {
                         <Search size={18} className="text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by feedback ID, student ID, or status..."
+                            placeholder="Search by feedback ID, student ID, subject, or status..."
                             value={searchText}
                             onChange={(e) => { setSearchText(e.target.value); setCurrentPage(1); }}
                             className="flex-1 px-2 py-2 outline-none text-sm bg-transparent"
                         />
                     </div>
                     <button
-                        onClick={handleExportPDF}
-                        className="flex items-center gap-2 border border-primary text-primary bg-white rounded-md px-4 py-2 text-sm font-semibold hover:bg-primary/5 transition cursor-pointer whitespace-nowrap"
+                        onClick={() => setIsExportModalOpen(true)}
+                        className="flex items-center gap-2 border border-primary text-primary bg-white rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/5 transition cursor-pointer whitespace-nowrap"
                     >
                         <Download size={16} />
-                        Export PDF
+                        Export Feedback
                     </button>
                 </div>
 
                 {/* Filters Row */}
                 <div className="bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] rounded-md px-4 py-3 flex items-center gap-3 flex-wrap">
                     <select
-                        value={starFilterTemp}
-                        onChange={(e) => setStarFilterTemp(e.target.value)}
+                        value={starFilter}
+                        onChange={(e) => { setStarFilter(e.target.value); setCurrentPage(1); }}
                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm text-[#4B2D23] outline-none flex-1 min-w-32"
                     >
                         <option value="">All Star Rating</option>
@@ -289,8 +407,8 @@ export default function Feedbacks() {
                     </select>
 
                     <select
-                        value={statusFilterTemp}
-                        onChange={(e) => setStatusFilterTemp(e.target.value)}
+                        value={statusFilter}
+                        onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm text-[#4B2D23] outline-none flex-1 min-w-32"
                     >
                         <option value="">All Status</option>
@@ -302,18 +420,20 @@ export default function Feedbacks() {
 
                     <input
                         type="date"
-                        value={dateFilterTemp}
-                        onChange={(e) => setDateFilterTemp(e.target.value)}
+                        value={dateFilterFrom}
+                        max={dateFilterTo || undefined}
+                        onChange={(e) => { setDateFilterFrom(e.target.value); setCurrentPage(1); }}
+                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm text-[#4B2D23] outline-none flex-1 min-w-32"
+                    />
+                    <input
+                        type="date"
+                        value={dateFilterTo}
+                        min={dateFilterFrom || undefined}
+                        onChange={(e) => { setDateFilterTo(e.target.value); setCurrentPage(1); }}
                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm text-[#4B2D23] outline-none flex-1 min-w-32"
                     />
 
                     <div className="flex items-center gap-3 ml-auto">
-                        <button
-                            onClick={handleApplyFilters}
-                            className="bg-primary text-white rounded-md px-5 py-2 text-sm font-semibold hover:opacity-90 transition active:scale-95 cursor-pointer whitespace-nowrap"
-                        >
-                            Apply Filters
-                        </button>
                         <button
                             onClick={handleClearFilters}
                             className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
@@ -563,7 +683,9 @@ export default function Feedbacks() {
 
                             <hr className="border-gray-200" />
                             <button
-                                onClick={selectedReview.is_archived ? handleUnarchive : handleArchive}
+                                onClick={() =>
+                                    setPendingArchiveAction(selectedReview.is_archived ? "unarchive" : "archive")
+                                }
                                 className="text-primary text-sm font-semibold text-left hover:underline cursor-pointer"
                             >
                                 {selectedReview.is_archived ? "Unarchive Feedback" : "Archive Feedback"}
@@ -571,6 +693,143 @@ export default function Feedbacks() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {pendingArchiveAction === "archive" && (
+                <ConfirmDialog
+                    title="Archive Feedback"
+                    description="Are you sure you want to archive this feedback?"
+                    message="You can unarchive it later from the same panel."
+                    confirmText={isArchiving ? "Archiving..." : "Archive"}
+                    cancelText="Cancel"
+                    disabled={isArchiving}
+                    onClose={() => setPendingArchiveAction(null)}
+                    onConfirm={handleArchive}
+                />
+            )}
+
+            {pendingArchiveAction === "unarchive" && (
+                <ConfirmDialog
+                    title="Unarchive Feedback"
+                    description="Are you sure you want to unarchive this feedback?"
+                    message="It will show up again in the active feedback list."
+                    confirmText={isArchiving ? "Unarchiving..." : "Unarchive"}
+                    cancelText="Cancel"
+                    disabled={isArchiving}
+                    onClose={() => setPendingArchiveAction(null)}
+                    onConfirm={handleUnarchive}
+                />
+            )}
+
+            {isExportModalOpen && createPortal(
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+                    onClick={handleCloseExportModal}
+                >
+                    <div
+                        className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                            <p className="font-semibold">Export Feedbacks</p>
+                            <button onClick={handleCloseExportModal}>
+                                <i className="fa-solid fa-x text-sm text-white" />
+                            </button>
+                        </div>
+
+                        <div className="p-4">
+                            <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
+
+                            <div className="grid grid-cols-2 gap-3 mb-4 items-start">
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="feedback-export-start" className="text-sm font-medium text-[#1A1208]">
+                                        Start Date <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        id="feedback-export-start"
+                                        type="date"
+                                        value={exportStartDate}
+                                        max={today}
+                                        onChange={(e) => setExportStartDate(e.target.value)}
+                                        onBlur={() => setExportTouched((t) => ({ ...t, start: true }))}
+                                        aria-invalid={Boolean(exportErrors.start)}
+                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
+                                            exportErrors.start ? "border-[#C0392B] focus:border-[#C0392B]" : "border-[#DDD9CF] focus:border-primary"
+                                        }`}
+                                    />
+                                    {exportErrors.start && (
+                                        <p className="text-xs text-[#C0392B]">{exportErrors.start}</p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="feedback-export-end" className="text-sm font-medium text-[#1A1208]">
+                                        End Date <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        id="feedback-export-end"
+                                        type="date"
+                                        value={exportEndDate}
+                                        min={exportStartDate || undefined}
+                                        max={today}
+                                        onChange={(e) => setExportEndDate(e.target.value)}
+                                        onBlur={() => setExportTouched((t) => ({ ...t, end: true }))}
+                                        aria-invalid={Boolean(exportErrors.end)}
+                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
+                                            exportErrors.end ? "border-[#C0392B] focus:border-[#C0392B]" : "border-[#DDD9CF] focus:border-primary"
+                                        }`}
+                                    />
+                                    {exportErrors.end && (
+                                        <p className="text-xs text-[#C0392B]">{exportErrors.end}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 mb-4">
+                                <label className="text-sm font-medium text-[#1A1208]">Format</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("pdf")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "pdf" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        PDF
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("csv")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "csv" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
+                                        transition-transform duration-100 active:scale-95"
+                                    onClick={handleCloseExportModal}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
+                                        transition-transform duration-100 enabled:active:scale-95
+                                        disabled:opacity-40 disabled:cursor-not-allowed"
+                                    disabled={!isExportValid}
+                                    onClick={handleExport}
+                                >
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </>
     );

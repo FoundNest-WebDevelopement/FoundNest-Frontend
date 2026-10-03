@@ -16,6 +16,15 @@ import WebLoading from "../global-components/WebLoading";
 import ExportModal from "../global-components/ExportModal";
 import { toast } from "react-toastify";
 
+// Local calendar date — not toISOString(), which converts to UTC first and
+// silently shifts the date back a day in timezones ahead of UTC.
+const toLocalISODate = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 export default function ItemManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -67,7 +76,8 @@ export default function ItemManagement() {
 
   // SEARCH AND FILTER VARIABLES
   const [search, setSearch] = useState("");
-  const [dateFound, setDateFound] = useState("");
+  const [dateFoundFrom, setDateFoundFrom] = useState("");
+  const [dateFoundTo, setDateFoundTo] = useState("");
   const [location, setLocation] = useState(officeId);
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("unclaimed");
@@ -108,8 +118,10 @@ export default function ItemManagement() {
 
    
 
-    const reportDate = new Date(report.found_date).toISOString().split("T")[0];
-    const matchesDate = !dateFound || reportDate === dateFound;
+    const reportDate = toLocalISODate(new Date(report.found_date));
+    const matchesDate =
+      (!dateFoundFrom || reportDate >= dateFoundFrom) &&
+      (!dateFoundTo || reportDate <= dateFoundTo);
 
     return (
       matchesSearch &&
@@ -227,7 +239,8 @@ useEffect(() => {
     setLocation(officeId);
     setCategory("");
     setStatus("unclaimed");
-    setDateFound("");
+    setDateFoundFrom("");
+    setDateFoundTo("");
   };
 
   // HANDLE QR SCAN USE DATA (for log via QR)
@@ -284,7 +297,10 @@ useEffect(() => {
               <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
             </div>
             <div className="flex-1">
-              <AdminDateInput value={dateFound} onChange={setDateFound} />
+              <AdminDateInput title="Date Found From" value={dateFoundFrom} onChange={setDateFoundFrom} max={dateFoundTo || undefined} />
+            </div>
+            <div className="flex-1">
+              <AdminDateInput title="Date Found To" value={dateFoundTo} onChange={setDateFoundTo} />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
               <AdminButton isIcon={false} label="Clear Filters" isSolid={true} isBorder={false} isShadow={false} onClick={handleClearFilters} />

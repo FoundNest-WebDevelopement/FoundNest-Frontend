@@ -25,6 +25,26 @@ function formatPeriodLabel(period, granularity) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Manila" });
 }
 
+// Recharts' default Tooltip doesn't reliably follow the <Line> declaration
+// order, so this renders each series explicitly in TREND_SERIES order
+// (Logged, Claimed, Donated, Disposed) regardless of how Recharts orders payload.
+function TrendTooltip({ active, payload, label, granularity }) {
+    if (!active || !payload || payload.length === 0) return null;
+
+    const valueByKey = Object.fromEntries(payload.map((p) => [p.dataKey, p.value]));
+
+    return (
+        <div style={{ background: "#fff", border: "1px solid #E5E1D8", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+            <p style={{ fontWeight: 600, margin: "0 0 4px" }}>{formatPeriodLabel(label, granularity)}</p>
+            {TREND_SERIES.map((series) => (
+                <p key={series.key} style={{ margin: 0, color: series.color }}>
+                    {series.label}: {valueByKey[series.key] ?? 0}
+                </p>
+            ))}
+        </div>
+    );
+}
+
 function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtextColor, trend }) {
     return (
         <div className="bg-white rounded-xl border border-[#E5E1D8] shadow-[0_2px_6px_0px_rgba(0,0,0,0.06)] p-5 flex flex-col gap-3">
@@ -257,10 +277,7 @@ if (!stats || !counters) {
                                 tick={{ fontSize: 12 }}
                             />
                             <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                            <Tooltip
-                                labelFormatter={(value) => formatPeriodLabel(value, statusTrend.granularity)}
-                                contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                            />
+                            <Tooltip content={<TrendTooltip granularity={statusTrend.granularity} />} />
                             {TREND_SERIES.map((series) => (
                                 <Line
                                     key={series.key}
