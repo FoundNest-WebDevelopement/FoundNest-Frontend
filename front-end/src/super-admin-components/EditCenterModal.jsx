@@ -237,7 +237,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                                         onChange={(e) => { setLocationName(e.target.value); setError(""); }}
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     >
-                                        <option value="">Select building</option>
+                                        <option value="" disabled hidden>Select building</option>
                                         {locationOptions.map((loc) => (
                                             <option key={loc} value={loc}>
                                                 {loc}

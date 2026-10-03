@@ -53,6 +53,17 @@ export async function fetchWithAuth(url, options = {}) {
     headers,
   });
 
+  if (response.status === 403) {
+    const body = await response.clone().json().catch(() => null);
+    if (body?.code === "OFFICE_INACTIVE") {
+      const rememberedEmail = localStorage.getItem("remembered_email");
+      localStorage.clear();
+      if (rememberedEmail) localStorage.setItem("remembered_email", rememberedEmail);
+      window.location.href = "/login?notice=office_inactive";
+      return response;
+    }
+  }
+
   if (response.status === 401) {
     accessToken = await refreshAccessToken();
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -9,8 +9,27 @@ export default function SwitchBackButton() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [openConfirm, setOpenConfirm] = useState(false);
+    const [officeInactive, setOfficeInactive] = useState(false);
 
     const actingAsAdmin = localStorage.getItem("acting_as_admin") === "true";
+    const officeId = localStorage.getItem("office_location");
+    const officeName = localStorage.getItem("office_name") || "Your center";
+
+    // The office may have been deactivated while this admin was browsing as
+    // an End User — check its live status so "Switch to Admin" reflects that
+    // instead of letting them hit the error only after confirming.
+    useEffect(() => {
+        if (!actingAsAdmin || !officeId) return;
+        fetchWithAuth(`${API_URL}/api/offices`)
+            .then((res) => res.json())
+            .then((data) => {
+                const office = Array.isArray(data)
+                    ? data.find((o) => String(o.office_id) === String(officeId))
+                    : null;
+                setOfficeInactive(Boolean(office && office.status === false));
+            })
+            .catch(() => {});
+    }, []);
 
     // The acting_as_super_admin case (Super Admin who switched down to Admin
     // or User) is handled by ActingSuperAdminSwitcher instead, since it needs
@@ -60,14 +79,23 @@ export default function SwitchBackButton() {
     };
 
     const label = "Switch to Admin";
+    const disabledMessage = `Admin access disabled: ${officeName} is currently inactive.`;
 
     return (
         <>
             <button
-                onClick={() => setOpenConfirm(true)}
+                onClick={() => {
+                    if (officeInactive) {
+                        toast.error(disabledMessage);
+                        return;
+                    }
+                    setOpenConfirm(true);
+                }}
                 disabled={isLoading}
-                className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
-                    transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title={officeInactive ? disabledMessage : undefined}
+                className={`flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
+                    transition-transform duration-100 active:scale-95 cursor-pointer disabled:cursor-not-allowed
+                    ${officeInactive ? "opacity-50" : "disabled:opacity-50"}`}
             >
                 {isLoading ? "Switching..." : label}
             </button>
