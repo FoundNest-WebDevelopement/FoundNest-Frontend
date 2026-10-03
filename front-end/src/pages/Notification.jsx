@@ -71,12 +71,13 @@ function NotificationItem({ notification, onClick }) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center text-center pt-16 px-5">
-      <img src={emptyImage} alt="nothing here yet" className="h-70" />
-      <p className="text-lg font-bold text-[#555] mt-4">No notifications yet</p>
-      <p className="text-sm text-[#888] leading-5 mt-2">
-        When you get new alerts or matches, they'll show up here.
-      </p>
+    <div className="absolute inset-0 top-32 flex flex-col items-center justify-center p-5">
+      <div className="flex flex-col items-center text-center">
+        <p className="text-lg font-bold text-[#555] mt-4">No notifications yet</p>
+        <p className="text-sm text-[#888] leading-5 mt-2">
+          When you get new alerts or matches, they'll show up here.
+        </p>
+      </div>
     </div>
   );
 }

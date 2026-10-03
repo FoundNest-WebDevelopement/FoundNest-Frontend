@@ -1,7 +1,7 @@
 export default function AlertDialog({message, b1Label, b2Label, b1OnClick, b2OnClick,}){
     return(
         <>
-            <div className="fixed  inset-0 w-screen h-screen bg-black/20 flex items-center justify-center">
+            <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-center justify-center">
             <div className="h-fit w-70 bg-white rounded-xl flex flex-col">
                 <div className="h-fit w-full flex items-center  p-3">
                     <p className=" text-sm font-medium">

@@ -521,7 +521,7 @@ export default function QRItem({ onBack }) {
 
         {showDiscardModal && (
           <div
-            className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 px-8"
+            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-center justify-center bg-black/50 px-8"
             onClick={() => setShowDiscardModal(false)}
           >
             <div
@@ -694,7 +694,7 @@ export default function QRItem({ onBack }) {
 
         {showDeleteModal && (
           <div
-            className="fixed inset-0 z-[5000] flex items-end justify-center bg-black/50"
+            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-end justify-center bg-black/50"
             onClick={() => setShowDeleteModal(false)}
           >
             <div

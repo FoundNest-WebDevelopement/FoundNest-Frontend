@@ -25,6 +25,7 @@ export default function AdminTextArea({
         />
 
       </div>
+      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
 
     </fieldset>
   );

@@ -158,7 +158,7 @@ export async function getDisposedDetails(foundReportId) {
 //done
 export async function analyzeItemImage(formData) {
   const response = await fetchWithAuth(
-    `${API_URL}/api/gemini-item-listing/describe-item`,
+    `${API_URL}/api/gemini-item-listing/describe-item/admin`,
     {
       method: "POST",
       body: formData,
@@ -168,7 +168,7 @@ export async function analyzeItemImage(formData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || "AI analysis failed.");
+    throw new Error(data.message || "AI analysis failed.");
   }
 
   return data;

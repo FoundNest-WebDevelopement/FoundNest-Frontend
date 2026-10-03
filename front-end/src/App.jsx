@@ -42,7 +42,7 @@ function Layout() {
             <Route path="/report" element={<Report />} />
             <Route path="/report/:id" element={<Report />} />
             <Route path="/report/:id/:reportId" element={<Report />} />
-            <Route path="/report/:id/mode/:mode" element={<Report />} />
+            {/* <Route path="/report/:id/mode/:mode" element={<Report />} /> */}
             <Route
               path="/report/:id/mode/:mode/:reportId"
               element={<Report />}
@@ -55,6 +55,10 @@ function Layout() {
             <Route
               path="/profile/report-history/:id"
               element={<ReportHistory />}
+            />
+            <Route
+              path="/profile/report/:id/mode/:mode"
+              element={<Report />}
             />
             <Route
               path="/profile/match-details/:id"

@@ -18,6 +18,8 @@ export default function TransactionManagementModal(
 
 ) {
     const API_URL = import.meta.env.VITE_API_URL;
+    const officeIdChecker = localStorage.getItem("office_location")
+    const isUnauthorized = String(officeIdChecker) !== String(selectedRecord.found_office_id)
     const [isReverting, setIsReverting] = useState(false);
 
     const [selectedImage, setSelectedImage] = useState(null);
@@ -178,6 +180,12 @@ export default function TransactionManagementModal(
                             </div>
                             <div className="flex">
                                 <div className="flex flex-col flex-1">
+                                    <p className="text-xs text-[#6B5C42]">LOCATION CLAIMED</p>
+                                    <p className="text-xs">{selectedRecord.found_office_name || "N/A"}</p>
+                                </div>
+                            </div>
+                            <div className="flex">
+                                <div className="flex flex-col flex-1">
                                     <p className="text-xs text-[#6B5C42]">DESCRIPTION</p>
                                     <p className="text-xs">{selectedRecord.description || "N/A"}</p>
                                 </div>
@@ -295,7 +303,7 @@ export default function TransactionManagementModal(
                                     <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                     <button className="w-full h-10 bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                         onClick={() => setOpenRevertDialog(true)}
-                                        disabled={isReverting || selectedRecord.claimant_status === false}
+                                        disabled={isReverting || selectedRecord.claimant_status === false || isUnauthorized}
                                     >{isReverting ? "Reverting..." : "Revert Transaction"}</button>
                                 </div>
                             }
@@ -307,6 +315,10 @@ export default function TransactionManagementModal(
                                     <p className="text-[#6B5C42]">This transaction has been reverted and no further action available</p>
 
                                 </div>
+                            }
+                            {isUnauthorized &&
+                             <span className="text-primary italic text-[10px]  mt-1">Item is not claimed in your offce</span>
+
                             }
                         </div>
                     </div>

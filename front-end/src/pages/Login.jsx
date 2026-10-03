@@ -6,6 +6,7 @@ import bsu from "../assets/bsu.jpg";
 import { useState, useEffect } from "react";
 import RoleSelectionModal from "../super-admin-components/RoleSelectionModal";
 import AdminRoleSelectionModal from "../admin-components/AdminRoleSelectionModal";
+import { showMobileOnlyToast } from "../utils/mobileOnlyToast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -106,6 +107,7 @@ function Login() {
           localStorage.setItem("office_name", data.user.office_name || "");
           setShowAdminRoleSelection(true);
         } else {
+          showMobileOnlyToast();
           navigate("/home");
         }
       } else {

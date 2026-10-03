@@ -9,6 +9,16 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { Astroid } from "lucide-react";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import { toast } from "react-toastify";
+import { sanitizeText, minLengthMessage } from "../utils/textValidation";
+
+const LIMITS = {
+    itemName: 50,
+    description: 500,
+    contents: 100,
+    specificLocation: 100,
+    ownerName: 100,
+};
+const MIN_LENGTHS = { itemName: 2, description: 10 };
 
 export default function LostReportModal(
     {
@@ -161,9 +171,22 @@ export default function LostReportModal(
         (email && isValidEmail) ||
         (contactNumber && isValidPhone);
 
+    const itemNameTrimmed = itemName.trim();
+    const descriptionTrimmed = description.trim();
+
+    const itemNameError =
+        itemNameTrimmed && itemNameTrimmed.length < MIN_LENGTHS.itemName
+            ? minLengthMessage(MIN_LENGTHS.itemName)
+            : "";
+    const descriptionError =
+        descriptionTrimmed && descriptionTrimmed.length < MIN_LENGTHS.description
+            ? minLengthMessage(MIN_LENGTHS.description)
+            : "";
+
     //FORM VALIDATOR CHECKER
     const isFormValid =
-        itemName.trim() &&
+        itemNameTrimmed.length >= MIN_LENGTHS.itemName &&
+        descriptionTrimmed.length >= MIN_LENGTHS.description &&
         category &&
         locationLost.length > 0 &&
         dateLost &&
@@ -494,7 +517,8 @@ const handleRemoveImage = () => {
                             title="Item Name"
                             placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
                             value={itemName}
-                            onChange={setItemName}
+                            error={itemNameError}
+                            onChange={(value) => setItemName(sanitizeText(value, LIMITS.itemName))}
                             reqField={true}
                             disabled={isSubmitting || isAnalyzing}
                         />
@@ -511,14 +535,15 @@ const handleRemoveImage = () => {
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
-                            onChange={setDescription}
+                            error={descriptionError}
+                            onChange={(value) => setDescription(sanitizeText(value, LIMITS.description))}
                             disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminTextField
                             title="Contents (if Applicable)"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
-                            onChange={setContents}
+                            onChange={(value) => setContents(sanitizeText(value, LIMITS.contents))}
                             disabled={isSubmitting || isAnalyzing}
                         />
                            {isAnalyzing && (
@@ -683,7 +708,7 @@ const handleRemoveImage = () => {
                         <AdminTextField
                             title="Specific Location"
                             value={specificLocation}
-                            onChange={setSpecificLocation}
+                            onChange={(value) => setSpecificLocation(sanitizeText(value, LIMITS.specificLocation))}
                             disabled={isSubmitting}
 
                         />
@@ -724,7 +749,7 @@ const handleRemoveImage = () => {
                         <AdminTextField
                             title="Item Owner Name"
                             value={ownerName}
-                            onChange={setOwnerName}
+                            onChange={(value) => setOwnerName(sanitizeText(value, LIMITS.ownerName))}
                             reqField={true}
                             disabled={isSubmitting}
                         />

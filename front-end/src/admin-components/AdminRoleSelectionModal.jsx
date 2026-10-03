@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { showMobileOnlyToast } from "../utils/mobileOnlyToast";
 
 const AdminIcon = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#990000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -49,6 +50,7 @@ export default function AdminRoleSelectionModal({ onClose }) {
             localStorage.setItem("role", "user");
             localStorage.setItem("acting_as_admin", "true");
 
+            showMobileOnlyToast();
             navigate("/home");
         } catch (err) {
             console.error(err);

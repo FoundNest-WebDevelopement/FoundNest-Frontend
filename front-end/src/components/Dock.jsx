@@ -1,14 +1,31 @@
 import { MapPin, Search } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import reportIconInactive from "../assets/report_icon_inactive.png";
 import reportIconActive from "../assets/report_icon_active.png";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import Toast from "./Toast";
 
 export default function Dock() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { requestNavigation } = useUnsavedChangesGuard();
+
+  const guardedClick = (to) => (e) => {
+    if (to === location.pathname) return;
+    e.preventDefault();
+    const result = requestNavigation(() => navigate(to));
+    if (result === "blocked") {
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />);
+    }
+  };
+
   return (
     <>
-      <div className="dock dock-sm bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white z-4000">
+      <div className="dock dock-sm max-w-3xl mx-auto bg-white rounded-t-xl shadow-[0_8px_10px_10px_rgba(0,0,0,0.25)] border-4 border-white z-4000">
         <NavLink
           to="/home"
+          onClick={guardedClick("/home")}
           className={({ isActive }) =>
             isActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
           }
@@ -27,6 +44,7 @@ export default function Dock() {
 
         <NavLink
           to="/map"
+          onClick={guardedClick("/map")}
           className={({ isActive }) =>
             isActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
           }
@@ -47,6 +65,7 @@ export default function Dock() {
 
         <NavLink
           to="/find"
+          onClick={guardedClick("/find")}
           className={({ isActive }) =>
             isActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
           }
@@ -65,6 +84,7 @@ export default function Dock() {
 
         <NavLink
           to="/profile"
+          onClick={guardedClick("/profile")}
           className={({ isActive }) =>
             isActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
           }
@@ -83,6 +103,7 @@ export default function Dock() {
 
         <NavLink
           to="/report"
+          onClick={guardedClick("/report")}
           className={() => `
             absolute left-1/2 -translate-x-1/2 -top-9
             flex flex-col items-center justify-center

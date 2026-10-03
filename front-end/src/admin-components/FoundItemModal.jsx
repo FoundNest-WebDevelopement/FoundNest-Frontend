@@ -13,7 +13,17 @@ import { Astroid } from "lucide-react";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminButton from "./AdminButton";
 import useUnsavedChangesWarning from "../hooks/useUnsavedChangesWarning";
+import { sanitizeText, minLengthMessage } from "../utils/textValidation";
 
+const LIMITS = {
+    itemName: 50,
+    description: 500,
+    contents: 100,
+    specificLocation: 100,
+    surrenderedBy: 100,
+    additionalNotes: 300,
+};
+const MIN_LENGTHS = { itemName: 2, description: 10 };
 
 export default function FoundItemModal({
     open,
@@ -136,9 +146,22 @@ const [timeFound, setTimeFound] = useState(defaultDateTimeRef.current.time);
     const timeValid = dateValid && isTimeNotFuture(dateFound, timeFound);
     const hasImage = Boolean(selectedFile || prefilledImageUrl);
 
+    const itemNameTrimmed = itemName.trim();
+    const descriptionTrimmed = description.trim();
+
+    const itemNameError =
+        itemNameTrimmed && itemNameTrimmed.length < MIN_LENGTHS.itemName
+            ? minLengthMessage(MIN_LENGTHS.itemName)
+            : "";
+    const descriptionError =
+        descriptionTrimmed && descriptionTrimmed.length < MIN_LENGTHS.description
+            ? minLengthMessage(MIN_LENGTHS.description)
+            : "";
+
     const isFormValid =
         hasImage &&
-        itemName.trim() &&
+        itemNameTrimmed.length >= MIN_LENGTHS.itemName &&
+        descriptionTrimmed.length >= MIN_LENGTHS.description &&
         category &&
         locationFound &&
         dateFound &&
@@ -173,6 +196,7 @@ const dateTimeChanged =
     timeFound !== defaultDateTimeRef.current.time;
 
 const hasChanges =
+    isAnalyzing ||
     dateTimeChanged ||
     [
         selectedFile,
@@ -242,7 +266,7 @@ const analyzeFile = async () => {
         formData.append("image", selectedFile);
 
         const response = await fetchWithAuth(
-            `${API_URL}/api/gemini-item-listing/describe-item`,
+            `${API_URL}/api/gemini-item-listing/describe-item/admin`,
             {
                 method: "POST",
                 body: formData,
@@ -252,7 +276,7 @@ const analyzeFile = async () => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || "AI analysis failed");
+            throw new Error(data.message || "AI analysis failed");
         }
 
         setItemName(data.itemName || "");
@@ -373,7 +397,7 @@ const analyzeFile = async () => {
                         <p className="text-xl font-semibold text-white">
                             Log New Found Item
                         </p>
-                        <button type="button" disabled={isSubmitting} onClick={handleCancelForm} className="disabled:opacity-40 disabled:cursor-not-allowed">
+                        <button type="button" disabled={isSubmitting || isAnalyzing} onClick={handleCancelForm} className="disabled:opacity-40 disabled:cursor-not-allowed">
                             <i className="fa-solid fa-xmark text-xl text-white"></i>
                         </button>
                     </div>
@@ -436,7 +460,8 @@ const analyzeFile = async () => {
                             title="Item Name"
                             placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
                             value={itemName}
-                            onChange={setItemName}
+                            error={itemNameError}
+                            onChange={(value) => setItemName(sanitizeText(value, LIMITS.itemName))}
                             reqField={true}
                             disabled={isSubmitting || isAnalyzing}
                         />
@@ -453,15 +478,16 @@ const analyzeFile = async () => {
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
+                            error={descriptionError}
                             disabled={isSubmitting || isAnalyzing}
-                            onChange={setDescription}
+                            onChange={(value) => setDescription(sanitizeText(value, LIMITS.description))}
                         />
                         <AdminTextField
                             title="Contents"
                             placeholder="e.g., Cash amount, ID name"
                             value={contents}
                             disabled={isSubmitting || isAnalyzing}
-                            onChange={setContents}
+                            onChange={(value) => setContents(sanitizeText(value, LIMITS.contents))}
                         />
                           {isAnalyzing && (
                                 <p className="text-xs text-primary mt-2">Analyzing image...</p>
@@ -478,7 +504,7 @@ const analyzeFile = async () => {
                         <AdminTextField
                             title="Specific Location"
                             value={specificLocation}
-                            onChange={setSpecificLocation}
+                            onChange={(value) => setSpecificLocation(sanitizeText(value, LIMITS.specificLocation))}
                             disabled={isSubmitting}
                         />
                         <AdminDateInput
@@ -517,14 +543,14 @@ const analyzeFile = async () => {
                         <AdminTextField
                             title="Surrendered by (Recommended)"
                             value={surrenderedBy}
-                            onChange={setSurrenderedBy}
+                            onChange={(value) => setSurrenderedBy(sanitizeText(value, LIMITS.surrenderedBy))}
                             disabled={isSubmitting}
                         />
                         <AdminTextField
                             title="Additional Notes"
                             placeholder="Any other relevant details.."
                             value={additionalNotes}
-                            onChange={setAdditionalNotes}
+                            onChange={(value) => setAdditionalNotes(sanitizeText(value, LIMITS.additionalNotes))}
                             disabled={isSubmitting}
                         />
                         <AdminTextField
@@ -539,7 +565,7 @@ const analyzeFile = async () => {
                             type="button"
                             onClick={handleCancelForm}
                             className="font-medium text-sm text-primary border border-primary p-3 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isAnalyzing}
                         >
                             Cancel
                         </button>

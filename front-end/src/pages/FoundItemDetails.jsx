@@ -6,93 +6,94 @@ import { useNavigate, useParams } from "react-router-dom";
 import Loading from "../components/Loading";
 import AlertDialog from "../components/AlertDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { X, Expand } from "lucide-react";
 
-export default function FoundItemDetails(){
-const { id } = useParams();
-const API_URL = import.meta.env.VITE_API_URL;
-const navigate = useNavigate();
-const [report,setReport] = useState();
+export default function FoundItemDetails() {
+  const { id } = useParams();
+  const API_URL = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
+  const [report, setReport] = useState();
 
 
-const [claimSteps, setClaimSteps] = useState([]);
-const [isLoadingSteps, setIsLoadingSteps] = useState(false);
+  const [claimSteps, setClaimSteps] = useState([]);
+  const [isLoadingSteps, setIsLoadingSteps] = useState(false);
 
-const [selectedPhoto, setSelectedPhoto] = useState(null);
-const [howToClaim, setHowToClaim] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [howToClaim, setHowToClaim] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const [error, setError] = useState(null);
 
 
-const fetchReport = async (id) => {
-  try {
-    setError(null);
-    const res = await fetchWithAuth(`${API_URL}/api/found-reports/public/${id}`);
-    const data = await res.json();
+  const fetchReport = async (id) => {
+    try {
+      setError(null);
+      const res = await fetchWithAuth(`${API_URL}/api/found-reports/public/${id}`);
+      const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.message || `Request failed (${res.status})`);
+      if (!res.ok) {
+        throw new Error(data.message || `Request failed (${res.status})`);
+      }
+      setReport(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
     }
-    setReport(data);
-  } catch (err) {
-    console.error(err);
-    setError(err.message);
-  }
-};
+  };
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (id) {
-        fetchReport(id);
+      fetchReport(id);
     }
-}, [id]);
+  }, [id]);
 
-    const fetchClaimSteps = async () => {
-        try {
-            setIsLoadingSteps(true);
-            const response = await fetchWithAuth(`${API_URL}/api/policies`);
-            const data = await response.json();
- 
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to fetch claim process.");
-            }
- 
-            const claimPolicy = data.find(
-                (policy) => policy.policy_name === "Item Claim Process"
-            );
- 
-            if (claimPolicy) {
-                const parsedSteps = JSON.parse(claimPolicy.policy_value);
-                setClaimSteps(parsedSteps);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoadingSteps(false);
-        }
-    };
-    
+  const fetchClaimSteps = async () => {
+    try {
+      setIsLoadingSteps(true);
+      const response = await fetchWithAuth(`${API_URL}/api/policies`);
+      const data = await response.json();
 
-      const sheetRef = useRef(null);
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch claim process.");
+      }
+
+      const claimPolicy = data.find(
+        (policy) => policy.policy_name === "Item Claim Process"
+      );
+
+      if (claimPolicy) {
+        const parsedSteps = JSON.parse(claimPolicy.policy_value);
+        setClaimSteps(parsedSteps);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSteps(false);
+    }
+  };
+
+
+  const sheetRef = useRef(null);
   const touchStartRef = useRef(0);
   const dragYRef = useRef(0);
 
 
- 
-    useEffect(() => {
-        fetchClaimSteps();
-    }, []);
 
-    const handleReturn = () => {
-        navigate(`/find`)
-    }
+  useEffect(() => {
+    fetchClaimSteps();
+  }, []);
 
-      const formatItemId = (id) => {
-        return `SI-${String(id).padStart(5, "0")}`;
-    };
+  const handleReturn = () => {
+    navigate(`/find`)
+  }
 
-     useEffect(() => {
+  const formatItemId = (id) => {
+    return `SI-${String(id).padStart(5, "0")}`;
+  };
+
+  useEffect(() => {
     if (howToClaim) {
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
@@ -109,7 +110,7 @@ const fetchReport = async (id) => {
 
 
 
-const handlePointerDown = (e) => {
+  const handlePointerDown = (e) => {
     touchStartRef.current = e.clientY;
     isDraggingRef.current = true;
     setIsDragging(true);
@@ -128,10 +129,10 @@ const handlePointerDown = (e) => {
   const handlePointerUp = (e) => {
     isDraggingRef.current = false;
     setIsDragging(false);
-    
+
     try {
       e.target.releasePointerCapture(e.pointerId);
-    } catch (err) {} // Safety catch for mobile edge cases
+    } catch (err) { } // Safety catch for mobile edge cases
 
     if (dragYRef.current > 100) {
       setHowToClaim(false);
@@ -142,82 +143,87 @@ const handlePointerDown = (e) => {
 
 
 
-    return(
-        <>
 
-            <div inert={howToClaim}>
-             <PageLabelWithReturn label="Item Details" onClick={handleReturn}/>
-              <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col ">
-                {report?
-                    (<>
-                    <div className="w-full h-fit flex flex-col gap-2 mt-2 ">
-                    <div className="bg-[#AE7365]/50  w-full h-70 rounded-lg relative"
-                        onClick={()=>{setSelectedPhoto(report.image_url), setHowToClaim(true)}}>
-                      <img src={report.image_url} alt="item" className="w-full h-full object-contain" />
-                      <div className="text-xl rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
-                        <i className="fa-solid fa-up-right-and-down-left-from-center text-white"></i>
-                      </div>
+  return (
+    <>
+
+      <div inert={howToClaim}>
+        <PageLabelWithReturn label="Item Details" onClick={handleReturn} />
+        <div className="bg-(--color-secondary)  min-h-screen w-full px-2 flex flex-col ">
+          {report ?
+            (<>
+              <div className="w-full h-fit flex flex-col gap-2 mt-2 ">
+                <div className="bg-[#AE7365]/50  w-full h-70 rounded-lg relative"
+                  onClick={() => { setSelectedPhoto(report.image_url) }}>
+                  <img src={report.image_url} alt="item" className="w-full h-full object-contain" />
+                  <div className="text-xl rounded-full p-4 bg-black/70 absolute bottom-3 right-3">
+                    <Expand className="text-white"/>
+                  </div>
                 </div>
                 <div className="bg-white  w-full rounded-t-lg flex flex-col p-4 px-6 text-lg pb-10">
-                    <p className="font-semibold">{report.item_name}</p>
-                    <HorizontalBreak/>
-                    <div className="w-full my-1 flex flex-col text-sm gap-2">
-                        <div>
-                        <p >Item ID</p>
-                        <p className="font-medium">{formatItemId(report.item_id)}</p>
-                        </div>
-                        <div>
-                        <p >Category</p>
-                        <p className="font-medium">{report.category_name}</p>
-                        </div>
-                        <div>
-                        <p >Location Found</p>
-                        <p className=" font-medium">{report.location_found}</p>
-                        </div>
-                        <div>
-                        <p >Date & Time Found</p>
-                        <p className="font-medium">{formatDateTime(report.found_date)}</p>
-                        </div>
-                        <div>
-                                             <p >Current Location</p>
-                        <p className="font-medium">{report.office_name }</p>
-                        </div>
+                  <p className="font-semibold">{report.item_name}</p>
+                  <HorizontalBreak />
+                  <div className="w-full my-1 flex flex-col text-sm gap-2">
+                    <div>
+                      <p >Item ID</p>
+                      <p className="font-medium">{formatItemId(report.item_id)}</p>
                     </div>
-                    <HorizontalBreak/>
-                    <div className=" flex flex-col mt-4 pb-15  gap-2">
-                        <button className="border border-primary rounded-lg h-10 text-white bg-primary text-xs w-full "
-                                onClick={() => {setHowToClaim(true)}}
-                            >How to claim?</button>
-                    <button
-                        className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!report.office_id}
-                        onClick={() => navigate(`/map?officeId=${report.office_id}`)}
-                    >View Office Location</button>
+                    <div>
+                      <p >Category</p>
+                      <p className="font-medium">{report.category_name}</p>
                     </div>
-                </div>
-                </div>
-                    </>)
-                    :
-                    (
-                        <>
-                        {error ? (
-  <p className="text-center py-10 text-red-500">{error}</p>
-) : report ? (
-  <>{/* your details */}</>
-) : (
-  <Loading />
-)}
-                        </>
-                    )
-
-                }
-                 </div>
+                    <div>
+                      <p >Description</p>
+                      <p>{report.description}</p>
+                    </div>
+                    <div>
+                      <p >Location Found</p>
+                      <p className=" font-medium">{report.location_found}</p>
+                    </div>
+                    <div>
+                      <p >Date & Time Found</p>
+                      <p className="font-medium">{formatDateTime(report.found_date)}</p>
+                    </div>
+                    <div>
+                      <p >Current Location</p>
+                      <p className="font-medium">{report.office_name}</p>
+                    </div>
                   </div>
-                  {howToClaim && (
-      <div
-        className="fixed inset-0 bg-black/20 flex items-end justify-center z-10"
-        onClick={() => setHowToClaim(false)}
-      >
+                  <HorizontalBreak />
+                  <div className=" flex flex-col mt-4 pb-15  gap-2">
+                    <button className="border border-primary rounded-lg h-10 text-white bg-primary text-xs w-full "
+                      onClick={() => { setHowToClaim(true) }}
+                    >How to claim?</button>
+                    <button
+                      className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!report.office_id}
+                      onClick={() => navigate(`/map?officeId=${report.office_id}`)}
+                    >View Office Location</button>
+                  </div>
+                </div>
+              </div>
+            </>)
+            :
+            (
+              <>
+                {error ? (
+                  <p className="text-center py-10 text-red-500">{error}</p>
+                ) : report ? (
+                  <>{/* your details */}</>
+                ) : (
+                  <Loading />
+                )}
+              </>
+            )
+
+          }
+        </div>
+      </div>
+      {howToClaim && (
+        <div
+          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-end justify-center z-10"
+          onClick={() => setHowToClaim(false)}
+        >
           <div
             ref={sheetRef}
             onClick={(e) => e.stopPropagation()}
@@ -251,21 +257,37 @@ const handlePointerDown = (e) => {
             </div>
           </div>
         </div>
-      )}    
+      )}
 
-             
-              {selectedPhoto && 
-               <div className="fixed  inset-0 w-screen h-screen bg-black/75 flex items-center justify-center z-4001">
-                    <div className="relative w-full h-full flex items-center ">
-                        <button className="absolute top-2 right-2 text-3xl text-white"
-                            onClick={()=>{setSelectedPhoto(null), setHowToClaim(false)}}
-                        ><i className="fa-regular fa-circle-xmark"></i></button>
-                    <img src={selectedPhoto} alt={report.item_name} className="w-full h-100"/>
-                    </div>
-               </div>
 
-              }
-             
-        </>
-    )
+      {selectedPhoto && (
+        <div
+          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[4001]"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <button
+            className="absolute top-2 right-2 text-3xl text-white z-10 rounded-full bg-black/20 p-2"
+            onClick={() => setSelectedPhoto(null)}
+          >
+            <X />
+          </button>
+
+          <div
+            className="relative max-w-[95vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+
+            <img
+              src={selectedPhoto}
+              alt={report.item_name}
+              className="max-w-[95vw] max-h-[90vh] object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+
+    </>
+  )
 }
