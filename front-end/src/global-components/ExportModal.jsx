@@ -17,7 +17,11 @@ export default function ExportModal({
     onClose,
     onUpdate,
     queryParams = {},
-    officeName
+    officeName,
+    scopeExport = false,
+    filteredIds = [],
+    exportDisabled = false,
+    exportDisabledReason = ""
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -27,6 +31,7 @@ export default function ExportModal({
     const [endDate, setEndDate] = useState("");
     const [format, setFormat] = useState("csv");
     const [exportAll, setExportAll] = useState(false);
+    const [scope, setScope] = useState("filtered");
     const [isExporting, setIsExporting] = useState(false);
     const [serverError, setServerError] = useState("");
 
@@ -34,7 +39,7 @@ export default function ExportModal({
 
     const errors = { start: "", end: "" };
 
-    if (!exportAll) {
+    if (!scopeExport && !exportAll) {
         if (!startDate) {
             if (touched.start) errors.start = "Start date is required.";
         } else if (startDate > today) {
@@ -50,7 +55,13 @@ export default function ExportModal({
         }
     }
 
-    const isValid = exportAll || Boolean(startDate && endDate && !errors.start && !errors.end);
+    const noFilteredItems = scopeExport && scope === "filtered" && filteredIds.length === 0;
+
+    const isValid = scopeExport
+        ? !noFilteredItems
+        : exportAll || Boolean(startDate && endDate && !errors.start && !errors.end);
+
+    const canExport = isValid && !exportDisabled;
 
     const handleExportAllChange = (e) => {
         setExportAll(e.target.checked);
@@ -69,7 +80,7 @@ export default function ExportModal({
 
     const handleExport = async () => {
         // Safety net in case the button is triggered while invalid
-        if (!isValid) {
+        if (!canExport) {
             setTouched({ start: true, end: true });
             return;
         }
@@ -84,10 +95,11 @@ export default function ExportModal({
             setServerError("");
 
             const params = new URLSearchParams({
-                start_date: effectiveStart,
-                end_date: effectiveEnd,
                 format,
                 ...queryParams,
+                ...(scopeExport
+                    ? { scope, ...(scope === "filtered" ? { ids: filteredIds.join(",") } : {}) }
+                    : { start_date: effectiveStart, end_date: effectiveEnd }),
             });
             // Dynamically uses the endpoint passed via props
             const response = await fetchWithAuth(
@@ -104,9 +116,11 @@ export default function ExportModal({
             const link = document.createElement("a");
             link.href = url;
             // Dynamically names the file based on props
-            link.download = exportAll
-                ? `${filenamePrefix}-ALL.${format}`
-                : `${filenamePrefix}-${startDate}-to-${endDate}.${format}`;
+            link.download = scopeExport
+                ? `${filenamePrefix}-${scope === "all" ? "ALL" : "FILTERED"}.${format}`
+                : exportAll
+                    ? `${filenamePrefix}-ALL.${format}`
+                    : `${filenamePrefix}-${startDate}-to-${endDate}.${format}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -155,66 +169,105 @@ export default function ExportModal({
                         </p>
                     )}
 
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-[#1A1208]">Report Period</p>
-                        <label className="flex items-center gap-1.5 text-sm text-[#6B5C42] cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={exportAll}
-                                onChange={handleExportAllChange}
-                                className="accent-primary cursor-pointer"
-                            />
-                            Export All
-                        </label>
-                    </div>
+                    {exportDisabled && exportDisabledReason && (
+                        <p className="text-xs text-[#C0392B] mb-3 bg-[#FBEAEA] border border-[#C0392B]/30 rounded-md px-3 py-2">
+                            {exportDisabledReason}
+                        </p>
+                    )}
 
-                    <div className="grid grid-cols-2 gap-3 mb-4 items-start">
-                        <div className="flex flex-col gap-1">
-                            <label htmlFor="export-start-date" className="text-sm font-medium text-[#1A1208]">
-                                Start Date <span className="text-[#C0392B]">*</span>
+                    {scopeExport ? (
+                        <div className="flex flex-col gap-2 mb-4">
+                            <p className="text-sm font-semibold text-[#1A1208]">Export Scope</p>
+                            <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
+                                <input
+                                    type="radio"
+                                    name="export-scope"
+                                    checked={scope === "filtered"}
+                                    disabled={exportDisabled}
+                                    onChange={() => setScope("filtered")}
+                                    className="accent-primary cursor-pointer"
+                                />
+                                Current Filtered View ({filteredIds.length} Item{filteredIds.length === 1 ? "" : "s"})
                             </label>
-                            <input
-                                id="export-start-date"
-                                type="date"
-                                value={startDate}
-                                max={endDate || today}
-                                disabled={exportAll}
-                                onChange={handleStartChange}
-                                onBlur={() => setTouched((t) => ({ ...t, start: true }))}
-                                aria-invalid={Boolean(errors.start)}
-                                aria-describedby={errors.start ? "export-start-error" : undefined}
-                                className={inputClass(errors.start)}
-                            />
-                            {errors.start && (
-                                <p id="export-start-error" className="text-xs text-[#C0392B]">
-                                    {errors.start}
-                                </p>
+                            <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
+                                <input
+                                    type="radio"
+                                    name="export-scope"
+                                    checked={scope === "all"}
+                                    disabled={exportDisabled}
+                                    onChange={() => setScope("all")}
+                                    className="accent-primary cursor-pointer"
+                                />
+                                All Items (All Time)
+                            </label>
+                            {noFilteredItems && (
+                                <p className="text-xs text-[#C0392B]">No items match the current filters.</p>
                             )}
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <label htmlFor="export-end-date" className="text-sm font-medium text-[#1A1208]">
-                                End Date <span className="text-[#C0392B]">*</span>
-                            </label>
-                            <input
-                                id="export-end-date"
-                                type="date"
-                                value={endDate}
-                                min={startDate || undefined}
-                                max={today}
-                                disabled={exportAll}
-                                onChange={handleEndChange}
-                                onBlur={() => setTouched((t) => ({ ...t, end: true }))}
-                                aria-invalid={Boolean(errors.end)}
-                                aria-describedby={errors.end ? "export-end-error" : undefined}
-                                className={inputClass(errors.end)}
-                            />
-                            {errors.end && (
-                                <p id="export-end-error" className="text-xs text-[#C0392B]">
-                                    {errors.end}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm font-semibold text-[#1A1208]">Report Period</p>
+                                <label className="flex items-center gap-1.5 text-sm text-[#6B5C42] cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportAll}
+                                        onChange={handleExportAllChange}
+                                        className="accent-primary cursor-pointer"
+                                    />
+                                    Export All
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 mb-4 items-start">
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="export-start-date" className="text-sm font-medium text-[#1A1208]">
+                                        Start Date <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        id="export-start-date"
+                                        type="date"
+                                        value={startDate}
+                                        max={endDate || today}
+                                        disabled={exportAll}
+                                        onChange={handleStartChange}
+                                        onBlur={() => setTouched((t) => ({ ...t, start: true }))}
+                                        aria-invalid={Boolean(errors.start)}
+                                        aria-describedby={errors.start ? "export-start-error" : undefined}
+                                        className={inputClass(errors.start)}
+                                    />
+                                    {errors.start && (
+                                        <p id="export-start-error" className="text-xs text-[#C0392B]">
+                                            {errors.start}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label htmlFor="export-end-date" className="text-sm font-medium text-[#1A1208]">
+                                        End Date <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        id="export-end-date"
+                                        type="date"
+                                        value={endDate}
+                                        min={startDate || undefined}
+                                        max={today}
+                                        disabled={exportAll}
+                                        onChange={handleEndChange}
+                                        onBlur={() => setTouched((t) => ({ ...t, end: true }))}
+                                        aria-invalid={Boolean(errors.end)}
+                                        aria-describedby={errors.end ? "export-end-error" : undefined}
+                                        className={inputClass(errors.end)}
+                                    />
+                                    {errors.end && (
+                                        <p id="export-end-error" className="text-xs text-[#C0392B]">
+                                            {errors.end}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <div className="flex flex-col gap-2 mb-4">
                         <label className="text-sm font-medium text-[#1A1208]">Format</label>
@@ -255,7 +308,7 @@ export default function ExportModal({
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isExporting || !isValid}
+                            disabled={isExporting || !canExport}
                             onClick={handleExport}
                         >
                             {isExporting ? "Exporting..." : "Export"}

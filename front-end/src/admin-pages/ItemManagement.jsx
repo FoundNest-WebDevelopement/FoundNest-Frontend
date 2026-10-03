@@ -380,6 +380,10 @@ useEffect(() => {
       onUpdate={fetchFoundReports}
       queryParams={{userId}}
       officeName={localStorage.getItem("office_name")}
+      scopeExport
+      filteredIds={filteredReports.map((r) => r.item_id)}
+      exportDisabled={location !== officeId}
+      exportDisabledReason={`Export is limited to your own office. Set the Location filter to "${localStorage.getItem("office_name") || "your office"}" to enable export.`}
       />
 
       }
