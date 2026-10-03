@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import ConfirmDialog from "../global-components/ConfirmDialog";
-import DateRangeInput from "../global-components/DateRangeInput";
+import AdminDateInput from "../admin-components/AdminDateInput";
 
 const toLocalISODate = (d = new Date()) => {
     const y = d.getFullYear();
@@ -419,17 +419,13 @@ export default function Feedbacks() {
                         <option value="archived">Archived</option>
                     </select>
 
-                    <DateRangeInput
-                        startDate={dateFilterFrom}
-                        endDate={dateFilterTo}
-                        onChange={(start, end) => {
-                            setDateFilterFrom(start);
-                            setDateFilterTo(end);
-                            setCurrentPage(1);
-                        }}
-                        placeholder="Date submitted"
-                        className="flex-1 min-w-48"
-                    />
+                    <div className="text-[#DDD9CF] text-xl font-light select-none">|</div>
+                    <div className="flex-1">
+                        <AdminDateInput placeholder="Start Date" value={dateFilterFrom} onChange={(val) => { setDateFilterFrom(val); setCurrentPage(1); }} max={dateFilterTo || today} />
+                    </div>
+                    <div className="flex-1">
+                        <AdminDateInput placeholder="End Date" value={dateFilterTo} onChange={(val) => { setDateFilterTo(val); setCurrentPage(1); }} min={dateFilterFrom || undefined} max={today} />
+                    </div>
 
                     <div className="flex items-center gap-3 ml-auto">
                         <button

@@ -32,6 +32,11 @@ export default function SwitchBackButton() {
 
             localStorage.setItem("token", data.accessToken);
             localStorage.setItem("role", data.role);
+            const originalRefreshToken = localStorage.getItem("original_refreshToken");
+            if (originalRefreshToken) {
+                localStorage.setItem("refreshToken", originalRefreshToken);
+                localStorage.removeItem("original_refreshToken");
+            }
 
             if (data.role === "admin") {
                 localStorage.setItem("office_location", data.office_id);

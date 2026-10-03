@@ -63,6 +63,11 @@ export default function ActingSuperAdminSwitcher() {
 
             localStorage.setItem("token", data.accessToken);
             localStorage.setItem("role", data.role);
+            const originalRefreshToken = localStorage.getItem("original_refreshToken");
+            if (originalRefreshToken) {
+                localStorage.setItem("refreshToken", originalRefreshToken);
+                localStorage.removeItem("original_refreshToken");
+            }
             localStorage.removeItem("office_location");
             localStorage.removeItem("office_name");
             localStorage.removeItem("acting_as_super_admin");
@@ -92,7 +97,11 @@ export default function ActingSuperAdminSwitcher() {
                 throw new Error(data.message || "Failed to switch mode.");
             }
 
+            if (!localStorage.getItem("original_refreshToken")) {
+                localStorage.setItem("original_refreshToken", localStorage.getItem("refreshToken") || "");
+            }
             localStorage.setItem("token", data.accessToken);
+            localStorage.setItem("refreshToken", data.refreshToken);
             localStorage.setItem("role", "user");
             localStorage.removeItem("office_location");
             localStorage.removeItem("office_name");
@@ -128,7 +137,11 @@ export default function ActingSuperAdminSwitcher() {
             throw new Error(data.message || "Failed to switch mode.");
         }
 
+        if (!localStorage.getItem("original_refreshToken")) {
+            localStorage.setItem("original_refreshToken", localStorage.getItem("refreshToken") || "");
+        }
         localStorage.setItem("token", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("role", "admin");
         localStorage.setItem("office_location", data.office_id);
         localStorage.setItem("office_name", data.office_name);

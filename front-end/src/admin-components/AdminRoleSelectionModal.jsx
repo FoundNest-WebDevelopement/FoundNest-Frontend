@@ -46,7 +46,11 @@ export default function AdminRoleSelectionModal({ onClose }) {
                 throw new Error(data.message || "Failed to switch role.");
             }
 
+            if (!localStorage.getItem("original_refreshToken")) {
+                localStorage.setItem("original_refreshToken", localStorage.getItem("refreshToken") || "");
+            }
             localStorage.setItem("token", data.accessToken);
+            localStorage.setItem("refreshToken", data.refreshToken);
             localStorage.setItem("role", "user");
             localStorage.setItem("acting_as_admin", "true");
 

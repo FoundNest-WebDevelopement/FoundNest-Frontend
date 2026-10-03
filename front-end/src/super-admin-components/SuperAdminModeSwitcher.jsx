@@ -55,7 +55,11 @@ export default function SuperAdminModeSwitcher() {
                 throw new Error(data.message || "Failed to switch mode.");
             }
 
+            if (!localStorage.getItem("original_refreshToken")) {
+                localStorage.setItem("original_refreshToken", localStorage.getItem("refreshToken") || "");
+            }
             localStorage.setItem("token", data.accessToken);
+            localStorage.setItem("refreshToken", data.refreshToken);
             localStorage.setItem("role", "user");
             localStorage.setItem("acting_as_super_admin", "true");
 
@@ -85,7 +89,11 @@ export default function SuperAdminModeSwitcher() {
                 throw new Error(data.message || "Failed to switch mode.");
             }
 
+            if (!localStorage.getItem("original_refreshToken")) {
+                localStorage.setItem("original_refreshToken", localStorage.getItem("refreshToken") || "");
+            }
             localStorage.setItem("token", data.accessToken);
+            localStorage.setItem("refreshToken", data.refreshToken);
             localStorage.setItem("role", "admin");
             localStorage.setItem("office_location", data.office_id);
             localStorage.setItem("office_name", data.office_name);
