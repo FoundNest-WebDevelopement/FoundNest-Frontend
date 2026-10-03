@@ -388,6 +388,8 @@ export default function ReportManagement() {
                   onUpdate={getLostReports}
                   queryParams={{userId}}
                   officeName={localStorage.getItem("office_name")}
+                  scopeExport
+                  filteredIds={filteredReports.map((r) => r.lost_report_id)}
                 />
             }
         </>

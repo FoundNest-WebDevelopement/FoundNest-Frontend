@@ -41,6 +41,7 @@ export default function EditTab({
     const [selectedFile, setSelectedFile] = useState(null);
     const [image, setImage] = useState(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [scannedFile, setScannedFile] = useState(null);
     const fileInputRef = useRef(null);
 
     const [originalFormData, setOriginalFormData] = useState({});
@@ -137,6 +138,8 @@ const analyzeFile = async () => {
         }));
 
         toast.success("Image analyzed successfully.");
+
+        setScannedFile(selectedFile);
 
     } catch (err) {
         console.error("Image analysis error:", err);
@@ -403,7 +406,7 @@ const analyzeFile = async () => {
                            <div className="flex gap-2 h-10  text-[10px] xl:text-xs">
                                     <button
                                    className=" bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 w-fit flex gap-2"
-                                    disabled={isAnalyzing || isSaving}
+                                    disabled={isAnalyzing || isSaving || !selectedFile || selectedFile === scannedFile}
                                     onClick={() => analyzeFile()}
                                 >
                                     <Astroid size={15} />  <p>Scan Image</p>

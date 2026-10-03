@@ -274,6 +274,8 @@ const paddedClaimId =
                                   onUpdate={getClaimRecords}
                                   queryParams={{userId}}
                                   officeName={localStorage.getItem("office_name")}
+                                  scopeExport
+                                  filteredIds={filteredRecords.map((r) => r.claim_id)}
                                 />
                             }
         </>

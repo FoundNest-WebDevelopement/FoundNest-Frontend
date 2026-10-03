@@ -150,6 +150,7 @@ export default function Report() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isCancel, setIsCancel] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scannedFile, setScannedFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
@@ -363,6 +364,8 @@ export default function Report() {
       const aiCategory = data.category?.toLowerCase();
       const matched = categories.find((c) => c.category_name?.toLowerCase() === aiCategory);
       if (matched) setCategoryID(String(matched.category_id));
+
+      setScannedFile(file);
     } catch (err) {
       console.error(err);
       showToast("Failed to auto-fill details. Please fill them out manually.");
@@ -602,7 +605,7 @@ export default function Report() {
               image={image}
               isLoading={isAnalyzing}
               viewOnly={viewOnly}
-              canScan={selectedFile instanceof File && !isAnalyzing}
+              canScan={selectedFile instanceof File && !isAnalyzing && selectedFile !== scannedFile}
               onScan={() => analyzeImage(selectedFile)}
               onOpenPicker={() => setShowImageOptions(true)}
             />
