@@ -379,6 +379,7 @@ useEffect(() => {
       onClose={() => setIsExportItemOpen(false)}
       onUpdate={fetchFoundReports}
       queryParams={{userId}}
+      officeName={localStorage.getItem("office_name")}
       />
 
       }

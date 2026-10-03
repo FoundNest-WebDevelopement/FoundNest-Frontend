@@ -273,6 +273,7 @@ const paddedClaimId =
                                     onClose={() => setIsExportTransactionOpen(false)}
                                   onUpdate={getClaimRecords}
                                   queryParams={{userId}}
+                                  officeName={localStorage.getItem("office_name")}
                                 />
                             }
         </>

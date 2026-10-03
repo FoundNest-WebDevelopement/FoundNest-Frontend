@@ -387,6 +387,7 @@ export default function ReportManagement() {
                     onClose={() => setIsExportReportOpen(false)}
                   onUpdate={getLostReports}
                   queryParams={{userId}}
+                  officeName={localStorage.getItem("office_name")}
                 />
             }
         </>

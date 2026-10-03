@@ -10,13 +10,14 @@ const toLocalISODate = (d = new Date()) => {
     return `${y}-${m}-${day}`;
 };
 
-export default function ExportModal({ 
-    title = "Export Data", 
-    endpoint, 
-    filenamePrefix = "export", 
+export default function ExportModal({
+    title = "Export Data",
+    endpoint,
+    filenamePrefix = "export",
     onClose,
     onUpdate,
-    queryParams = {}
+    queryParams = {},
+    officeName
 }) {
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -25,6 +26,7 @@ export default function ExportModal({
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [format, setFormat] = useState("csv");
+    const [exportAll, setExportAll] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [serverError, setServerError] = useState("");
 
@@ -32,21 +34,28 @@ export default function ExportModal({
 
     const errors = { start: "", end: "" };
 
-    if (!startDate) {
-        if (touched.start) errors.start = "Start date is required.";
-    } else if (startDate > today) {
-        errors.start = "Start date cannot be in the future.";
+    if (!exportAll) {
+        if (!startDate) {
+            if (touched.start) errors.start = "Start date is required.";
+        } else if (startDate > today) {
+            errors.start = "Start date cannot be in the future.";
+        }
+
+        if (!endDate) {
+            if (touched.end) errors.end = "End date is required.";
+        } else if (endDate > today) {
+            errors.end = "End date cannot be in the future.";
+        } else if (startDate && startDate > endDate) {
+            errors.end = "End date must be on or after the start date.";
+        }
     }
 
-    if (!endDate) {
-        if (touched.end) errors.end = "End date is required.";
-    } else if (endDate > today) {
-        errors.end = "End date cannot be in the future.";
-    } else if (startDate && startDate > endDate) {
-        errors.end = "End date must be on or after the start date.";
-    }
+    const isValid = exportAll || Boolean(startDate && endDate && !errors.start && !errors.end);
 
-    const isValid = Boolean(startDate && endDate && !errors.start && !errors.end);
+    const handleExportAllChange = (e) => {
+        setExportAll(e.target.checked);
+        setServerError("");
+    };
 
     const handleStartChange = (e) => {
         setStartDate(e.target.value);
@@ -65,13 +74,18 @@ export default function ExportModal({
             return;
         }
 
+        // Export All covers the full history up to today instead of requiring a picked range.
+        const EARLIEST_DATE = "1970-01-01";
+        const effectiveStart = exportAll ? EARLIEST_DATE : startDate;
+        const effectiveEnd = exportAll ? today : endDate;
+
         try {
             setIsExporting(true);
             setServerError("");
 
             const params = new URLSearchParams({
-                start_date: startDate,
-                end_date: endDate,
+                start_date: effectiveStart,
+                end_date: effectiveEnd,
                 format,
                 ...queryParams,
             });
@@ -90,7 +104,9 @@ export default function ExportModal({
             const link = document.createElement("a");
             link.href = url;
             // Dynamically names the file based on props
-            link.download = `${filenamePrefix}-${startDate}-to-${endDate}.${format}`;
+            link.download = exportAll
+                ? `${filenamePrefix}-ALL.${format}`
+                : `${filenamePrefix}-${startDate}-to-${endDate}.${format}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -110,7 +126,7 @@ export default function ExportModal({
     };
 
     const inputClass = (hasError) =>
-        `border rounded-md px-3 py-2 text-sm outline-none ${
+        `border rounded-md px-3 py-2 text-sm outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed ${
             hasError
                 ? "border-[#C0392B] focus:border-[#C0392B]"
                 : "border-[#DDD9CF] focus:border-primary"
@@ -133,7 +149,24 @@ export default function ExportModal({
                 </div>
 
                 <div className="p-4">
-                    <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
+                    {officeName && (
+                        <p className="text-xs text-[#6B5C42] mb-3">
+                            Exporting data for <span className="font-semibold text-[#1A1208]">{officeName}</span>
+                        </p>
+                    )}
+
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-[#1A1208]">Report Period</p>
+                        <label className="flex items-center gap-1.5 text-sm text-[#6B5C42] cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={exportAll}
+                                onChange={handleExportAllChange}
+                                className="accent-primary cursor-pointer"
+                            />
+                            Export All
+                        </label>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-4 items-start">
                         <div className="flex flex-col gap-1">
@@ -144,7 +177,8 @@ export default function ExportModal({
                                 id="export-start-date"
                                 type="date"
                                 value={startDate}
-                                max={today}
+                                max={endDate || today}
+                                disabled={exportAll}
                                 onChange={handleStartChange}
                                 onBlur={() => setTouched((t) => ({ ...t, start: true }))}
                                 aria-invalid={Boolean(errors.start)}
@@ -167,6 +201,7 @@ export default function ExportModal({
                                 value={endDate}
                                 min={startDate || undefined}
                                 max={today}
+                                disabled={exportAll}
                                 onChange={handleEndChange}
                                 onBlur={() => setTouched((t) => ({ ...t, end: true }))}
                                 aria-invalid={Boolean(errors.end)}
