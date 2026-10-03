@@ -478,6 +478,7 @@ const analyzeFile = async () => {
                             disabled={isSubmitting || isAnalyzing}
                         />
                         <AdminTextArea
+                            reqField={true}
                             title="Description"
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}

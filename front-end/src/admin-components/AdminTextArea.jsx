@@ -6,12 +6,14 @@ export default function AdminTextArea({
   error,
   titlePrimary,
   disabled,
+  reqField = false,
 }) {
   return (
     <fieldset className="fieldset">
 
       <legend className={`fieldset-legend font-medium text-sm ${titlePrimary? "text-primary" : "text-black"}`}>
         {title}
+         {reqField&&<span className="text-primary">*</span>}
       </legend>
 
       <div className={`rounded-md ${error ? "p-1 border border-red-600" : ""}`}>

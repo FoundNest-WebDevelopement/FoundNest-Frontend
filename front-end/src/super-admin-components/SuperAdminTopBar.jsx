@@ -14,6 +14,7 @@ export default function SuperAdminTopBar({tabName}) {
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+     const imageUrl = localStorage.getItem("profile_image_url") || null;
 
     
 
@@ -179,7 +180,13 @@ const markAllAdminNotificationsAsRead = async () => {
     
                             </div>
                             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
-                                <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
+                                {imageUrl ?
+                <div className="p-[2px] rounded-full border-green-500 border">
+                  <img src={imageUrl} alt="Profile Picture" className="h-6 rounded-full" />
+                </div>
+                :
+                <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
+              }
                                 <p className="text-sm text-[#1A1208]">{fullName}</p>
                             </div>
                         </div>

@@ -153,7 +153,9 @@ export default function CategoryManagementModal({
                                                 {formatDate(selectedCategory.created_at) || "N/A"}
                                             </p>
                                         </div>
-                                        <div className="flex flex-col gap-1 flex-1">
+                                        
+                                    </div>
+                                    <div className="flex flex-col gap-1 flex-1">
                                             <p className="text-xs text-[#6B5C42]">STATUS</p>
                                             <div
                                                 className={`px-3 py-1 rounded-full text-xs font-medium w-fit
@@ -167,7 +169,6 @@ export default function CategoryManagementModal({
                                                 </p>
                                             </div>
                                         </div>
-                                    </div>
                                 </div>
 
                                 {/* Actions */}

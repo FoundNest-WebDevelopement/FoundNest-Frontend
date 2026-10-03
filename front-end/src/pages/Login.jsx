@@ -89,6 +89,7 @@ function Login() {
         localStorage.setItem("faculty_id", data.user.faculty_id || "");
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("course_section", data.user.course_section || "");
+        localStorage.setItem("profile_image_url", data.user.profile_image_url || null);
 
         if (rememberMe) {
           localStorage.setItem("remembered_email", email);

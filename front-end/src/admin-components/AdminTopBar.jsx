@@ -14,6 +14,7 @@ export default function AdminTopBar({ tabName }) {
     localStorage.getItem("first_name") +
     " " +
     localStorage.getItem("last_name");
+  const imageUrl = localStorage.getItem("profile_image_url") || null;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -40,32 +41,32 @@ export default function AdminTopBar({ tabName }) {
 
   const fetchNotifications = async () => {
     try {
-  const params = new URLSearchParams();
+      const params = new URLSearchParams();
 
-  if (userId) {
-    params.append("userId", userId);
-  }
-
-  const [response, count] = await Promise.all([
-    fetchWithAuth(
-      `${API_URL}/api/notifications/admin?${params.toString()}`,
-      {
-        method:"POST",
-        body: JSON.stringify({
-          officeId: officeId,
-        }),
+      if (userId) {
+        params.append("userId", userId);
       }
-    ),
-    getAdminUnreadNotificationCount(),
-  ]);
 
-  const data = await response.json();
+      const [response, count] = await Promise.all([
+        fetchWithAuth(
+          `${API_URL}/api/notifications/admin?${params.toString()}`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              officeId: officeId,
+            }),
+          }
+        ),
+        getAdminUnreadNotificationCount(),
+      ]);
 
-  setNotifications(data);
-  setUnreadCount(count);
-} catch (err) {
-  console.error(err);
-}
+      const data = await response.json();
+
+      setNotifications(data);
+      setUnreadCount(count);
+    } catch (err) {
+      console.error(err);
+    }
 
   };
 
@@ -73,12 +74,12 @@ export default function AdminTopBar({ tabName }) {
     try {
       const response = await fetchWithAuth(
         `${API_URL}/api/notifications/admin/unread/${userId}`,
-      {
-        method:"POST",
-        body: JSON.stringify({
-          officeId: officeId,
-        }),
-      }
+        {
+          method: "POST",
+          body: JSON.stringify({
+            officeId: officeId,
+          }),
+        }
       );
 
       const data = await response.json();
@@ -186,7 +187,14 @@ export default function AdminTopBar({ tabName }) {
               )}
             </div>
             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
-              <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
+              {imageUrl ?
+                <div className="p-[2px] rounded-full border-green-500 border">
+                  <img src={imageUrl} alt="Profile Picture" className="h-6 rounded-full" />
+                </div>
+                :
+                <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
+              }
+
               <p className="text-sm text-[#1A1208]">{fullName}</p>
             </div>
           </div>
