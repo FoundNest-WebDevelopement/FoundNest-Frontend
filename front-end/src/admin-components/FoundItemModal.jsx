@@ -89,6 +89,7 @@ const [timeFound, setTimeFound] = useState(defaultDateTimeRef.current.time);
     const [additionalNotes, setAdditionalNotes] = useState("");
     const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [scannedFile, setScannedFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     
@@ -292,6 +293,8 @@ const analyzeFile = async () => {
         if (matchedCategory) {
             setCategory(String(matchedCategory.category_id));
         }
+
+        setScannedFile(selectedFile);
     } catch (error) {
         console.error(error);
         toast.error(error.message || "AI analysis failed");
@@ -449,7 +452,7 @@ const analyzeFile = async () => {
                             />
                             {image && fileInputRef  &&
                             <div className="mt-2">
-                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting} onClick={analyzeFile}/>
+                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting || !selectedFile || selectedFile === scannedFile} onClick={analyzeFile}/>
                             </div>
                           
 

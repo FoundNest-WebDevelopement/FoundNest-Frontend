@@ -58,6 +58,7 @@ export default function LostReportModal(
     const [ownerName, setOwnerName] = useState("");
     const [specificLocation, setSpecificLocation] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [scannedFile, setScannedFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef(null);
 
@@ -322,7 +323,9 @@ const analyzeFile = async () => {
         if (matchedCategory) {
             setCategory(String(matchedCategory.category_id));
         }
-        
+
+        setScannedFile(selectedFile);
+
     } catch (error) {
         console.error("Image analysis error:", error);
         toast.error(error.message || "Failed to analyze image with AI.");
@@ -505,7 +508,7 @@ const handleRemoveImage = () => {
                             />
                              {image && fileInputRef &&
                             <div className="flex gap-2 mt-2">
-                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting} onClick={analyzeFile}/>
+                                <AdminButton icon={Astroid} isIcon={true} isSolid={true} label={"Scan Image"} disabled={isAnalyzing || isSubmitting || !selectedFile || selectedFile === scannedFile} onClick={analyzeFile}/>
                                
                                      <AdminButton isIcon={false}  label={"Remove Image"} disabled={isAnalyzing || isSubmitting} onClick={handleRemoveImage}/>
                                

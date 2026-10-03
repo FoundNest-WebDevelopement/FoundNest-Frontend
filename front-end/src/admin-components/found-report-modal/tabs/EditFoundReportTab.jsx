@@ -59,6 +59,7 @@ export default function EditFoundReportTab({
 
     // UI & Loading States
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [scannedFile, setScannedFile] = useState(null);
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
     const [openDiscardDialog, setOpenDiscardDialog] = useState(false);
 
@@ -229,8 +230,10 @@ const analyzeFile = async () => {
             item_name: data.itemName || "",
             description: data.detailedDescription || "",
             contents: data.contents || "",
-         
+
         }));
+
+        setScannedFile(selectedFile);
     } catch (err) {
         console.error(err);
         toast.error("Failed to analyze image with AI.");
@@ -356,7 +359,7 @@ const analyzeFile = async () => {
                             {image && fileInputRef &&
                             <button
                                 className="bg-primary text-white items-center rounded-md p-2 cursor-pointer disabled:opacity-40 w-fit flex gap-2"
-                                disabled={isAnalyzing || isSavingEdit}
+                                disabled={isAnalyzing || isSavingEdit || !selectedFile || selectedFile === scannedFile}
                                 onClick={() => analyzeFile()}
                             >
                                 <Astroid size={15} /> <p>Scan Image</p>
