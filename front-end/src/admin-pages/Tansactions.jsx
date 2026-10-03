@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown"
-import AdminDateInput from "../admin-components/AdminDateInput"
+import DateRangeInput from "../global-components/DateRangeInput"
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
@@ -228,10 +228,12 @@ const paddedClaimId =
                         </div>
                      
                         <div className="flex-1">
-                            <AdminDateInput title="Date Claimed From" value={dateClaimedFrom} onChange={setDateClaimedFrom} max={dateClaimedTo || undefined} />
-                        </div>
-                        <div className="flex-1">
-                            <AdminDateInput title="Date Claimed To" value={dateClaimedTo} onChange={setDateClaimedTo} />
+                            <DateRangeInput
+                                startDate={dateClaimedFrom}
+                                endDate={dateClaimedTo}
+                                onChange={(start, end) => { setDateClaimedFrom(start); setDateClaimedTo(end); }}
+                                placeholder="Date claimed"
+                            />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
                             <AdminButton isIcon={false} isSolid={true} label="Clear Filters " isBorder={false} isShadow={false} onClick={handleClearFilters} />

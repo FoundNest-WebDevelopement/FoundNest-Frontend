@@ -4,7 +4,7 @@ import AdminLocationDropDown from "../admin-components/AdminLocationDropDown";
 import { useEffect, useState } from "react";
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown";
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown";
-import AdminDateInput from "../admin-components/AdminDateInput";
+import DateRangeInput from "../global-components/DateRangeInput";
 import ItemManagementTable from "../admin-components/ItemManagementTable";
 import FoundItemModal from "../admin-components/FoundItemModal";
 import QRScanModal from "../admin-components/QRScanModal";
@@ -300,10 +300,12 @@ useEffect(() => {
               <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
             </div>
             <div className="flex-1">
-              <AdminDateInput title="Date Found From" value={dateFoundFrom} onChange={setDateFoundFrom} max={dateFoundTo || undefined} />
-            </div>
-            <div className="flex-1">
-              <AdminDateInput title="Date Found To" value={dateFoundTo} onChange={setDateFoundTo} />
+              <DateRangeInput
+                startDate={dateFoundFrom}
+                endDate={dateFoundTo}
+                onChange={(start, end) => { setDateFoundFrom(start); setDateFoundTo(end); }}
+                placeholder="Date found"
+              />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
               <AdminButton isIcon={false} label="Clear Filters" isSolid={true} isBorder={false} isShadow={false} onClick={handleClearFilters} />

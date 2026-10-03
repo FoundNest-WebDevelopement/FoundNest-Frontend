@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown"
-import AdminDateInput from "../admin-components/AdminDateInput"
+import DateRangeInput from "../global-components/DateRangeInput"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
 import { LOST_REPORT_STATUS } from "../constants/lost_item_status";
@@ -320,10 +320,12 @@ export default function ReportManagement() {
                                     <AdminDropDown placeholder="All Location" value={reportType} onChange={setReportType} options={REPORT_TYPE} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminDateInput title="Date Lost From" value={dateLostFrom} onChange={setDateLostFrom} max={dateLostTo || undefined} />
-                                </div>
-                                <div className="flex-1">
-                                    <AdminDateInput title="Date Lost To" value={dateLostTo} onChange={setDateLostTo} />
+                                    <DateRangeInput
+                                        startDate={dateLostFrom}
+                                        endDate={dateLostTo}
+                                        onChange={(start, end) => { setDateLostFrom(start); setDateLostTo(end); }}
+                                        placeholder="Date lost"
+                                    />
                                 </div>
                                 <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
             
