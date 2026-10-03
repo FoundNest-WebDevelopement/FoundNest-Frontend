@@ -3,6 +3,9 @@ import { ChevronDown, Calendar } from "lucide-react";
 
 const PRESETS = [
     { key: "all", label: "All Time" },
+    { key: "7days", label: "Last 7 Days" },
+    { key: "week", label: "This Week" },
+    { key: "30days", label: "Last 30 Days" },
     { key: "month", label: "This Month" },
     { key: "6months", label: "Last 6 Months" },
     { key: "year", label: "Last Year" },
@@ -24,7 +27,17 @@ function getPresetRange(key) {
     const end = toDateStr(now);
     let start;
 
-    if (key === "month") {
+    if (key === "7days") {
+        // Last 7 days INCLUDING today, so a 7-day-wide window.
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    } else if (key === "week") {
+        // Calendar week starting Monday, through today.
+        const day = now.getDay(); // 0 = Sunday, 1 = Monday, ...
+        const diffToMonday = day === 0 ? 6 : day - 1;
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+    } else if (key === "30days") {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+    } else if (key === "month") {
         start = new Date(now.getFullYear(), now.getMonth(), 1);
     } else if (key === "6months") {
         start = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());

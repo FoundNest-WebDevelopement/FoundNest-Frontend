@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link2, Handshake, QrCode } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRCodeLib from "qrcode";
+import foundNestLogo from "../../../assets/logo.png";
 
 // Utility Imports (Adjust paths as needed)
 import formatDateTime from "../../../utils/formatDateTime.js";
@@ -41,41 +42,50 @@ export default function FoundReportDetailsTab({
     const formatReportId = (id) => `RPT-${String(id).padStart(5, "0")}`;
     const formatTXNId = (id) => `TXN-${String(id).padStart(5, "0")}`;
 
-    // QR Code Print Logic (Moved here to isolate it from the parent)
+    // Generates a QR code with the FoundNest logo centered on top (matching
+    // the mobile app's QR codes) and downloads it as a PNG — no print dialog.
     const handlePrintQRCode = async () => {
         setIsPrintingQR(true);
         try {
             const qrData = formatItemId(selectedItem.item_id);
-            const qrImageUrl = await QRCodeLib.toDataURL(qrData, {
-                width: 300,
+            const size = 600;
+            const canvas = document.createElement("canvas");
+
+            // High error correction so the center logo overlay doesn't break scanning.
+            await QRCodeLib.toCanvas(canvas, qrData, {
+                width: size,
                 margin: 2,
+                errorCorrectionLevel: "H",
             });
 
-            const printWindow = window.open("", "_blank");
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Print QR Code - ${selectedItem.item_name}</title>
-                        <style>
-                            body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; }
-                            .card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; border: 1px solid #DDD9CF; border-radius: 16px; }
-                            .item-id { font-size: 13px; color: #6B5C42; }
-                            .item-name { font-weight: bold; font-size: 18px; color: #4B2D23; }
-                            .brand { font-weight: bold; font-size: 12px; color: #990000; margin-top: 8px; }
-                            img { width: 220px; height: 220px; }
-                        </style>
-                    </head>
-                    <body onload="window.print()">
-                        <div class="card">
-                            <p class="item-id">${qrData}</p>
-                            <p class="item-name">${selectedItem.item_name}</p>
-                            <img src="${qrImageUrl}" alt="QR Code" />
-                            <p class="brand">FoundNest</p>
-                        </div>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
+            const logoImg = new Image();
+            await new Promise((resolve, reject) => {
+                logoImg.onload = resolve;
+                logoImg.onerror = reject;
+                logoImg.src = foundNestLogo;
+            });
+
+            const ctx = canvas.getContext("2d");
+            const logoSize = size * 0.2;
+            const logoX = (size - logoSize) / 2;
+            const logoY = (size - logoSize) / 2;
+            const padding = size * 0.02;
+
+            // White backdrop behind the logo so it stays legible against the QR modules.
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(logoX - padding, logoY - padding, logoSize + padding * 2, logoSize + padding * 2);
+
+            // The source logo is a small icon (43x35), so ask the canvas for its best
+            // upscale filtering — browsers default to low-quality smoothing otherwise,
+            // which makes a scaled-up small image look noticeably blockier than this.
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = `${qrData}-QR.png`;
+            link.click();
         } catch (error) {
             console.error(error);
         } finally {
@@ -418,7 +428,7 @@ export default function FoundReportDetailsTab({
                             className="flex gap-3 p-3 rounded-md items-center cursor-pointer transition-transform active:scale-95 border border-primary text-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <QrCode size="20" />
-                            <p>{isPrintingQR ? "Preparing..." : "Print QR Code"}</p>
+                            <p>{isPrintingQR ? "Preparing..." : "Download QR Code"}</p>
                         </button>
                         {!selectedItem.qr_code_id && (
                             <p className="text-[#6B5C42] text-[10px] text-center mt-1">

@@ -15,7 +15,14 @@ import WebLoading from "../global-components/WebLoading"
 import AdminDropDown from "../admin-components/AdminDropdown"
 import ExportModal from "../global-components/ExportModal"
 
-
+// Local calendar date — not toISOString(), which converts to UTC first and
+// silently shifts the date back a day in timezones ahead of UTC.
+const toLocalISODate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
 export default function ReportManagement() {
 
@@ -42,7 +49,8 @@ export default function ReportManagement() {
 
     //SEARCH AND FILTER VARIABLES 
     const [search, setSearch] = useState("");
-    const [dateLost, setDateLost] = useState("");
+    const [dateLostFrom, setDateLostFrom] = useState("");
+    const [dateLostTo, setDateLostTo] = useState("");
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("open");
@@ -196,7 +204,8 @@ export default function ReportManagement() {
         setLocation("");
         setCategory("");
         setStatus("open");
-        setDateLost("");
+        setDateLostFrom("");
+        setDateLostTo("");
         setReportType("All Report");
     }
 
@@ -246,11 +255,10 @@ export default function ReportManagement() {
             !status ||
             report.status === status;
 
-        const reportDate = new Date(report.lost_date)
-            .toISOString()
-            .split("T")[0];
+        const reportDate = toLocalISODate(new Date(report.lost_date));
         const matchesDate =
-            !dateLost || reportDate === dateLost;
+            (!dateLostFrom || reportDate >= dateLostFrom) &&
+            (!dateLostTo || reportDate <= dateLostTo);
 
         const matchReportType =
             !reportType ||
@@ -312,7 +320,10 @@ export default function ReportManagement() {
                                     <AdminDropDown placeholder="All Location" value={reportType} onChange={setReportType} options={REPORT_TYPE} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminDateInput value={dateLost} onChange={setDateLost} />
+                                    <AdminDateInput title="Date Lost From" value={dateLostFrom} onChange={setDateLostFrom} max={dateLostTo || undefined} />
+                                </div>
+                                <div className="flex-1">
+                                    <AdminDateInput title="Date Lost To" value={dateLostTo} onChange={setDateLostTo} />
                                 </div>
                                 <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
             

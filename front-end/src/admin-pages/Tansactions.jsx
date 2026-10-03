@@ -11,7 +11,14 @@ import { useSearchParams, useLocation } from "react-router-dom";
 import WebLoading from "../global-components/WebLoading"
 import ExportModal from "../global-components/ExportModal"
 
-
+// Local calendar date — not toISOString(), which converts to UTC first and
+// silently shifts the date back a day in timezones ahead of UTC.
+const toLocalISODate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
 export default function Transactions() {
     //API URL
@@ -39,7 +46,8 @@ export default function Transactions() {
 
     //SEARCH AND FILTER VARIABLES 
     const [search, setSearch] = useState("");
-    const [dateClaimed, setDateClaimed] = useState("");
+    const [dateClaimedFrom, setDateClaimedFrom] = useState("");
+    const [dateClaimedTo, setDateClaimedTo] = useState("");
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("true");
@@ -119,7 +127,8 @@ useEffect(() => {
         setLocation("");
         setCategory("");
         setStatus("");
-        setDateClaimed("");
+        setDateClaimedFrom("");
+        setDateClaimedTo("");
     }
 
       //CAEGORIES FETCH
@@ -165,11 +174,10 @@ const paddedClaimId =
             records.claimant_status === (status === "true");
 
                 
-            const claimDate = new Date(records.claim_date)
-                .toISOString()
-                .split("T")[0];
+            const claimDate = toLocalISODate(new Date(records.claim_date));
             const matchesDate =
-                !dateClaimed || claimDate === dateClaimed;
+                (!dateClaimedFrom || claimDate >= dateClaimedFrom) &&
+                (!dateClaimedTo || claimDate <= dateClaimedTo);
 
 
             return (
@@ -220,7 +228,10 @@ const paddedClaimId =
                         </div>
                      
                         <div className="flex-1">
-                            <AdminDateInput value={dateClaimed} onChange={setDateClaimed} />
+                            <AdminDateInput title="Date Claimed From" value={dateClaimedFrom} onChange={setDateClaimedFrom} max={dateClaimedTo || undefined} />
+                        </div>
+                        <div className="flex-1">
+                            <AdminDateInput title="Date Claimed To" value={dateClaimedTo} onChange={setDateClaimedTo} />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
                             <AdminButton isIcon={false} isSolid={true} label="Clear Filters " isBorder={false} isShadow={false} onClick={handleClearFilters} />
