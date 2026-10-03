@@ -5,10 +5,6 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
 
-// Shown instead of SwitchBackButton whenever a Super Admin has switched down
-// to Admin or User (acting_as_super_admin). Unlike SwitchBackButton's single
-// "Back to X" action, this offers a dropdown so they can also switch laterally
-// between Admin and User without first going back up to Super Admin.
 export default function ActingSuperAdminSwitcher() {
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
@@ -113,36 +109,41 @@ export default function ActingSuperAdminSwitcher() {
     };
 
     const handleSwitchToAdmin = async () => {
-        if (!selectedOfficeId) return;
+    if (!selectedOfficeId) return;
 
-        try {
-            setIsLoading(true);
-            const response = await fetchWithAuth(`${API_URL}/api/auth/select-role`, {
-                method: "POST",
-                body: JSON.stringify({ mode: "admin", office_id: selectedOfficeId }),
-            });
+    try {
+        setIsLoading(true);
 
-            const data = await response.json();
+        const response = await fetchWithAuth(`${API_URL}/api/auth/select-role`, {
+            method: "POST",
+            body: JSON.stringify({
+                mode: "admin",
+                office_id: selectedOfficeId,
+            }),
+        });
 
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to switch mode.");
-            }
+        const data = await response.json();
 
-            localStorage.setItem("token", data.accessToken);
-            localStorage.setItem("role", "admin");
-            localStorage.setItem("office_location", data.office_id);
-            localStorage.setItem("office_name", data.office_name);
-            localStorage.setItem("acting_as_super_admin", "true");
-
-            navigate("/admin");
-        } catch (err) {
-            console.error(err);
-            toast.error(err.message || "Failed to switch mode.");
-        } finally {
-            setIsLoading(false);
-            setPendingAction(null);
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to switch mode.");
         }
-    };
+
+        localStorage.setItem("token", data.accessToken);
+        localStorage.setItem("role", "admin");
+        localStorage.setItem("office_location", data.office_id);
+        localStorage.setItem("office_name", data.office_name);
+        localStorage.setItem("acting_as_super_admin", "true");
+
+        window.location.href = "/admin";
+    } catch (err) {
+        console.error(err);
+        toast.error(err.message || "Failed to switch mode.");
+    } finally {
+        setIsLoading(false);
+        setPendingAction(null);
+    }
+};
+
 
     const selectedOfficeName = offices.find(
         (o) => String(o.office_id) === String(selectedOfficeId)

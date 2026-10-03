@@ -90,6 +90,7 @@ export default function Notification() {
   const navigate = useNavigate();
   const userId = localStorage.getItem("user_id");
 
+
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

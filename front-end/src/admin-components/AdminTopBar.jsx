@@ -21,6 +21,8 @@ export default function AdminTopBar({ tabName }) {
   const userId = localStorage.getItem("user_id");
   const role = localStorage.getItem("role");
   const officeLocation = localStorage.getItem("office_name") || "Office Admin";
+  const officeId = localStorage.getItem("office_location")
+
 
   useEffect(() => {
     if (!userId) return;
@@ -38,30 +40,45 @@ export default function AdminTopBar({ tabName }) {
 
   const fetchNotifications = async () => {
     try {
-      const params = new URLSearchParams();
+  const params = new URLSearchParams();
 
-      if (userId) params.append("userId", userId);
+  if (userId) {
+    params.append("userId", userId);
+  }
 
-      const [response, count] = await Promise.all([
-        fetchWithAuth(
-          `${API_URL}/api/notifications/admin?${params.toString()}`,
-        ),
-        getAdminUnreadNotificationCount(),
-      ]);
+  const [response, count] = await Promise.all([
+    fetchWithAuth(
+      `${API_URL}/api/notifications/admin?${params.toString()}`,
+      {
+        method:"POST",
+        body: JSON.stringify({
+          officeId: officeId,
+        }),
+      }
+    ),
+    getAdminUnreadNotificationCount(),
+  ]);
 
-      const data = await response.json();
+  const data = await response.json();
 
-      setNotifications(data);
-      setUnreadCount(count);
-    } catch (err) {
-      console.error(err);
-    }
+  setNotifications(data);
+  setUnreadCount(count);
+} catch (err) {
+  console.error(err);
+}
+
   };
 
   const getAdminUnreadNotificationCount = async () => {
     try {
       const response = await fetchWithAuth(
         `${API_URL}/api/notifications/admin/unread/${userId}`,
+      {
+        method:"POST",
+        body: JSON.stringify({
+          officeId: officeId,
+        }),
+      }
       );
 
       const data = await response.json();
