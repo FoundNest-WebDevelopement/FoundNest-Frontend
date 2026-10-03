@@ -82,7 +82,9 @@ export default function ItemManagement() {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("unclaimed");
 
-  
+  const today = toLocalISODate(new Date());
+
+
 
 
 
@@ -299,11 +301,12 @@ useEffect(() => {
             <div className="flex-1">
               <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
             </div>
+            <div className="text-[#DDD9CF] text-xl font-light select-none">|</div>
             <div className="flex-1">
-              <AdminDateInput title="Date Found From" value={dateFoundFrom} onChange={setDateFoundFrom} max={dateFoundTo || undefined} />
+              <AdminDateInput placeholder="Start Date" value={dateFoundFrom} onChange={setDateFoundFrom} max={today} />
             </div>
             <div className="flex-1">
-              <AdminDateInput title="Date Found To" value={dateFoundTo} onChange={setDateFoundTo} />
+              <AdminDateInput placeholder="End Date" value={dateFoundTo} onChange={setDateFoundTo} min={dateFoundFrom || undefined} max={today} />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
               <AdminButton isIcon={false} label="Clear Filters" isSolid={true} isBorder={false} isShadow={false} onClick={handleClearFilters} />

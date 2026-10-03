@@ -584,7 +584,7 @@ export default function Report() {
         {mode ? (
           <PageLabelWithReturn label="View Lost Item Report Form" onClick={navBack} />
         ) : (
-          <PageLabel label={id ? "Edit Lost Item Report Form" : "Lost Item Report Form"} />
+          <PageLabelWithReturn label={id ? "Edit Lost Item Report Form" : "Lost Item Report Form"} onClick={() => (hasUnsavedChanges ? setIsCancel(true) : handleDiscard())}/>
         )}
       </div>
 

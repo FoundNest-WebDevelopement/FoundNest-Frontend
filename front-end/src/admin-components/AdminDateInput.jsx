@@ -2,11 +2,13 @@ import { useRef, useState } from "react";
 
 export default function AdminDateInput({
   title,
+  placeholder,
   value,
   onChange,
   error,
   reqField,
   max,
+  min,
   disabled,
 }) {
   const inputRef = useRef(null);
@@ -60,13 +62,22 @@ export default function AdminDateInput({
         <input
           ref={inputRef}
           type="date"
-          className="input bg-white text-sm rounded-md w-full border border-[#DDD9CF] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          className={`input bg-white text-sm rounded-md w-full border border-[#DDD9CF] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+            placeholder && !value ? "[&::-webkit-datetime-edit]:text-transparent" : ""
+          }`}
           value={value || ""}
           disabled={disabled}
           onChange={handleChange}
           onBlur={handleBlur}
           max={max}
+          min={min}
         />
+
+        {placeholder && !value && (
+          <span className="absolute inset-y-0 left-3 flex items-center text-sm text-[#9B9589] pointer-events-none">
+            {placeholder}
+          </span>
+        )}
 
         {!disabled && (
           <div

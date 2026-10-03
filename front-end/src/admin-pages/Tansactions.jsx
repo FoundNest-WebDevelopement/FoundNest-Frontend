@@ -52,6 +52,8 @@ export default function Transactions() {
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("true");
 
+    const today = toLocalISODate(new Date());
+
     const [locations, setLocations] = useState();
 
     //DROPDOWN LIST
@@ -226,12 +228,12 @@ const paddedClaimId =
                         <div className="flex-1">
                             <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
                         </div>
-                     
+                        <div className="text-[#DDD9CF] text-xl font-light select-none">|</div>
                         <div className="flex-1">
-                            <AdminDateInput title="Date Claimed From" value={dateClaimedFrom} onChange={setDateClaimedFrom} max={dateClaimedTo || undefined} />
+                            <AdminDateInput placeholder="Start Date" value={dateClaimedFrom} onChange={setDateClaimedFrom} max={today} />
                         </div>
                         <div className="flex-1">
-                            <AdminDateInput title="Date Claimed To" value={dateClaimedTo} onChange={setDateClaimedTo} />
+                            <AdminDateInput placeholder="End Date" value={dateClaimedTo} onChange={setDateClaimedTo} min={dateClaimedFrom || undefined} max={today} />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
                             <AdminButton isIcon={false} isSolid={true} label="Clear Filters " isBorder={false} isShadow={false} onClick={handleClearFilters} />

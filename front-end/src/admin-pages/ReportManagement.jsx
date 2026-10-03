@@ -56,6 +56,8 @@ export default function ReportManagement() {
     const [status, setStatus] = useState("open");
     const [reportType, setReportType] = useState("All Report");
 
+    const today = toLocalISODate(new Date());
+
     //DROPDOWN LIST
     const statuses = Object.values(LOST_REPORT_STATUS);
     const [categories, setCategories] = useState([]);
@@ -319,11 +321,12 @@ export default function ReportManagement() {
                                 <div className="flex-1">
                                     <AdminDropDown placeholder="All Location" value={reportType} onChange={setReportType} options={REPORT_TYPE} />
                                 </div>
+                                <div className="text-[#DDD9CF] text-xl font-light select-none">|</div>
                                 <div className="flex-1">
-                                    <AdminDateInput title="Date Lost From" value={dateLostFrom} onChange={setDateLostFrom} max={dateLostTo || undefined} />
+                                    <AdminDateInput placeholder="Start Date" value={dateLostFrom} onChange={setDateLostFrom} max={today} />
                                 </div>
                                 <div className="flex-1">
-                                    <AdminDateInput title="Date Lost To" value={dateLostTo} onChange={setDateLostTo} />
+                                    <AdminDateInput placeholder="End Date" value={dateLostTo} onChange={setDateLostTo} min={dateLostFrom || undefined} max={today} />
                                 </div>
                                 <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
             
