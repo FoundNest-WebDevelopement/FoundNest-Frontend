@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown"
-import AdminDateInput from "../admin-components/AdminDateInput"
+import DateRangeInput from "../global-components/DateRangeInput"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
 import { LOST_REPORT_STATUS } from "../constants/lost_item_status";
@@ -14,6 +14,7 @@ import AdminAllLocationDropDown from "../admin-components/AdminAllLocationDropDo
 import WebLoading from "../global-components/WebLoading"
 import AdminDropDown from "../admin-components/AdminDropdown"
 import ExportModal from "../global-components/ExportModal"
+import AdminDateInput from "../admin-components/AdminDateInput"
 
 // Local calendar date — not toISOString(), which converts to UTC first and
 // silently shifts the date back a day in timezones ahead of UTC.

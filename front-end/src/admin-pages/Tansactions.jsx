@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import AdminButton from "../admin-components/AdminButton"
 import AdminCategoriesDropdown from "../admin-components/AdminCategoriesDropdown"
-import AdminDateInput from "../admin-components/AdminDateInput"
+import DateRangeInput from "../global-components/DateRangeInput"
 import AdminLocationDropDown from "../admin-components/AdminLocationDropDown"
 import AdminStatusDropDown from "../admin-components/AdminStatusDropDown"
 import { Plus, Download } from "lucide-react"
@@ -10,6 +10,7 @@ import TransactionTable from "../admin-components/TransactionTable"
 import { useSearchParams, useLocation } from "react-router-dom";
 import WebLoading from "../global-components/WebLoading"
 import ExportModal from "../global-components/ExportModal"
+import AdminDateInput from "../admin-components/AdminDateInput"
 
 // Local calendar date — not toISOString(), which converts to UTC first and
 // silently shifts the date back a day in timezones ahead of UTC.
