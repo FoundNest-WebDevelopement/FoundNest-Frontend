@@ -518,73 +518,73 @@ export default function LostReportMangementModal(
                                     <div className="mt-auto">
                                         <div >
                                         </div>
-                                      
-                                        {selectedItem.status !== 'archived' && selectedItem.status !== 'resolved' && selectedItem.status !== 'cancelled' && 
-                                          <>
-                                          <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                            <div className="relative flex w-full h-10 my-5 gap-2 text-[10px] xl:text-xs ">
-                                                
-                                                {openUpdateStatus && (
-                                                    <div className="absolute bottom-12 right-0 h-fit w-45 bg-white border border-[#DDD9CF] shadow-lg rounded-md z-50 animate-in fade-in slide-in-from-bottom-2">
 
-                                                        <button
-                                                            className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
-                                                            onClick={() => setResolved(true)}
-                                                        >
-                                                            <p className="ml-2">Mark as Resolved</p>
-                                                        </button>
+                                        {selectedItem.status !== 'archived' && selectedItem.status !== 'resolved' && selectedItem.status !== 'cancelled' &&
+                                            <>
+                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                                <div className="relative flex w-full h-10 my-5 gap-2 text-[10px] xl:text-xs ">
 
-                                                        {String(selectedItem.user_id) === userId &&
+                                                    {openUpdateStatus && (
+                                                        <div className="absolute bottom-12 right-0 h-fit w-45 bg-white border border-[#DDD9CF] shadow-lg rounded-md z-50 animate-in fade-in slide-in-from-bottom-2">
+
                                                             <button
                                                                 className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
-                                                                onClick={() => {
-                                                                    setOpenUpdateStatus(false);
-                                                                    setOpenCancelDialog(true);
-                                                                }}
+                                                                onClick={() => setResolved(true)}
                                                             >
-                                                                <p className="ml-2">Cancel Report</p>
+                                                                <p className="ml-2">Mark as Resolved</p>
                                                             </button>
 
-                                                        }
+                                                            {String(selectedItem.user_id) === userId &&
+                                                                <button
+                                                                    className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
+                                                                    onClick={() => {
+                                                                        setOpenUpdateStatus(false);
+                                                                        setOpenCancelDialog(true);
+                                                                    }}
+                                                                >
+                                                                    <p className="ml-2">Cancel Report</p>
+                                                                </button>
+
+                                                            }
+                                                            <button
+                                                                className="text-xs p-3 w-full text-left text-red-600 hover:bg-red-50 transition rounded-b-md"
+                                                                onClick={() => setOpenArchiveDialog(true)}
+                                                            >
+                                                                <p className="ml-2">Archive Report</p>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {selectedItem.status !== 'archived' && userId === String(selectedItem.user_id) && selectedItem.status !== 'cancelled' &&
                                                         <button
-                                                            className="text-xs p-3 w-full text-left text-red-600 hover:bg-red-50 transition rounded-b-md"
-                                                            onClick={() => setOpenArchiveDialog(true)}
-                                                        >
-                                                            <p className="ml-2">Archive Report</p>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {selectedItem.status !== 'archived' && userId === String(selectedItem.user_id) && selectedItem.status !== 'cancelled' &&
-                                                    <button
-                                                        type="button"
-                                                        className="h-full border-primary border rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform duration-100
+                                                            type="button"
+                                                            className="h-full border-primary border rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform duration-100
                                         enabled:active:scale-95 disabled:cursor-not-allowed "
-                                                        onClick={() => setEditTab(true)}
-                                                    >
-                                                        Edit Report Details
-                                                    </button>
-                                                }
-                                                {selectedItem.status !== "cancelled" &&
-                                                <button
-                                                    className="h-full border-primary border rounded-md flex-1 bg-primary text-white  disabled:opacity-40
-                              cursor-pointer transition-transform duration-100 enabled:active:scale-95 disabled:cursor-not-allowed"
-                                                    onClick={() => {
-                                                        setOpenUpdateStatus(!openUpdateStatus);
-                                                    }}
-                                                    disabled={
-                                                        isArchiving
+                                                            onClick={() => setEditTab(true)}
+                                                        >
+                                                            Edit Report Details
+                                                        </button>
                                                     }
-                                                >
-                                                    Update Status{" "}
-                                                    <i
-                                                        className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white`}
-                                                    ></i>
-                                                </button>
+                                                    {selectedItem.status !== "cancelled" &&
+                                                        <button
+                                                            className="h-full border-primary border rounded-md flex-1 bg-primary text-white  disabled:opacity-40
+                              cursor-pointer transition-transform duration-100 enabled:active:scale-95 disabled:cursor-not-allowed"
+                                                            onClick={() => {
+                                                                setOpenUpdateStatus(!openUpdateStatus);
+                                                            }}
+                                                            disabled={
+                                                                isArchiving
+                                                            }
+                                                        >
+                                                            Update Status{" "}
+                                                            <i
+                                                                className={`fa-solid fa-angle-${openUpdateStatus ? "up" : "down"} text-white`}
+                                                            ></i>
+                                                        </button>
 
-                                                }
+                                                    }
 
-                                            </div>
-                                          </>
+                                                </div>
+                                            </>
                                         }
                                     </div>
                                     {selectedItem.status === 'archived' && selectedItem.archived_by_user_id &&
@@ -622,15 +622,23 @@ export default function LostReportMangementModal(
                                         )
                                     }
                                     <div className=" text-[10px] xl:text-xs gap-1">
-                                        <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                         {selectedItem.status === 'resolved' &&
-                                            <p className="text-[#6B5C42]">This report has been resolved and no further action needed</p>
+                                            <>
+                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                                <p className="text-[#6B5C42]">This report has been resolved and no further action needed</p>
+                                            </>
                                         }
                                         {selectedItem.status === 'cancelled' &&
-                                            <p className="text-[#6B5C42]">This report has been cancelled and no further action needed</p>
+                                            <>
+                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                                <p className="text-[#6B5C42]">This report has been cancelled and no further action needed</p>
+                                            </>
                                         }
                                         {selectedItem.status === 'archived' &&
-                                            <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
+                                            <>
+                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                                <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
+                                            </>
                                         }
                                     </div>
                                 </div>
