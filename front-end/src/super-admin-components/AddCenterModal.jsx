@@ -214,7 +214,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                         onChange={(e) => { setLocationName(e.target.value); setError(""); }}
                                         className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                                     >
-                                        <option value="">e.g. Pimentel Hall</option>
+                                        <option value="" disabled hidden>e.g. Pimentel Hall</option>
                                         {locationOptions.map((loc) => (
                                             <option key={loc} value={loc}>
                                                 {loc}

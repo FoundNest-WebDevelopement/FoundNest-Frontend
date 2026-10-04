@@ -75,7 +75,7 @@ export default function Feedbacks() {
                 ? review.is_archived
                 : statusFilter
                 ? status === statusFilter && !review.is_archived
-                : !review.is_archived;
+                : true; // "All Status" means all, including archived
 
         const reviewDate = toLocalISODate(new Date(review.created_at));
         const matchesDate =
@@ -615,6 +615,13 @@ export default function Feedbacks() {
 
                             {/* Response section */}
                             {!selectedReview.response_text || isEditingResponse ? (
+                                selectedReview.is_archived ? (
+                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                        <p className="text-sm text-gray-500">
+                                            This feedback is archived. Unarchive this feedback to send a response.
+                                        </p>
+                                    </div>
+                                ) : (
                                 <>
                                     <p className="font-semibold text-[#4B2D23]">
                                         {isEditingResponse ? "Edit Response" : "Respond to Feedback"}
@@ -642,6 +649,7 @@ export default function Feedbacks() {
                                         </button>
                                     </div>
                                 </>
+                                )
                             ) : (
                                 <>
                                     <p className="font-semibold text-[#4B2D23]">Response</p>

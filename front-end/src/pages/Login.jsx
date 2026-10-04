@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
 import logowhite from "../assets/logowhite.png";
 import bsulogo from "../assets/bsulogo.png";
@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import RoleSelectionModal from "../super-admin-components/RoleSelectionModal";
 import AdminRoleSelectionModal from "../admin-components/AdminRoleSelectionModal";
 import { showMobileOnlyToast } from "../utils/mobileOnlyToast";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -28,6 +30,7 @@ const EyeOffIcon = () => (
 
 function Login() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -63,6 +66,13 @@ function Login() {
       setRememberMe(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("notice") === "office_inactive") {
+      toast.error("Your center was deactivated. You've been logged out.");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const isLoginValid = email.trim() !== "" && password.trim() !== "";
 
@@ -106,6 +116,36 @@ function Login() {
           localStorage.setItem("admin_id", data.user.admin_id);
           localStorage.setItem("office_location", data.user.office_location);
           localStorage.setItem("office_name", data.user.office_name || "");
+
+          if (data.user.office_active === false) {
+            // Their center isn't usable right now — skip the Continue-as-Admin
+            // picker entirely and log them in as an End User, the same way
+            // choosing "Login as End User" there would.
+            try {
+              const selectRes = await fetch(`${API_URL}/api/auth/select-role`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${data.accessToken}`,
+                },
+                body: JSON.stringify({ mode: "user" }),
+              });
+              const selectData = await selectRes.json();
+              if (selectRes.ok) {
+                localStorage.setItem("token", selectData.accessToken);
+                localStorage.setItem("refreshToken", selectData.refreshToken);
+                localStorage.setItem("role", "user");
+                localStorage.setItem("acting_as_admin", "true");
+              }
+            } catch (err) {
+              console.error(err);
+            }
+            toast.error(`${data.user.office_name || "Your center"} is currently inactive. Logged in as End User.`);
+            showMobileOnlyToast();
+            navigate("/home");
+            return;
+          }
+
           setShowAdminRoleSelection(true);
         } else {
           showMobileOnlyToast();
@@ -460,6 +500,13 @@ const DesktopLogin = (
 
   return (
     <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        toastStyle={{
+          width: "100%",
+        }}
+      />
       {DesktopLogin}
       {MobileLogin}
       {showRoleSelection && (
