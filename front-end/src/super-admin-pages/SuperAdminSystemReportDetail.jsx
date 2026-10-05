@@ -79,7 +79,7 @@ export default function SuperAdminSystemReportDetail() {
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [exportAll, setExportAll] = useState(true);
+    const [exportAll, setExportAll] = useState(false);
     const [exportStartDate, setExportStartDate] = useState("");
     const [exportEndDate, setExportEndDate] = useState("");
     const [exportFormat, setExportFormat] = useState("csv");
@@ -190,7 +190,7 @@ export default function SuperAdminSystemReportDetail() {
     };
 
     const openExportModal = () => {
-        setExportAll(true);
+        setExportAll(false);
         setExportStartDate(dateFrom || "");
         setExportEndDate(dateTo || "");
         setExportFormat("csv");
