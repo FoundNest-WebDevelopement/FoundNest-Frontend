@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { ClipboardList, CheckCircle, AlertTriangle, Gift, Trash2 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import DateRangeFilter from "../global-components/DateRangeFilter";
 import TrendBadge from "../global-components/TrendBadge";
 
@@ -144,6 +144,15 @@ export default function Dashboard() {
         },
     ];
 
+    // See the Bar/LabelList comment below — a true 0 renders no bar and no
+    // label in Recharts, so zero-count statuses get a hairline-thin bar here
+    // (2% of the tallest real bar) while the label text keeps the real count.
+    const maxCount = Math.max(1, ...statusBreakdown.map((entry) => entry.count));
+    const statusBreakdownChartData = statusBreakdown.map((entry) => ({
+        ...entry,
+        barHeight: entry.count > 0 ? entry.count : maxCount * 0.02,
+    }));
+
     return (
         <div className="min-h-screen w-full bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7 flex flex-col gap-5">
 
@@ -185,13 +194,32 @@ export default function Dashboard() {
                 <p className="font-semibold text-[#1A1208] text-base mb-4">Item Status Breakdown</p>
                 <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={statusBreakdown} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                        <BarChart data={statusBreakdownChartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                             <XAxis dataKey="status" tick={{ fontSize: 12 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                            <Bar dataKey="count" radius={[4, 4, 0, 0]} label={{ position: "top", fontSize: 12, fontWeight: 600 }}>
-                                {statusBreakdown.map((entry, index) => (
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, "dataMax"]} />
+                            {/* Plots `barHeight`, not `count` — Recharts never generates a
+                                label (or a visibly distinct bar) for a literal 0, so a zero
+                                status is given a hairline-thin bar instead. The label below
+                                still reads the true `count`, so it correctly shows "0". */}
+                            <Bar dataKey="barHeight" radius={[4, 4, 0, 0]}>
+                                {statusBreakdownChartData.map((entry, index) => (
                                     <Cell key={entry.status} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
                                 ))}
+                                <LabelList
+                                    dataKey="count"
+                                    content={({ x, y, width, value }) => (
+                                        <text
+                                            x={x + width / 2}
+                                            y={y - 6}
+                                            textAnchor="middle"
+                                            fontSize={12}
+                                            fontWeight={600}
+                                            fill="#1A1208"
+                                        >
+                                            {value}
+                                        </text>
+                                    )}
+                                />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
