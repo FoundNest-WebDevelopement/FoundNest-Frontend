@@ -5,6 +5,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDate from "../utils/formatDate";
 import ConfirmDialog from "../global-components/ConfirmDialog";
+import UserManagementModal from "./UserManagementModal";
 
 export default function ViewAdminsModal({ center, onClose }) {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -22,6 +23,8 @@ export default function ViewAdminsModal({ center, onClose }) {
   const [confirmAssignUser, setConfirmAssignUser] = useState(null);
   const [confirmRevokeAdmin, setConfirmRevokeAdmin] = useState(null);
   const [isRevoking, setIsRevoking] = useState(false);
+
+  const [viewingUser, setViewingUser] = useState(null);
 
   const loadAdmins = async () => {
     try {
@@ -123,6 +126,34 @@ export default function ViewAdminsModal({ center, onClose }) {
     }
   };
 
+  const handleViewUserDetails = async (admin) => {
+    setOpenMenuIndex(null);
+    try {
+      // The admins list here only carries first/last name + assignment date —
+      // the full profile (college, course, student number, status, etc.)
+      // lives on the same /api/users record User Management already uses.
+      const response = await fetchWithAuth(`${API_URL}/api/users`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch user details.");
+      }
+
+      const fullUser = (Array.isArray(data) ? data : []).find(
+        (u) => String(u.user_id) === String(admin.user_id),
+      );
+
+      if (!fullUser) {
+        throw new Error("User record not found.");
+      }
+
+      setViewingUser(fullUser);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to load user details.");
+    }
+  };
+
   const handleRevokeAdmin = async (admin) => {
     try {
       setIsRevoking(true);
@@ -158,7 +189,11 @@ export default function ViewAdminsModal({ center, onClose }) {
 
   return (
     <>
-      {createPortal(
+      {/* Hidden (not unmounted) while View User Details is open — that modal
+          portals to document.body at the same z-index as this one, so the two
+          would otherwise fight over stacking order. Hiding this keeps state
+          (open dropdown, etc.) intact for when the user closes the details view. */}
+      {!viewingUser && createPortal(
       <div
         className="fixed inset-0 bg-black/60 flex items-center justify-end z-[1040]"
         onClick={() => onClose()}
@@ -229,7 +264,13 @@ export default function ViewAdminsModal({ center, onClose }) {
                     </button>
 
                     {openMenuIndex === index && (
-                      <div className="absolute right-0 top-6 bg-white border border-[#DDD9CF] rounded-md shadow-md text-sm z-10 w-36">
+                      <div className="absolute right-0 top-6 bg-white border border-[#DDD9CF] rounded-md shadow-md text-sm z-10 w-40">
+                        <button
+                          className="w-full text-left px-3 py-2 text-[#1A1208] hover:bg-[#F5F5F5]"
+                          onClick={() => handleViewUserDetails(admin)}
+                        >
+                          View User Details
+                        </button>
                         <button
                           className="w-full text-left px-3 py-2 text-[#C0392B] hover:bg-[#F5F5F5]"
                           onClick={() => {
@@ -395,6 +436,14 @@ export default function ViewAdminsModal({ center, onClose }) {
           }
           onClose={() => setConfirmRevokeAdmin(null)}
           onConfirm={() => handleRevokeAdmin(confirmRevokeAdmin)}
+        />
+      )}
+
+      {viewingUser && (
+        <UserManagementModal
+          selectedUser={viewingUser}
+          setSelectedUser={setViewingUser}
+          onUpdated={loadAdmins}
         />
       )}
     </>
