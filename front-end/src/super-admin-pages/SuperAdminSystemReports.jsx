@@ -1,25 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Package, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import GenerateReportModal from "../super-admin-components/GenerateReportModal";
 import WebLoading from "../global-components/WebLoading";
-
-function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtextColor }) {
-    return (
-        <div className="bg-white rounded-xl border border-[#E5E1D8] shadow-[0_2px_6px_0px_rgba(0,0,0,0.06)] p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}>
-                    <Icon size={20} className={iconColor} />
-                </div>
-                <p className="text-sm text-[#6B5C42]">{label}</p>
-            </div>
-            <p className="text-3xl font-bold text-[#1A1208]">{value}</p>
-            <p className={`text-xs font-medium ${subtextColor}`}>{subtext}</p>
-        </div>
-    );
-}
 
 export default function SuperAdminSystemReports() {
     const API_URL = import.meta.env.VITE_API_URL;
@@ -73,45 +58,6 @@ if (isLoading || !stats) {
 
     return (
         <div className="w-full min-h-screen bg-[#FAFAF8] p-6 flex flex-col gap-6">
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <StatCard
-                    icon={Package}
-                    iconBg="bg-[#FBEFD8]"
-                    iconColor="text-[#C89B3C]"
-                    label="Total Items (All Centers)"
-                    value={stats.total_items}
-                    subtext="Surrendered Items"
-                    subtextColor="text-green-700"
-                />
-                <StatCard
-                    icon={CheckCircle2}
-                    iconBg="bg-[#E3F2E3]"
-                    iconColor="text-green-700"
-                    label="Total Items Claimed"
-                    value={stats.total_claimed}
-                    subtext={`Claim Rate ${stats.claim_rate}%`}
-                    subtextColor="text-green-700"
-                />
-                <StatCard
-                    icon={FileText}
-                    iconBg="bg-[#E3EAF7]"
-                    iconColor="text-blue-700"
-                    label="Total Lost Reports Filled"
-                    value={stats.total_lost_reports}
-                    subtext="Active lost reports system-wide"
-                    subtextColor="text-blue-700"
-                />
-                <StatCard
-                    icon={AlertTriangle}
-                    iconBg="bg-[#FBE3E3]"
-                    iconColor="text-[#C0392B]"
-                    label="Unclaimed Items (> 30 Days)"
-                    value={stats.unclaimed_30_days}
-                    subtext="To be donated"
-                    subtextColor="text-[#C0392B]"
-                />
-            </div>
 
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
