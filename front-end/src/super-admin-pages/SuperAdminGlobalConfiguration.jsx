@@ -26,7 +26,7 @@ const TABS = [
     { label: "Locations", value: "LOCATIONS" },
     { label: "Categories", value: "CATEGORIES" },
     { label: "Centers", value: "CENTERS" },
-    { label: "Templates", value: "TEMPLATES" },
+    { label: "Template", value: "TEMPLATES" },
 ];
 
 export default function SuperAdminGlobalConfiguration() {

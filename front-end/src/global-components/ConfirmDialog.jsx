@@ -16,7 +16,7 @@ export default function ConfirmDialog({
 }) {
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
       onClick={() => !disabled && onClose()}
     >
       <div
