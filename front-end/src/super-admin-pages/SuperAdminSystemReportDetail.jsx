@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Search, Filter, ChevronDown, ArrowLeft, Download, FileText, Package, CheckCircle2, AlertTriangle, Trash2, Eye, X } from "lucide-react";
+import { Search, Filter, ChevronDown, ArrowLeft, Download, Package, CheckCircle2, AlertTriangle, Trash2, Eye, X } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatItemId, formatReportId } from "../utils/formatId";
 import WebLoading from "../global-components/WebLoading";
-import GenerateReportModal from "../super-admin-components/GenerateReportModal";
 
 function StatCard({ icon: Icon, iconBg, iconColor, label, value }) {
     return (
@@ -35,6 +34,16 @@ const ACTIVITY_FILTERS = [
     { label: "Report Reopened", value: "REPORT_REOPENED" },
     { label: "Transaction Reverted", value: "TRANSACTION_REVERTED" },
 ];
+
+// Local calendar date — not toISOString(), which converts to UTC first and
+// silently shifts the date back a day in timezones ahead of UTC (e.g. Manila).
+function todayLocalISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
 
 const ACTIVITY_LABELS = ACTIVITY_FILTERS.reduce((acc, filter) => {
     acc[filter.value] = filter.label;
@@ -69,8 +78,12 @@ export default function SuperAdminSystemReportDetail() {
     const [isLoadingOverview, setIsLoadingOverview] = useState(true);
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
-    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-    const [openGenerateReport, setOpenGenerateReport] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportAll, setExportAll] = useState(false);
+    const [exportStartDate, setExportStartDate] = useState("");
+    const [exportEndDate, setExportEndDate] = useState("");
+    const [exportFormat, setExportFormat] = useState("csv");
+    const [exportError, setExportError] = useState("");
 
     const [search, setSearch] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -176,18 +189,46 @@ export default function SuperAdminSystemReportDetail() {
         setCurrentPage(1);
     };
 
-    const handleExport = async (format = "csv") => {
+    const openExportModal = () => {
+        setExportAll(false);
+        setExportStartDate(dateFrom || "");
+        setExportEndDate(dateTo || "");
+        setExportFormat("csv");
+        setExportError("");
+        setIsExportModalOpen(true);
+    };
+
+    const handleExport = async () => {
+        if (!exportAll) {
+            if (!exportStartDate || !exportEndDate) {
+                setExportError("Start date and end date are required, or check \"Export All Time Records\".");
+                return;
+            }
+            if (new Date(exportStartDate) > new Date(exportEndDate)) {
+                setExportError("Start date must be before end date.");
+                return;
+            }
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            if (new Date(exportStartDate) > today || new Date(exportEndDate) > today) {
+                setExportError("Export dates cannot be in the future.");
+                return;
+            }
+        }
+
         try {
             setIsExporting(true);
-            setIsExportMenuOpen(false);
+            setExportError("");
 
             const params = new URLSearchParams();
             if (search.trim()) params.set("search", search.trim());
             if (selectedActivityTypes.length > 0) params.set("activity", selectedActivityTypes.join(","));
-            if (dateFrom) params.set("date_from", dateFrom);
-            if (dateTo) params.set("date_to", dateTo);
+            if (!exportAll) {
+                params.set("date_from", exportStartDate);
+                params.set("date_to", exportEndDate);
+            }
             if (selectedAdmin !== "all") params.set("admin_id", selectedAdmin);
-            params.set("format", format);
+            params.set("format", exportFormat);
 
             const response = await fetchWithAuth(`${API_URL}/api/system-reports/office/${officeId}/export?${params.toString()}`);
 
@@ -200,16 +241,18 @@ export default function SuperAdminSystemReportDetail() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `office-${officeId}-activity-log.${format}`;
+            link.download = `office-${officeId}-activity-log.${exportFormat}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
 
             toast.success("Exported successfully.");
+            setIsExportModalOpen(false);
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to export activity log.");
+            setExportError(err.message || "Failed to export activity log.");
         } finally {
             setIsExporting(false);
         }
@@ -280,48 +323,14 @@ export default function SuperAdminSystemReportDetail() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => setOpenGenerateReport(true)}
-                        className="flex items-center gap-2 bg-white border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium
-                            transition-transform duration-100 active:scale-95"
+                        onClick={openExportModal}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
+                            transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                        <FileText size={16} />
-                        Generate Report
+                        <Download size={16} />
+                        {isExporting ? "Exporting..." : "Export Log"}
                     </button>
-                    <div className="relative">
-                        <button
-                            type="button"
-                            onClick={() => setIsExportMenuOpen((o) => !o)}
-                            disabled={isExporting}
-                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                                transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Download size={16} />
-                            {isExporting ? "Exporting..." : "Export Log"}
-                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExportMenuOpen ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isExportMenuOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
-                                <div className="absolute right-0 mt-2 w-40 bg-white border border-[#DDD9CF] rounded-lg shadow-lg z-50 overflow-hidden">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleExport("csv")}
-                                        className="w-full text-left px-4 py-2.5 text-sm text-[#1A1208] hover:bg-[#F5F5F5] cursor-pointer"
-                                    >
-                                        Export as CSV
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleExport("pdf")}
-                                        className="w-full text-left px-4 py-2.5 text-sm text-[#1A1208] hover:bg-[#F5F5F5] cursor-pointer"
-                                    >
-                                        Export as PDF
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
                 </div>
             </div>
 
@@ -652,13 +661,117 @@ export default function SuperAdminSystemReportDetail() {
                 </div>
             )}
 
-            {openGenerateReport && (
-                <GenerateReportModal
-                    centers={[office]}
-                    defaultOfficeId={office.office_id}
-                    lockOffice
-                    onClose={() => setOpenGenerateReport(false)}
-                />
+            {isExportModalOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+                    onClick={() => !isExporting && setIsExportModalOpen(false)}
+                >
+                    <div
+                        className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                            <p className="font-semibold">Export Log</p>
+                            <button onClick={() => !isExporting && setIsExportModalOpen(false)}>
+                                <i className="fa-solid fa-x text-sm text-white" />
+                            </button>
+                        </div>
+
+                        <div className="p-4">
+                            <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={exportAll}
+                                    onChange={(e) => { setExportAll(e.target.checked); setExportError(""); }}
+                                    className="w-4 h-4 accent-primary cursor-pointer"
+                                />
+                                <span className="text-sm font-medium text-[#1A1208]">Export All Time Records</span>
+                            </label>
+
+                            <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
+
+                            <div className="grid grid-cols-2 gap-3 mb-1">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        Start Date {!exportAll && <span className="text-[#C0392B]">*</span>}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={exportStartDate}
+                                        max={todayLocalISO()}
+                                        disabled={exportAll}
+                                        onChange={(e) => { setExportStartDate(e.target.value); setExportError(""); }}
+                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
+                                            disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        End Date {!exportAll && <span className="text-[#C0392B]">*</span>}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={exportEndDate}
+                                        max={todayLocalISO()}
+                                        disabled={exportAll}
+                                        onChange={(e) => { setExportEndDate(e.target.value); setExportError(""); }}
+                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
+                                            disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
+                                    />
+                                </div>
+                            </div>
+                            {exportAll && (
+                                <p className="text-xs text-[#9A8F7C] mb-3">Disabled while "Export All Time Records" is checked.</p>
+                            )}
+
+                            <div className="flex flex-col gap-2 mb-4 mt-3">
+                                <label className="text-sm font-medium text-[#1A1208]">Format</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("pdf")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "pdf" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        PDF
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("csv")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "csv" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            {exportError && <p className="text-xs text-[#C0392B] mb-2">{exportError}</p>}
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    disabled={isExporting}
+                                    className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
+                                        transition-transform duration-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    onClick={() => setIsExportModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
+                                        transition-transform duration-100 enabled:active:scale-95
+                                        disabled:opacity-40 disabled:cursor-not-allowed"
+                                    disabled={isExporting || (!exportAll && (!exportStartDate || !exportEndDate))}
+                                    onClick={handleExport}
+                                >
+                                    {isExporting ? "Exporting..." : "Export"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

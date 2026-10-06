@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Package, CheckCircle2, FileText, AlertTriangle, Sparkles, UserCircle2, Gift, Trash2 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import WebLoading from "../global-components/WebLoading";
@@ -65,38 +65,85 @@ function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtext, subtex
     );
 }
 
-function CenterBarChart({ title, data, dataKey }) {
-    // Bars keep a minimum width as centers are added — instead of squeezing
-    // every bar thinner to fit them all in this panel, the chart grows wider
-    // than the panel and scrolls horizontally once there's no more room.
-    const minWidth = Math.max(280, data.length * 70);
+// Fixed metric order for the grouped Center Performance chart — one X-axis
+// category per metric, with one bar per center inside each category group.
+const CENTER_METRICS = [
+    { key: "surrendered_items", label: "Surrendered Items" },
+    { key: "claimed_items", label: "Claimed Items" },
+    { key: "unclaimed_30_days", label: "Unclaimed (>30d)" },
+    { key: "donated_items", label: "Donated Items" },
+    { key: "disposed_items", label: "Disposed Items" },
+];
+
+// Pivots the per-center rows (one row per office, a column per metric) into
+// one row per metric with one column per office — what Recharts needs to
+// render a grouped (not stacked) bar per metric, one bar per center.
+function buildGroupedCenterData(centers) {
+    return CENTER_METRICS.map((metric) => {
+        const row = { metric: metric.label };
+        centers.forEach((center) => {
+            row[center.office_name] = center[metric.key] ?? 0;
+        });
+        return row;
+    });
+}
+
+// Lists every center's value for the hovered metric, colored to match its
+// bar — same pattern as TrendTooltip above, just keyed by office name
+// instead of a fixed series list.
+function GroupedBarTooltip({ active, payload, label, centers }) {
+    if (!active || !payload || payload.length === 0) return null;
+
+    const valueByOffice = Object.fromEntries(payload.map((p) => [p.dataKey, p.value]));
 
     return (
-        <div className="flex-1 flex flex-col gap-3 min-w-0">
-            <p className="text-sm font-semibold text-[#1A1208] text-center">{title}</p>
-            <div className="h-52 overflow-x-auto">
+        <div style={{ background: "#fff", border: "1px solid #E5E1D8", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+            <p style={{ fontWeight: 600, margin: "0 0 4px" }}>{label}</p>
+            {centers.map((center, index) => (
+                <p key={center.office_id} style={{ margin: 0, color: CENTER_COLORS[index % CENTER_COLORS.length] }}>
+                    {center.office_name}: {valueByOffice[center.office_name] ?? 0}
+                </p>
+            ))}
+        </div>
+    );
+}
+
+function GroupedCenterPerformanceChart({ centers }) {
+    const data = buildGroupedCenterData(centers);
+    // Keeps every center's bar at a readable width as more centers are
+    // added, growing wider than the panel and scrolling horizontally
+    // instead of squeezing bars thinner indefinitely.
+    const minWidth = Math.max(560, CENTER_METRICS.length * centers.length * 36);
+
+    return (
+        <div className="flex flex-col gap-3 min-w-0">
+            <div className="h-72 overflow-x-auto overflow-y-hidden">
                 <div style={{ width: "100%", minWidth: `${minWidth}px`, height: "100%" }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
-                            <XAxis dataKey="office_name" hide />
-                            <YAxis hide />
-                            <Bar dataKey={dataKey} radius={[4, 4, 0, 0]} label={{ position: "top", fontSize: 12, fontWeight: 600 }}>
-                                {data.map((entry, index) => (
-                                    <Cell key={entry.office_id} fill={CENTER_COLORS[index % CENTER_COLORS.length]} />
-                                ))}
-                            </Bar>
+                        <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                            <XAxis dataKey="metric" tick={{ fontSize: 12 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip content={<GroupedBarTooltip centers={centers} />} cursor={{ fill: "#F5F5F3" }} />
+                            {centers.map((center, index) => (
+                                <Bar
+                                    key={center.office_id}
+                                    dataKey={center.office_name}
+                                    fill={CENTER_COLORS[index % CENTER_COLORS.length]}
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            ))}
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-                {data.map((entry, index) => (
-                    <div key={entry.office_id} className="flex items-center gap-1.5">
+                {centers.map((center, index) => (
+                    <div key={center.office_id} className="flex items-center gap-1.5">
                         <span
                             className="w-2.5 h-2.5 rounded-full"
                             style={{ backgroundColor: CENTER_COLORS[index % CENTER_COLORS.length] }}
                         />
-                        <span className="text-xs text-[#6B5C42]">{entry.office_name}</span>
+                        <span className="text-xs text-[#6B5C42]">{center.office_name}</span>
                     </div>
                 ))}
             </div>
@@ -236,7 +283,7 @@ if (!stats || !counters) {
                     icon={Gift}
                     iconBg="bg-[#E3EAF7]"
                     iconColor="text-blue-700"
-                    label="Donated Items"
+                    label="Total Donated Items"
                     value={stats.donated_items}
                     subtext="Given to charity"
                     subtextColor="text-blue-700"
@@ -246,7 +293,7 @@ if (!stats || !counters) {
                     icon={Trash2}
                     iconBg="bg-[#F0EFEC]"
                     iconColor="text-[#6B5C42]"
-                    label="Disposed Items"
+                    label="Total Disposed Items"
                     value={stats.disposed_items}
                     subtext="Discarded as waste"
                     subtextColor="text-[#6B5C42]"
@@ -258,11 +305,7 @@ if (!stats || !counters) {
             <div className="bg-white rounded-xl border border-[#E5E1D8] shadow-[0_2px_6px_0px_rgba(0,0,0,0.06)] p-6">
                 <p className="font-semibold text-lg text-[#1A1208] mb-4">Center Performance</p>
 
-                <div className="flex flex-col md:flex-row gap-6">
-                    <CenterBarChart title="Surrendered Items" data={centers} dataKey="surrendered_items" />
-                    <CenterBarChart title="Claimed Items" data={centers} dataKey="claimed_items" />
-                    <CenterBarChart title="Unclaimed Items (>30 days)" data={centers} dataKey="unclaimed_30_days" />
-                </div>
+                <GroupedCenterPerformanceChart centers={centers} />
             </div>
 
             {/* STATUS OVER TIME */}
