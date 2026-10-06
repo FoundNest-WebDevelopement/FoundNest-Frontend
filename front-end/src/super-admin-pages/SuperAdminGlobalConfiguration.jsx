@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, FileText, Upload } from "lucide-react";
 
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -19,12 +19,14 @@ import CenterCard from "../super-admin-components/CenterCard";
 import AddCenterModal from "../super-admin-components/AddCenterModal";
 import EditCenterModal from "../super-admin-components/EditCenterModal";
 import ViewAdminsModal from "../super-admin-components/ViewAdminsModal";
+import EditExportTemplateModal from "../super-admin-components/EditExportTemplateModal";
 
 const TABS = [
     { label: "Policies", value: "POLICIES" },
     { label: "Locations", value: "LOCATIONS" },
     { label: "Categories", value: "CATEGORIES" },
     { label: "Centers", value: "CENTERS" },
+    { label: "Templates", value: "TEMPLATES" },
 ];
 
 export default function SuperAdminGlobalConfiguration() {
@@ -63,6 +65,10 @@ export default function SuperAdminGlobalConfiguration() {
     const [isLoadingCenters, setIsLoadingCenters] = useState(false);
     const [centerSearch, setCenterSearch] = useState("");
     const [openAddCenter, setOpenAddCenter] = useState(false);
+
+    const [exportTemplate, setExportTemplate] = useState(null);
+    const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+    const [openEditTemplate, setOpenEditTemplate] = useState(false);
 
 
   const mapPolicy = (row) => {
@@ -181,6 +187,25 @@ export default function SuperAdminGlobalConfiguration() {
         }
     };
 
+    const fetchExportTemplate = async () => {
+        try {
+            setIsLoadingTemplate(true);
+            const response = await fetchWithAuth(`${API_URL}/api/export-template`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to fetch export template.");
+            }
+
+            setExportTemplate(data);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+        } finally {
+            setIsLoadingTemplate(false);
+        }
+    };
+
     useEffect(() => {
         fetchPolicies();
     }, []);
@@ -201,6 +226,12 @@ export default function SuperAdminGlobalConfiguration() {
     useEffect(() => {
         if (activeTab === "CENTERS" && centers.length === 0) {
             fetchCenters();
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "TEMPLATES" && exportTemplate === null) {
+            fetchExportTemplate();
         }
     }, [activeTab]);
 
@@ -563,6 +594,57 @@ export default function SuperAdminGlobalConfiguration() {
                 </>
             )}
 
+            {activeTab === "TEMPLATES" && (
+                <>
+                    <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm text-[#6B5C42]">
+                            This PDF is used as the letterhead/background for all generated file exports.
+                        </p>
+
+                        <Button
+                            icon={Upload}
+                            isIcon={true}
+                            isShadow={true}
+                            isSolid={true}
+                            label={exportTemplate?.file_url ? "Replace Template" : "Upload Template"}
+                            onClick={() => setOpenEditTemplate(true)}
+                        />
+                    </div>
+
+                    {isLoadingTemplate && (
+                        <WebLoading marginBottom="mb-90" />
+                    )}
+
+                    {!isLoadingTemplate && (
+                        <div className="bg-white border border-[#E5E1D8] rounded-lg p-5 flex items-center gap-4 shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                            <div className="w-16 h-16 rounded-lg bg-[#F5F5F5] border border-[#E5E1D8] flex items-center justify-center shrink-0">
+                                <FileText size={32} className="text-[#9A8F7C]" strokeWidth={1.5} />
+                            </div>
+
+                            {exportTemplate?.file_url ? (
+                                <div className="flex flex-col gap-1">
+                                    <a
+                                        href={exportTemplate.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium text-primary underline break-all"
+                                    >
+                                        View current template
+                                    </a>
+                                    <p className="text-xs text-[#6B5C42]">
+                                        Last updated: {formatDate(exportTemplate.updated_at)}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-[#6B5C42]">
+                                    No custom template uploaded yet. Exports are using the default bundled letterhead.
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+
             {editingPolicy && (
                 <EditPolicyModal
                     policy={editingPolicy}
@@ -607,6 +689,14 @@ export default function SuperAdminGlobalConfiguration() {
                 <ViewAdminsModal
                     center={viewingAdminsCenter}
                     onClose={() => setViewingAdminsCenter(null)}
+                />
+            )}
+
+            {openEditTemplate && (
+                <EditExportTemplateModal
+                    template={exportTemplate}
+                    onClose={() => setOpenEditTemplate(false)}
+                    onUpdated={setExportTemplate}
                 />
             )}
         </div>
