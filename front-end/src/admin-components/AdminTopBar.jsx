@@ -188,7 +188,7 @@ export default function AdminTopBar({ tabName }) {
             </div>
             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
               {imageUrl ?
-                <div className="p-[2px] rounded-full border-green-500 border">
+                <div className="p-0.5 rounded-full border-green-500 border">
                   <img src={imageUrl} alt="Profile Picture" className="h-6 rounded-full" />
                 </div>
                 :
