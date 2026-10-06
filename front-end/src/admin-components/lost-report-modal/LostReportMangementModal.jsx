@@ -534,7 +534,7 @@ export default function LostReportMangementModal(
                                                                 <p className="ml-2">Mark as Resolved</p>
                                                             </button>
 
-                                                            {String(selectedItem.user_id) === userId &&
+                                                            {String(selectedItem.user_id) === userId && selectedItem.owner_name &&
                                                                 <button
                                                                     className="text-xs p-3 border-b border-[#DDD9CF] w-full text-left hover:bg-gray-50 transition"
                                                                     onClick={() => {
@@ -555,6 +555,7 @@ export default function LostReportMangementModal(
                                                         </div>
                                                     )}
                                                     {selectedItem.status !== 'archived' && userId === String(selectedItem.user_id) && selectedItem.status !== 'cancelled' &&
+                                                        selectedItem.owner_name &&
                                                         <button
                                                             type="button"
                                                             className="h-full border-primary border rounded-md text-primary flex-1 disabled:opacity-40 cursor-pointer transition-transform duration-100
@@ -638,6 +639,18 @@ export default function LostReportMangementModal(
                                             <>
                                                 <hr className="border-(--color-tertiary) my-5 opacity-30" />
                                                 <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
+                                            </>
+                                        }
+                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" &&
+                                            <>
+                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
+                                                <p className="text-[#6B5C42]">This report is yours and can only be modified in yout user account</p>
+                                            </>
+
+                                        }
+                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" && selectedItem.owner_name &&
+                                            <>
+                                                <p className="text-[#6B5C42] italic mt-2 opacity-70">This item is reported by you in admin side</p>
                                             </>
                                         }
                                     </div>

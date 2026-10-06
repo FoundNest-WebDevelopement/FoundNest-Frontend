@@ -3,8 +3,8 @@ import { X } from "lucide-react";
 
 // Admin-facing wording. The label is what gets sent to the backend and what
 // the modal later shows under "Report Cancelled" (selectedItem.cancel_reason).
-export const CANCEL_REASONS = [
-    { id: 1, label: "I found it myself!", isActive: true },
+const CANCEL_REASONS = [
+    { id: 1, label: "It was found by owner", isActive: true },
     { id: 2, label: "Reporter is no longer looking for it", isActive: true },
     { id: 3, label: "Duplicate report", isActive: true },
 ];
@@ -18,7 +18,7 @@ export default function CancelReportDialog({
     // Dialog is conditionally rendered by the parent, so this resets on every open.
     const [selectedReason, setSelectedReason] = useState("");
 
-    // Escape closes the dialog (unless a request is in flight)
+
     useEffect(() => {
         const onKeyDown = (e) => {
             if (e.key === "Escape" && !isCancelling) onClose();

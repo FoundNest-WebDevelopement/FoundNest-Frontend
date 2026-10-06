@@ -253,8 +253,6 @@ export default function LostReportTable(
                         locations={locations}
                         allLocations={allLocations}
                         onUpdated={onUpdated}
-                        categories={categories}
-                        locations={locations}
                         sharedSpaces={sharedSpaces}
                         gates={gates}
                         userId={userId}
