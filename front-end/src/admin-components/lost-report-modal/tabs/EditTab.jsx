@@ -271,6 +271,7 @@ const analyzeFile = async () => {
 
             setEditTab(false);
             toast.success(`${formatReportId(selectedItem.lost_report_id)} updated successfully`)
+            setHasChanges(false)
         } catch (err) {
             console.error(err);
         } finally {
