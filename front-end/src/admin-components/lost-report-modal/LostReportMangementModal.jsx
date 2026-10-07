@@ -32,6 +32,7 @@ export default function LostReportMangementModal(
     }
 
 ) {
+    console.log(selectedItem)
 
     const API_URL = import.meta.env.VITE_API_URL;
     const navigate = useNavigate();
@@ -410,7 +411,7 @@ export default function LostReportMangementModal(
                                             <div className="flex flex-col gap-2">
                                                 <div>
                                                     <p className="font-semibold">{selectedItem.owner_name || selectedItem.reported_by}</p>
-                                                    <p className="text-xs">{selectedItem.student_number || ""}</p>
+                                                    <p className="text-xs">{selectedItem.owner_name ? "Guest" : selectedItem.student_number}</p>
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <p className="text-xs text-[#6B5C42]">{selectedItem.email ? "EMAIL" : "CONTACT NUMBER"}</p>

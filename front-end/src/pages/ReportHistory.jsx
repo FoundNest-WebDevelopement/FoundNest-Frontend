@@ -178,7 +178,7 @@ export default function ReportHistory() {
         <div className="flex flex-col items-center text-center pt-16 px-6">
           <img src={emptyImage} alt="nothing here yet" className="h-70" />
           <p className="text-xl font-extrabold mt-4 mb-2.5">Nothing here yet!</p>
-          <p className="text-sm text-[#4B2D23]/80 leading-[22px]">
+          <p className="text-sm text-[#4B2D23]/80 leading-5.5">
             Your report history is currently empty.
             <br />
             Any new report you make will appear here.
