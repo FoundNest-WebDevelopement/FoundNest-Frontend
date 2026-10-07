@@ -83,7 +83,7 @@ function Layout() {
 
         {/* Admin Route */}
         <Route element={<AdminRoute />}>
-          <Route path="/admin/*" element={<Admin />} />
+          <Route path="/admin/*" element={<Admin />} /> 
         </Route>
 
         {/* Super Admin Route */}
