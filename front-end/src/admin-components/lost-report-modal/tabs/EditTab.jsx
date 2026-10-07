@@ -450,6 +450,7 @@ const analyzeFile = async () => {
 
                     <AdminTextArea
                         title="Description"
+                        reqField={true}
                         value={formData.description ?? ""}
                         error={descriptionError}
                         onChange={(value) =>

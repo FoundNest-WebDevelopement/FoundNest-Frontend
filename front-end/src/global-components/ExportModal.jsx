@@ -198,7 +198,7 @@ export default function ExportModal({
                                     onChange={() => setScope("all")}
                                     className="accent-primary cursor-pointer"
                                 />
-                                All Items (All Time)
+                                All Records (All Time)
                             </label>
                             {noFilteredItems && (
                                 <p className="text-xs text-[#C0392B]">No items match the current filters.</p>

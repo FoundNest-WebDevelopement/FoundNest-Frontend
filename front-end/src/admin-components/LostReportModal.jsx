@@ -536,6 +536,7 @@ const handleRemoveImage = () => {
                         />
                         <AdminTextArea
                             title="Description"
+                            reqField={true}
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
                             error={descriptionError}
