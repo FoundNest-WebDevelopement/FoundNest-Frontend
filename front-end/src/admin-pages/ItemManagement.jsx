@@ -297,7 +297,7 @@ useEffect(() => {
               <AdminLocationDropDown placeholder="All Locations" value={location} onChange={setLocation} options={locations} />
             </div>
             <div className="flex-1">
-              <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
+              <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} isFilter={true}/>
             </div>
             <div className="flex-1">
               <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses} />
