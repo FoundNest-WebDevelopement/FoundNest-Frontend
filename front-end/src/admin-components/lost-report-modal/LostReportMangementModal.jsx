@@ -606,7 +606,7 @@ export default function LostReportMangementModal(
                                         (
                                             <>
                                                 <button
-                                                    className="w-full h-10 disabled:opacity-40 border bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
+                                                    className="w-full h-10 shrink-0 disabled:opacity-40 border bg-primary rounded-lg text-white mb-2 text-sm font-medium transition-transform duration-100 active:enabled:scale-95"
                                                     disabled={isRestoring}
                                                     onClick={() => setOpenRestoreDialog(true)}
                                                 >
@@ -625,34 +625,29 @@ export default function LostReportMangementModal(
                                     <div className=" text-[10px] xl:text-xs gap-1">
                                         {selectedItem.status === 'resolved' &&
                                             <>
-                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                                <p className="text-[#6B5C42]">This report has been resolved and no further action needed</p>
+                                                {/* <hr className="border-(--color-tertiary) my-5 opacity-30" /> */}
+                                                <p className="text-[#6B5C42] my-5 ">This report has been resolved and no further action needed</p>
                                             </>
                                         }
                                         {selectedItem.status === 'cancelled' &&
                                             <>
-                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                                <p className="text-[#6B5C42]">This report has been cancelled and no further action needed</p>
+                                                {/* <hr className="border-(--color-tertiary) my-5 opacity-30" /> */}
+                                                <p className="text-[#6B5C42] my-5 ">This report has been cancelled and no further action needed</p>
                                             </>
                                         }
                                         {selectedItem.status === 'archived' &&
                                             <>
-                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                                <p className="text-[#6B5C42]">This item has been marked as archived and is hidden from active reports queue</p>
+                                                {/* <hr className="border-(--color-tertiary) my-5 opacity-30" /> */}
+                                                <p className="text-[#6B5C42] my-5 ">This item has been marked as archived and is hidden from active reports queue</p>
                                             </>
                                         }
                                         {String(selectedItem.user_id) === userId && selectedItem.status === "open" &&
                                             <>
-                                                <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                                <p className="text-[#6B5C42]">This report is yours and can only be modified in yout user account</p>
+                                                <p className="text-[#6B5C42]">This report is yours and can only be modified in your user account</p>
                                             </>
 
                                         }
-                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" && selectedItem.owner_name &&
-                                            <>
-                                                <p className="text-[#6B5C42] italic mt-2 opacity-70">This item is reported by you in admin side</p>
-                                            </>
-                                        }
+                                   
                                     </div>
                                 </div>
                             </>

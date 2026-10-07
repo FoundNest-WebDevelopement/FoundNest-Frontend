@@ -148,7 +148,7 @@ export default function ExportModal({
 
     return createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
             onClick={() => !isExporting && onClose()}
         >
             <div
