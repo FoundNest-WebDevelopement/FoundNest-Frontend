@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import image from "../assets/pana.png";
+import image from "../assets/404page.png";
 
 // Sends a logged-in user back to their OWN dashboard instead of the public
 // login page, so hitting a bad URL inside /admin or /super_admin doesn't
@@ -43,11 +43,11 @@ export default function NotFoundPage() {
                     <img
                         src={image}
                         alt="Page not found illustration"
-                        className="w-full max-w-sm sm:max-w-md drop-shadow-xl"
+                        className="w-full max-w-sm sm:max-w-md drop-shadow-xl "
                     />
                 </div>
 
-                <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-white">
+                <h1 className="text-3xl sm:text-4xl font-bold text-white xs:mt-20 lg:mt-10">
                     Oops! Page not found
                 </h1>
 
