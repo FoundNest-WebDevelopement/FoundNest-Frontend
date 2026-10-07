@@ -10,6 +10,7 @@ export default function AdminNotificationDropdown({
     notifCount
 }) {
     const navigate = useNavigate();
+    const loggedOfficeId = localStorage.getItem("office_location")
 
     const handleNotificationClick = (notification) => {
         const routes = {
@@ -52,20 +53,30 @@ export default function AdminNotificationDropdown({
             </div>
 
             <div className="h-100 overflow-y-auto">
-                {notifications.length === 0 ? (
-                    <div className="py-8 text-center text-gray-500">
-                        No notifications
-                    </div>
-                ) : (
-                    notifications.map((notification) => (
-                        <AdminNotificationItem
-                            key={notification.notification_id}
-                            notification={notification}
-                            onClick={handleNotificationClick}
-                        />
-                    ))
-                )}
-            </div>
+    {notifications.length === 0 ? (
+        <div className="py-8 text-center text-gray-500">
+            No notifications
+        </div>
+    ) : (
+        notifications.map((notification) => {
+            if (
+                (notification.category === "match_found" || notification.type === "match") &&
+                String(notification.found_office_id) !== String(loggedOfficeId)
+            ) {
+                return null;
+            }
+
+            return (
+                <AdminNotificationItem
+                    key={notification.notification_id}
+                    notification={notification}
+                    onClick={handleNotificationClick}
+                />
+            );
+        })
+    )}
+</div>
+
         </div>
     );
 }
