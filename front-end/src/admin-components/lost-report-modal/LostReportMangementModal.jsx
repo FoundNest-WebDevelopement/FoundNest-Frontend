@@ -641,9 +641,15 @@ export default function LostReportMangementModal(
                                                 <p className="text-[#6B5C42] my-5 ">This item has been marked as archived and is hidden from active reports queue</p>
                                             </>
                                         }
-                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" &&
+                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" && !selectedItem.owner_name &&
                                             <>
                                                 <p className="text-[#6B5C42]">This report is yours and can only be modified in your user account</p>
+                                            </>
+
+                                        }
+                                        {String(selectedItem.user_id) === userId && selectedItem.status === "open" && selectedItem.owner_name &&
+                                            <>
+                                                <p className="text-[#6B5C42]">This report is listed using admin account</p>
                                             </>
 
                                         }

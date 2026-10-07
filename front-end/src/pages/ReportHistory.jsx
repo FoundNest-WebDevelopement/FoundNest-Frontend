@@ -10,13 +10,9 @@ const API_URL = import.meta.env.VITE_API_URL;
 const STATUS_OPTIONS = ["open", "cancelled", "resolved"];
 const FILTERS_KEY = "reportHistoryFilters";
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
-
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Use the server's status if it sends one, otherwise infer it from date_cancelled
+
 const getStatus = (report) => report.status ?? (report.date_cancelled ? "cancelled" : "open");
 
 const toggleInList = (list, value) =>
@@ -28,7 +24,6 @@ const summaryLabel = (base, selected, format = (v) => v) => {
   return `${selected.length} Selected`;
 };
 
-// Keeps filters when the user opens a report and comes back (RN does the same)
 const loadSavedFilters = () => {
   try {
     return JSON.parse(sessionStorage.getItem(FILTERS_KEY)) ?? {};
@@ -36,10 +31,6 @@ const loadSavedFilters = () => {
     return {};
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* UI pieces                                                                  */
-/* -------------------------------------------------------------------------- */
 
 function Chip({ label, active, onClick }) {
   return (
@@ -72,22 +63,16 @@ function FilterTrigger({ label, open, active, onClick }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Page                                                                       */
-/* -------------------------------------------------------------------------- */
-
 export default function ReportHistory() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [saved] = useState(loadSavedFilters);
 
-  // ---- data ----
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ---- filters ----
   const [search, setSearch] = useState(saved.search ?? "");
   const [selectedCategories, setSelectedCategories] = useState(saved.selectedCategories ?? []);
   const [selectedStatuses, setSelectedStatuses] = useState(saved.selectedStatuses ?? []);
@@ -125,14 +110,9 @@ export default function ReportHistory() {
         JSON.stringify({ search, selectedCategories, selectedStatuses })
       );
     } catch {
-      // storage unavailable (private mode etc.); filters just won't persist
     }
   }, [search, selectedCategories, selectedStatuses]);
 
-  /* ------------------------------ derived data ----------------------------- */
-
-  // Only offer categories that actually appear in this user's reports.
-  // If the API doesn't return category_name, this stays empty and the trigger hides.
   const categoryOptions = useMemo(
     () => [...new Set(reports.map((r) => r.category_name).filter(Boolean))].sort(),
     [reports]
@@ -154,7 +134,7 @@ export default function ReportHistory() {
   const hasActiveFilters =
     search.length > 0 || selectedCategories.length > 0 || selectedStatuses.length > 0;
 
-  /* -------------------------------- handlers ------------------------------- */
+
 
   const toggleMenu = (menu) => setActiveMenu((prev) => (prev === menu ? null : menu));
 
@@ -165,8 +145,6 @@ export default function ReportHistory() {
     setActiveMenu(null);
   };
 
-  // Update the one card locally instead of refetching, so the list doesn't
-  // flash to a spinner and lose the user's scroll position
   const handleCancelled = (reportId) => {
     setReports((prev) =>
       prev.map((r) =>
@@ -176,8 +154,6 @@ export default function ReportHistory() {
       )
     );
   };
-
-  /* --------------------------------- render -------------------------------- */
 
   const renderBody = () => {
     if (isLoading) return <Loading />;
