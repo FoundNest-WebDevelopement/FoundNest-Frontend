@@ -163,30 +163,30 @@ export default function FoundItemDetails() {
                 <div className="bg-white  w-full rounded-t-lg flex flex-col p-4 px-6 text-lg pb-10">
                   <p className="font-semibold">{report.item_name}</p>
                   <HorizontalBreak />
-                  <div className="w-full my-1 flex flex-col text-sm gap-2">
+                  <div className="w-full my-1 flex flex-col text-sm md:text-base gap-2">
                     <div>
-                      <p >Item ID</p>
+                      <p className="">ITEM ID</p>
                       <p className="font-medium">{formatItemId(report.item_id)}</p>
                     </div>
                     <div>
                       <p >Category</p>
-                      <p className="font-medium">{report.category_name}</p>
+                      <p className="font-medium text-xs md:text-sm">{report.category_name}</p>
                     </div>
                     <div>
                       <p >Description</p>
-                      <p>{report.description}</p>
+                      <p className="text-xs md:text-sm">{report.description}</p>
                     </div>
                     <div>
                       <p >Location Found</p>
-                      <p className=" font-medium">{report.location_found}</p>
+                      <p className=" font-medium text-xs md:text-sm">{report.location_found}</p>
                     </div>
                     <div>
                       <p >Date & Time Found</p>
-                      <p className="font-medium">{formatDateTime(report.found_date)}</p>
+                      <p className="font-medium text-xs md:text-sm">{formatDateTime(report.found_date)}</p>
                     </div>
                     <div>
                       <p >Current Location</p>
-                      <p className="font-medium">{report.office_name}</p>
+                      <p className="font-medium text-xs md:text-sm">{report.office_name}</p>
                     </div>
                   </div>
                   <HorizontalBreak />
