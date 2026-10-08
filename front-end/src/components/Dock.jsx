@@ -11,6 +11,14 @@ export default function Dock() {
   const location = useLocation();
   const { requestNavigation } = useUnsavedChangesGuard();
 
+  // The Report tab means "file a new report", so only the bare /report form
+  // owns it. Editing or viewing an existing report (/report/:id..., reached
+  // from report history or a notification) belongs to the Profile section.
+  const isExistingReport = /^\/report\/.+/.test(location.pathname);
+  const isReportActive = location.pathname === "/report";
+  const isProfileActive =
+    location.pathname.startsWith("/profile") || isExistingReport;
+
   const guardedClick = (to) => (e) => {
     if (to === location.pathname) return;
     e.preventDefault();
@@ -85,13 +93,13 @@ export default function Dock() {
         <NavLink
           to="/profile"
           onClick={guardedClick("/profile")}
-          className={({ isActive }) =>
-            isActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
+          className={
+            isProfileActive ? "text-(--color-primary)" : "text-(--color-primary) opacity-60"
           }
         >
-          {({ isActive }) => (
+          {() => (
             <>
-              {isActive ? (
+              {isProfileActive ? (
                 <i className="fa-solid fa-circle-user text-(--color-primary) text-2xl"></i>
               ) : (
                 <i className="fa-regular fa-circle-user text-(--color-primary) text-2xl"></i>
@@ -112,14 +120,14 @@ export default function Dock() {
             border-4 border-white transition-all duration-300
           `}
         >
-          {({ isActive }) => (
+          {() => (
             <>
-              {isActive ? (
+              {isReportActive ? (
                 <img src={reportIconActive} alt="ReportIcon" className="h-9.5 ml-1" />
               ) : (
                 <img src={reportIconInactive} alt="ReportIcon" className="h-9" />
               )}
-              <span className={`text-xs mt-1 ${isActive ? "opacity-100" : "opacity-60"}`}>
+              <span className={`text-xs mt-1 ${isReportActive ? "opacity-100" : "opacity-60"}`}>
                 Report
               </span>
             </>

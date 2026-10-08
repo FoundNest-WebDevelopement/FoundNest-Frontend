@@ -36,6 +36,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />);
+const showToastLight = (message) => toast.custom(() => <Toast message={message}  />);
 
 const sanitizeInput = sanitizeText;
 
@@ -118,6 +119,7 @@ export default function Report() {
   const userID = localStorage.getItem("user_id");
   const { setDirty, setBlocking } = useUnsavedChangesGuard();
 
+  const [recentReportId, setRecentReportId] = useState();
   const [categories, setCategories] = useState([]);
   const [offices, setOffices] = useState([]);
   const [sharedSpaces, setSharedSpaces] = useState([]);
@@ -483,14 +485,21 @@ export default function Report() {
       );
       const data = await res.json();
 
+      setRecentReportId(data.report.lost_report_id)
+
       if (!res.ok) throw new Error(data.error || data.message || "Something went wrong");
 
       if (!isUpdate) setCreatedReportID(data.report?.lost_report_id ?? null);
       setSubmitted(true);
-      if (isUpdate) showToast("Report edited successfully.");
+      if (isUpdate){
+         showToastLight("Report edited successfully.")
+      }
+      else{
+        showToastLight("Report submitted successfully.")
+      }
     } catch (err) {
       console.error(err);
-      showToast(err.message || "Something went wrong. Please try again.");
+      showToastLight(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
       setIsUpdating(false);
@@ -906,11 +915,11 @@ export default function Report() {
 
         {/* --------------------------- SUCCESS ---------------------------- */}
         {submitted && nextPage && (
-          <div className="h-fit w-fit px-3 flex flex-col gap-8">
+          <div className="h-fit w-fit px- flex flex-col gap-8 ">
             <div className="h-28 max-w-md flex gap-2 justify-evenly">
               <img className="h-full w-2/5" src={heart} alt="smiley heart" />
               <div className="flex flex-col gap-2 h-full w-full">
-                <p className="text-white font-bold text-md">Report Successful!</p>
+                <p className="text-white font-bold text-md">{isEdit? "Report Updated!" : "Report Successful!"}</p>
                 <p className="text-white/70 font-bold text-xs text-justify">
                   We've secured your lost report and immediately started searching for a match. Rest
                   assured, we'll notify you if we find it.
@@ -918,7 +927,7 @@ export default function Report() {
               </div>
             </div>
 
-            <div className="h-full w-full rounded-xl bg-white">
+            <div className="h-full w-full rounded-xl bg-white px-3">
               <div className="h-full max-w-md flex flex-col gap-2 p-4">
                 <p className="font-bold text-xs">What happens next?</p>
                 <div className="pl-5 flex flex-col gap-2">
@@ -936,15 +945,36 @@ export default function Report() {
 
               <HorizontalBreak />
 
-              <div className="flex justify-center items-center px-3 py-3">
+              <div className={`flex ${isEdit? "justify-between" : "justify-center"} items-center px-5 py-3 font-medium`}>
+                {isEdit &&
+                <button
+                  type="button"
+                  className="flex items-center gap-1 "
+                  onClick={() => {
+                    // Already on /report/:id for this report, so navigating
+                    // there is a no-op and would leave the success screen up.
+                    // Reset to page 1 and re-sync originalReport so the form
+                    // isn't instantly considered dirty.
+                    setSubmitted(false);
+                    setNextPage(false);
+                    fetchLostReport(recentReportId);
+                  }}
+                >
+                  <i className="fa-solid fa-pen text-primary text-[10px] md:text-xs"></i>
+                  <span className="text-xs text-primary">Edit Report</span>
+                  
+                </button>
+
+                }
                 <button
                   type="button"
                   className="flex items-center gap-1"
                   onClick={() => navigate(`/profile/report-history/${userID}`)}
                 >
-                  <span className="text-xs text-primary">Go to my Report History</span>
-                  <i className="fa-solid fa-arrow-right text-primary" />
+                  <span className="text-xs text-primary">{isEdit? "Report History" : "Go to my Report History"}</span>
+                  <i className="fa-solid fa-arrow-right text-primary text-[10px] md:text-xs" />
                 </button>
+                
               </div>
             </div>
           </div>
