@@ -455,7 +455,7 @@ export default function SuperAdminSystemReportDetail() {
                         <button
                             type="button"
                             onClick={handleClearFilters}
-                            className="text-primary text-sm font-medium"
+                            className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
                         >
                             Clear Filters
                         </button>

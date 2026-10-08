@@ -237,7 +237,13 @@ const paddedClaimId =
                             <AdminDateInput placeholder="End Date" value={dateClaimedTo} onChange={setDateClaimedTo} min={dateClaimedFrom || undefined} max={today} />
                         </div>
                         <div className="h-full w-fit flex items-center justify-center  ml-20 gap-1">
-                            <AdminButton isIcon={false} isSolid={true} label="Clear Filters " isBorder={false} isShadow={false} onClick={handleClearFilters} />
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
+                            >
+                                Clear Filters
+                            </button>
                         </div>
                     </div>
 

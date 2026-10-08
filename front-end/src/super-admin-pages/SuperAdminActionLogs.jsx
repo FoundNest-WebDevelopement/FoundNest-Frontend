@@ -371,11 +371,10 @@ useEffect(() => {
                         <button
                             type="button"
                             onClick={handleClearFilters}
-                            className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                                transition-transform duration-100 active:scale-95"
+                            className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
                         >
                             Clear Filters
-                        </button>                 
+                        </button>
                     </div>
                 </div>
             )}
