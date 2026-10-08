@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Eye, X, Pencil, Search, Download } from "lucide-react";
+import { Eye, X, Pencil, Search, Download, Trash2 } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
@@ -46,6 +46,16 @@ export default function Feedbacks() {
     // Archive/unarchive confirmation
     const [pendingArchiveAction, setPendingArchiveAction] = useState(null); // null | "archive" | "unarchive"
     const [isArchiving, setIsArchiving] = useState(false);
+
+    // Delete response confirmation
+    const [pendingDeleteResponse, setPendingDeleteResponse] = useState(false);
+    const [isDeletingResponse, setIsDeletingResponse] = useState(false);
+
+    // Discard-unsaved-changes confirmation — "revert-edit" means Cancel was
+    // pressed while editing an existing response (falls back to the saved
+    // response); "close-panel" means the whole panel is being closed
+    // (X, backdrop click, or Cancel on a brand-new, never-saved response).
+    const [pendingDiscardAction, setPendingDiscardAction] = useState(null); // null | "revert-edit" | "close-panel"
 
     const getStatus = (review) => {
         if (review.response_text) return "responded";
@@ -177,6 +187,71 @@ export default function Feedbacks() {
     const handleCancelResponse = () => {
         setResponseText(selectedReview.response_text || "");
         setIsEditingResponse(false);
+    };
+
+    // The compose/edit textarea is showing whenever there's no saved response
+    // yet, or an existing one is being edited — "unsaved" means its text no
+    // longer matches whatever's actually saved for this review.
+    const isComposeFormOpen =
+        selectedReview && !selectedReview.is_archived && (!selectedReview.response_text || isEditingResponse);
+    const hasUnsavedResponseChanges =
+        isComposeFormOpen && responseText.trim() !== (selectedReview?.response_text || "").trim();
+
+    const handleCancelClick = () => {
+        if (!hasUnsavedResponseChanges) {
+            if (isEditingResponse) handleCancelResponse();
+            else setSelectedReview(null);
+            return;
+        }
+        setPendingDiscardAction(isEditingResponse ? "revert-edit" : "close-panel");
+    };
+
+    const handleClosePanel = () => {
+        if (!hasUnsavedResponseChanges) {
+            setSelectedReview(null);
+            return;
+        }
+        setPendingDiscardAction("close-panel");
+    };
+
+    const confirmDiscard = () => {
+        if (pendingDiscardAction === "revert-edit") {
+            handleCancelResponse();
+        } else if (pendingDiscardAction === "close-panel") {
+            setSelectedReview(null);
+        }
+        setPendingDiscardAction(null);
+    };
+
+    const handleDeleteResponse = async () => {
+        setIsDeletingResponse(true);
+        try {
+            const res = await fetchWithAuth(
+                `${API_URL}/api/reviews/${selectedReview.review_id}/response`,
+                { method: "DELETE" }
+            );
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to delete response.");
+            }
+
+            setReviews((prev) =>
+                prev.map((r) =>
+                    r.review_id === selectedReview.review_id ? { ...r, ...data.review } : r
+                )
+            );
+            setSelectedReview((prev) => ({ ...prev, ...data.review }));
+            setResponseText("");
+            setIsEditingResponse(false);
+            toast.success("Response deleted.");
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || "Failed to delete response.");
+        } finally {
+            setIsDeletingResponse(false);
+            setPendingDeleteResponse(false);
+        }
     };
 
     const handleArchive = async () => {
@@ -565,7 +640,7 @@ export default function Feedbacks() {
             {selectedReview && (
                 <div
                     className="fixed inset-0 bg-black/40 z-50 flex justify-end"
-                    onClick={() => setSelectedReview(null)}
+                    onClick={handleClosePanel}
                 >
                     <div
                         className="bg-white w-full max-w-md h-full shadow-xl flex flex-col"
@@ -576,7 +651,7 @@ export default function Feedbacks() {
                         <div className="bg-primary px-6 py-4 flex items-center justify-between">
                             <h2 className="text-white font-semibold text-lg">View Feedback</h2>
                             <button
-                                onClick={() => setSelectedReview(null)}
+                                onClick={handleClosePanel}
                                 className="text-white hover:opacity-70 transition"
                             >
                                 <X size={20} />
@@ -588,8 +663,16 @@ export default function Feedbacks() {
 
                             {/* User info */}
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <i className="fa-regular fa-circle-user text-gray-400 text-2xl"></i>
+                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                                    {selectedReview.profile_image_url ? (
+                                        <img
+                                            src={selectedReview.profile_image_url}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <i className="fa-regular fa-circle-user text-gray-400 text-2xl"></i>
+                                    )}
                                 </div>
                                 <div>
                                     <p className="font-semibold text-[#4B2D23]">
@@ -635,7 +718,7 @@ export default function Feedbacks() {
                                     />
                                     <div className="flex gap-3">
                                         <button
-                                            onClick={isEditingResponse ? handleCancelResponse : () => setSelectedReview(null)}
+                                            onClick={handleCancelClick}
                                             className="flex-1 border border-primary text-primary rounded-lg py-3 text-sm font-semibold hover:bg-gray-50 transition active:scale-95 cursor-pointer"
                                         >
                                             Cancel
@@ -671,13 +754,22 @@ export default function Feedbacks() {
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => setIsEditingResponse(true)}
-                                        className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-gray-50 transition active:scale-95 cursor-pointer"
-                                    >
-                                        <Pencil size={14} />
-                                        Edit Response
-                                    </button>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setIsEditingResponse(true)}
+                                            className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-gray-50 transition active:scale-95 cursor-pointer"
+                                        >
+                                            <Pencil size={14} />
+                                            Edit Response
+                                        </button>
+                                        <button
+                                            onClick={() => setPendingDeleteResponse(true)}
+                                            className="flex items-center gap-2 border border-[#C0392B]/30 text-[#C0392B] rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-[#FBEAEA] transition active:scale-95 cursor-pointer"
+                                        >
+                                            <Trash2 size={14} />
+                                            Delete Response
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
@@ -720,6 +812,31 @@ export default function Feedbacks() {
                     disabled={isArchiving}
                     onClose={() => setPendingArchiveAction(null)}
                     onConfirm={handleUnarchive}
+                />
+            )}
+
+            {pendingDeleteResponse && (
+                <ConfirmDialog
+                    title="Delete Response"
+                    description="Are you sure you want to delete this response?"
+                    message="The student will no longer see a reply on their review. This can't be undone."
+                    confirmText={isDeletingResponse ? "Deleting..." : "Delete"}
+                    cancelText="Cancel"
+                    disabled={isDeletingResponse}
+                    onClose={() => setPendingDeleteResponse(false)}
+                    onConfirm={handleDeleteResponse}
+                />
+            )}
+
+            {pendingDiscardAction && (
+                <ConfirmDialog
+                    title="Discard Changes"
+                    description="You have unsaved changes to this response."
+                    message="Are you sure you want to discard them?"
+                    confirmText="Discard"
+                    cancelText="Keep Editing"
+                    onClose={() => setPendingDiscardAction(null)}
+                    onConfirm={confirmDiscard}
                 />
             )}
 
