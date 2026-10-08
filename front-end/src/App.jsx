@@ -8,7 +8,7 @@ import Notification from "./pages/Notification";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 
-import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import NotificationBar from "./components/NotificatioBar";
 import FoundItemDetails from "./pages/FoundItemDetails";
 import NotificationDetails from "./pages/NotificationDetails";
@@ -26,6 +26,15 @@ import { useEffect } from "react";
 import { initAuthSync } from "./utils/authSync";
 
 
+// Every /report* route below renders this same <Report /> element in the same
+// spot of the tree, so React would otherwise keep one instance (and its form
+// state) alive across them — carrying a viewed/edited report's details into a
+// brand-new report. Keying by pathname forces a fresh mount per report route.
+function KeyedReport() {
+  const { pathname } = useLocation();
+  return <Report key={pathname} />;
+}
+
 function Layout() {
   return (
     <>
@@ -39,13 +48,13 @@ function Layout() {
           <Route element={<UserLayout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/map" element={<Map />} />
-            <Route path="/report" element={<Report />} />
-            <Route path="/report/:id" element={<Report />} />
-            <Route path="/report/:id/:reportId" element={<Report />} />
+            <Route path="/report" element={<KeyedReport />} />
+            <Route path="/report/:id" element={<KeyedReport />} />
+            <Route path="/report/:id/:reportId" element={<KeyedReport />} />
             {/* <Route path="/report/:id/mode/:mode" element={<Report />} /> */}
             <Route
               path="/report/:id/mode/:mode/:reportId"
-              element={<Report />}
+              element={<KeyedReport />}
             />
 
             <Route path="/find" element={<Find />} />
@@ -58,7 +67,7 @@ function Layout() {
             />
             <Route
               path="/profile/report/:id/mode/:mode"
-              element={<Report />}
+              element={<KeyedReport />}
             />
             <Route
               path="/profile/match-details/:id"
