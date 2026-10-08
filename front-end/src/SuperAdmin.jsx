@@ -37,8 +37,9 @@ function SuperAdmin() {
                     <Route path="system_reports/:officeId" element={<SuperAdminSystemReportDetail />} />
                     <Route path="action_logs" element={<SuperAdminActionLogs />} />
                     <Route path="super_admin_profile" element={<SuperAdminProfile />} />
-                    <Route path="*" element={<NotFoundPage />} />
+                    
                 </Route>
+                <Route path="*" element={<NotFoundPage />} />
             </Routes>
             </div>
         </>

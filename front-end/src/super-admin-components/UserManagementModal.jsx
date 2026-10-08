@@ -20,6 +20,7 @@ export default function UserManagementModal(
 
     }
 ) {
+    
     const API_URL = import.meta.env.VITE_API_URL;
 
     const userId = selectedUser?.user_id;

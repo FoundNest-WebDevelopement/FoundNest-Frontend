@@ -1,5 +1,4 @@
 export default function CategoriesDropDownFilter({
-
   defaultOption,
   value,
   options = [],
@@ -7,16 +6,15 @@ export default function CategoriesDropDownFilter({
 }) {
   return (
     <fieldset className="fieldset">
-
-
       <select
-        className="select  bg-[#F2F2F2] rounded-md text-xs w-full "
+        className={`select bg-[#F2F2F2] rounded-md text-xs w-full ${
+          value ? "text-black" : "text-black/40"
+        }`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
       >
-
-        <option  value="" >
+        <option value="" disabled>
           {defaultOption}
         </option>
 
@@ -24,13 +22,12 @@ export default function CategoriesDropDownFilter({
           <option
             key={option.category_id}
             value={option.category_id}
+            className="text-black"
           >
             {option.category_name}
           </option>
         ))}
-
       </select>
-
     </fieldset>
   );
 }

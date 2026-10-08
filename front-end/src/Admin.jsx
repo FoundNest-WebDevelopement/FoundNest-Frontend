@@ -35,8 +35,8 @@ function Admin() {
           <Route path="feedbacks" element={<Feedbacks/>} />
           <Route path="transactions" element={<Transactions/>} />
           <Route path="admin_profile" element={<AdminProfile/>} />
-          <Route path="*" element={<NotFoundPage />} />
         </Route>
+          <Route path="*" element={<NotFoundPage />} />
       </Routes>
       </div>
       </>

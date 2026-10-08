@@ -452,6 +452,7 @@ const analyzeFile = async () => {
                     </div>
 
                     <AdminTextArea
+                        reqField={true}
                         title="Description"
                         disabled={isSavingEdit || isAnalyzing}
                         value={formData.description}

@@ -147,7 +147,7 @@ export default function ExportModal({
 
     return createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
             onClick={() => !isExporting && onClose()}
         >
             <div
@@ -191,7 +191,7 @@ export default function ExportModal({
                                     onChange={() => setScope("all")}
                                     className="accent-primary cursor-pointer"
                                 />
-                                All Items (All Time)
+                                All Records (All Time)
                             </label>
                             {noFilteredItems && (
                                 <p className="text-xs text-[#C0392B]">No items match the current filters.</p>

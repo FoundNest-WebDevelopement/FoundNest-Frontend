@@ -8,6 +8,8 @@ import { claimFoundItem, searchLostReports } from "../services/foundReportModalS
 import AdminConfirmDialog from "../../AdminConfirmDialog.jsx";
 import AdminTextField from "../../AdminTextField.jsx";
 import useUnsavedChangesWarning from "../../../hooks/useUnsavedChangesWarning.js";
+import { ImageOffIcon } from "lucide-react";
+import formatDateTime from "../../../utils/formatDataTimeNew.js";
 
 export default function ClaimFoundReportTab({
     setFullName,
@@ -52,11 +54,11 @@ export default function ClaimFoundReportTab({
     const isValidPhone = /^09\d{9}$/.test(claimantNumber);
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimantEmail);
     const isClaimValid = fullName.trim() && (claimantNumber.trim() || claimantEmail.trim()) && selectedFile && verificationDetails.trim();
-    
-    useEffect(()=>{
+
+    useEffect(() => {
         setHasChanges(fullName.trim() || claimantEmail.trim() || claimantNumber.trim() || verificationDetails.trim() || selectedFile || linkReport)
         setDiscardMessage("Cancel the release? The information you've entered on this form will not be saved.")
-    },[fullName,claimantEmail,claimantNumber,verificationDetails,selectedFile,linkReport])
+    }, [fullName, claimantEmail, claimantNumber, verificationDetails, selectedFile, linkReport])
 
     const formatItemId = (id) => `SI-${String(id).padStart(5, "0")}`;
 
@@ -102,7 +104,7 @@ export default function ClaimFoundReportTab({
 
             console.log(officeId)
 
-            if(officeId !== String(selectedItem.office_id)){
+            if (officeId !== String(selectedItem.office_id)) {
                 toast.error("item is not in your respected office")
                 return
             }
@@ -186,7 +188,7 @@ export default function ClaimFoundReportTab({
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" disabled={isReleasing} onChange={handleClaimantFileChange} />
                 </div>
                 <p className="text-xs text-[#6B5C42] opacity-70 font-medium mt-1 mb-2 text-center">
-                            PNG, JPG or WEBP up to 10MB
+                    PNG, JPG or WEBP up to 10MB
                 </p>
 
                 {/* Verification */}
@@ -203,7 +205,7 @@ export default function ClaimFoundReportTab({
                             <div className="w-full h-fit border border-[#DDD9CF] rounded-md">
                                 <div className="absolute bottom-full w-full h-fit border border-[#DDD9CF] rounded-md bg-white z-50">
                                     {searchResults.map((result) => (
-                                        <button key={result.lost_report_id} type="button" className="w-full text-sm flex p-2 border-b border-b-[#DDD9CF] hover:bg-gray-100" onMouseDown={() => { setSelectedReport(result); setLinkModal(true); setShowSearchResults(false); }}>
+                                        <button key={result.lost_report_id} type="button" className="w-full text-sm flex p-2 border-b border-b-[#DDD9CF] hover:bg-gray-100" onMouseDown={() => { setSelectedReport(result); setLinkModal(true); setShowSearchResults(false); console.log(result) }}>
                                             <p className="flex-1 text-left">{formatReportId(result.lost_report_id)}</p>
                                             <p className="flex-1 text-left">{result.item_name}</p>
                                         </button>
@@ -230,18 +232,18 @@ export default function ClaimFoundReportTab({
                 <div className="mt-auto">
                     <hr className="border-(--color-tertiary) my-5 opacity-30 " />
 
-                {/* Actions */}
-                <div className="w-full h-10 flex gap-2 text-xs">
-                    <button className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                     onClick={() => hasChanges ? setOpenCancelRelease(true) : onCancel()}
-                     disabled={isReleasing}
-                     >
-                        Cancel
-                    </button>
-                    <button type="button" disabled={!isClaimValid || isReleasing || (!isValidEmail && claimantEmail) || (!isValidPhone && claimantNumber)} onClick={() => setOpenConfirmRelease(true)} className="flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 transition-transform active:scale-95">
-                        {isReleasing ? "Releasing..." : "Confirm Release"}
-                    </button>
-                </div>
+                    {/* Actions */}
+                    <div className="w-full h-10 flex gap-2 text-xs">
+                        <button className="px-2 h-full bg-white border border-primary text-primary font-medium rounded-md transition-transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            onClick={() => hasChanges ? setOpenCancelRelease(true) : onCancel()}
+                            disabled={isReleasing}
+                        >
+                            Cancel
+                        </button>
+                        <button type="button" disabled={!isClaimValid || isReleasing || (!isValidEmail && claimantEmail) || (!isValidPhone && claimantNumber)} onClick={() => setOpenConfirmRelease(true)} className="flex-1 h-full bg-primary font-medium text-white rounded-md disabled:opacity-40 transition-transform active:scale-95">
+                            {isReleasing ? "Releasing..." : "Confirm Release"}
+                        </button>
+                    </div>
                 </div>
                 <div className="h-5"></div>
             </div>
@@ -282,18 +284,43 @@ export default function ClaimFoundReportTab({
                             <button onClick={() => { setLinkModal(false); setSelectedReport(null); }}><i className="fa-solid fa-x text-xs text-white"></i></button>
                         </div>
                         <div className="p-4 flex flex-col gap-3">
-                            <img src={selectedReport.image_url} alt={selectedReport.item_name} className="w-full h-40 object-contain bg-[#F0EDE6] rounded-md border" />
+                            <div className="relative aspect-video overflow-hidden rounded-xl bg-[#F0EDE6] ring-1 ring-black/5">
+                                {selectedReport.image_url ?
+                                    <img src={selectedReport.image_url} alt={selectedReport.item_name} className="h-full w-full object-contain" />
+                                    :
+                                    <div className="flex h-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-(--color-tertiary)/50 bg-(--color-tertiary)/15 text-(--color-tertiary)">
+                                        <ImageOffIcon size={40} />
+                                        <p className="text-sm font-medium">No Image Attached</p>
+                                    </div>
+                                }
+
+                            </div>
+
+
+
                             <div className="bg-[#FCEBEB] p-3 rounded-md text-xs flex flex-col gap-1">
                                 <p className="text-sm font-semibold text-[#6B5C42]">{formatReportId(selectedReport.lost_report_id)}</p>
                                 <p className="text-[#6B5C42]">Item: <span className="text-black">{selectedReport.item_name}</span></p>
-                                <p className="text-[#6B5C42]">Owner: <span className="text-black">{selectedReport.owner_name}</span></p>
+                                <p className="text-[#6B5C42]">
+                                    Owner:{" "}
+                                    <span className="text-black">
+                                        {selectedReport.owner_name
+                                            ? selectedReport.owner_name
+                                            : selectedReport.reported_by.trim() !== ""
+                                                ? selectedReport.reported_by
+                                                : "N/A"}
+                                    </span>
+                                </p>
+
+                                <p className="text-[#6B5C42]">Description: <span className="text-black">{selectedReport.description}</span></p>
+                                <p className="text-[#6B5C42]">Description: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
                             </div>
                             <p className="text-xs text-gray-600 text-justify">
                                 Linking this report will connect this case to the found item and update the status to ‘Resolved’. Please verify that the details match.
                             </p>
                             <div className="flex gap-2 mt-2">
-                                <button className="flex-1 h-10 border border-primary text-primary rounded-md" onClick={() => { setLinkModal(false); setSelectedReport(null); }}>No</button>
-                                <button className="flex-1 h-10 bg-primary text-white rounded-md" onClick={() => { setLinkReport(selectedReport); setLinkModal(false); setSelectedReport(null); }}>Confirm Link</button>
+                                <button className="flex-1 text-xs h-10 border border-primary text-primary rounded-md" onClick={() => { setLinkModal(false); setSelectedReport(null); }}>No</button>
+                                <button className="flex-1 text-xs h-10 bg-primary text-white rounded-md" onClick={() => { setLinkReport(selectedReport); setLinkModal(false); setSelectedReport(null); }}>Confirm Link</button>
                             </div>
                         </div>
                     </div>

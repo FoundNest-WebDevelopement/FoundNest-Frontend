@@ -16,7 +16,7 @@ export default function ConfirmDialog({
 }) {
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
       onClick={() => !disabled && onClose()}
     >
       <div
@@ -27,7 +27,7 @@ export default function ConfirmDialog({
         <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
           <p className="font-semibold">{title}</p>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={disabled} className="disabled:cursor-not-allowed disabled:opacity-40">
             <i className="fa-solid fa-x text-sm text-white" />
           </button>
         </div>
@@ -52,7 +52,8 @@ export default function ConfirmDialog({
             <button
               type="button"
               disabled={disabled}
-              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95"
+              className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium transition-transform duration-100 active:scale-95
+              disabled:cursor-not-allowed disabled:opacity-40"
               onClick={onClose}
             >
               {cancelText}

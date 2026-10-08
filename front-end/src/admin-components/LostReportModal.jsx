@@ -536,6 +536,7 @@ const handleRemoveImage = () => {
                         />
                         <AdminTextArea
                             title="Description"
+                            reqField={true}
                             placeholder="Brand, Model, Size, Color, Material, etc."
                             value={description}
                             error={descriptionError}
@@ -764,7 +765,7 @@ const handleRemoveImage = () => {
                             disabled={isSubmitting}
                         />
                         {!isValidEmail && email &&
-                            <span className="text-xs text-primary">Please enter a valid Email</span>
+                            <span className="text-xs text-[#6B5C42]">Please enter a valid Email</span>
                         }
 
 
@@ -776,9 +777,12 @@ const handleRemoveImage = () => {
                             disabled={isSubmitting}
                         />
                         {!isValidPhone && contactNumber &&
-                            <span className="text-xs text-primary">Please enter a valid phone number</span>
+                            <span className="text-xs text-[#6B5C42]">Please enter a valid phone number</span>
                         }
+                        {!email && !contactNumber &&
                         <p className="text-xs text-[#6B5C42]">At least one identifier is required.</p>
+
+                        }
                         <AdminTextField
                             title="Logged By"
                             value={AdminFullName}
@@ -823,7 +827,7 @@ const handleRemoveImage = () => {
                 (
                     <AdminConfirmDialog
                         title="Review Report"
-                        description={`Publishing this report will make it visible to everyone on FoundNest. Please review your photo, item, 
+                        description={`Publishing this report will make it visible to all Admins. Please review your photo, item, 
                 and owner details to ensure everything is accurate before submitting the report."`}
                         cancelText="Cancel"
                         confirmText="Confirm"

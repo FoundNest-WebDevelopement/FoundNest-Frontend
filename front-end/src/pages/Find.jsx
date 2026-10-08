@@ -7,12 +7,8 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Which location tabs share a row (mirrors the RN layout: 2 tabs, then 1)
 const LOCATION_ROWS = [["college", "shared"], ["gates"]];
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
 
 async function fetchJson(url, fetcher = fetch) {
   const res = await fetcher(url);
@@ -42,11 +38,10 @@ function Chip({ label, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-3.5 py-2.5 text-[13px] bg-white border ${
-        active
-          ? "border-primary text-primary font-bold"
-          : "border-[#eee] text-[#333] font-semibold"
-      }`}
+      className={`rounded-lg px-3.5 py-2.5 text-[13px] bg-white border ${active
+        ? "border-primary text-primary font-bold"
+        : "border-[#eee] text-[#333] font-semibold"
+        }`}
     >
       {label}
     </button>
@@ -60,9 +55,8 @@ function FilterTrigger({ label, open = false, active = false, showArrow = true, 
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-white rounded-2xl border px-2 py-2 text-xs ${
-        highlighted ? "border-primary text-primary font-bold" : "border-[#ddd] text-[#333]"
-      }`}
+      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-white rounded-2xl border px-2 py-2 text-xs ${highlighted ? "border-primary text-primary font-bold" : "border-[#ddd] text-[#333]"
+        }`}
     >
       <span className="truncate">{label}</span>
       {showArrow && (
@@ -125,6 +119,8 @@ function ItemCard({ report, onClick }) {
     </button>
   );
 }
+
+
 
 /* -------------------------------------------------------------------------- */
 /* Page                                                                       */
@@ -301,6 +297,22 @@ export default function Find() {
     );
   };
 
+  useEffect(() => {
+    const query = searchParams.get("q");
+
+    if (query) {
+      sessionStorage.setItem("searchTerm", query);
+      setSearch(query);
+    } else {
+      const savedSearch = sessionStorage.getItem("searchTerm");
+
+      if (savedSearch) {
+        setSearch(savedSearch);
+      }
+    }
+  }, [searchParams]);
+
+
   return (
     <>
       <PageLabel label="Found Item Gallery" />
@@ -312,7 +324,7 @@ export default function Find() {
             type="text"
             placeholder="Search Item"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value), sessionStorage.setItem("searchTerm", e.target.value) }}
             className="flex-1 min-w-0 bg-transparent outline-none text-base placeholder:text-[#999]"
           />
         </div>
@@ -399,9 +411,8 @@ export default function Find() {
 
                     {openGroup && (
                       <div
-                        className={`-mt-px bg-[#F3F3F3] border border-[#ddd] rounded-lg p-1.5 pt-2.5 ${
-                          openId === rowIds[0] ? "rounded-tl-none" : ""
-                        }`}
+                        className={`-mt-px bg-[#F3F3F3] border border-[#ddd] rounded-lg p-1.5 pt-2.5 ${openId === rowIds[0] ? "rounded-tl-none" : ""
+                          }`}
                       >
                         <div className="flex flex-wrap gap-2">
                           {openGroup.items.map((item) => (

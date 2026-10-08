@@ -271,6 +271,7 @@ const analyzeFile = async () => {
 
             setEditTab(false);
             toast.success(`${formatReportId(selectedItem.lost_report_id)} updated successfully`)
+            setHasChanges(false)
         } catch (err) {
             console.error(err);
         } finally {
@@ -449,6 +450,7 @@ const analyzeFile = async () => {
 
                     <AdminTextArea
                         title="Description"
+                        reqField={true}
                         value={formData.description ?? ""}
                         error={descriptionError}
                         onChange={(value) =>

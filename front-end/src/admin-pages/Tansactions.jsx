@@ -227,7 +227,7 @@ const paddedClaimId =
                             <AdminStatusDropDown placeholder="All Status" value={status} onChange={setStatus} options={statuses}/>
                         </div>
                         <div className="flex-1">
-                            <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} />
+                            <AdminCategoriesDropdown placeholder="All Categories" value={category} onChange={setCategory} options={categories} isFilter={true}/>
                         </div>
                         <div className="text-[#DDD9CF] text-xl font-light select-none">|</div>
                         <div className="flex-1">

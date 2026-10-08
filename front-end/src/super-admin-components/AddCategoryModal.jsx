@@ -89,7 +89,7 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
 
         {createPortal(
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
             onClick={() => (checkProgress ? setOpenCancelAdd(true) : onClose())}
         >
             <div
@@ -172,7 +172,7 @@ export default function AddCategoryModal ({ onClose, onCreate, onUpdated, setSel
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving || categoryName === "" ||  description === ""}
+                            disabled={isSaving || categoryName.trim() === "" ||  description.trim() === ""}
                             onClick={()=>setOpenConfirmAdd(true)}
                         >
                             {isSaving ? "Creating..." : "Create Category"}
