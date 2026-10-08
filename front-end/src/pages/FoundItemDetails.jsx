@@ -161,32 +161,32 @@ export default function FoundItemDetails() {
                   </div>
                 </div>
                 <div className="bg-white  w-full rounded-t-lg flex flex-col p-4 px-6 text-lg pb-10">
-                  <p className="font-semibold">{report.item_name}</p>
+                  <p className="font-semibold text-xl md:text-2xl mb-2 mt-4">{report.item_name}</p>
                   <HorizontalBreak />
-                  <div className="w-full my-1 flex flex-col text-sm md:text-base gap-2">
-                    <div>
-                      <p className="">ITEM ID</p>
-                      <p className="font-medium">{formatItemId(report.item_id)}</p>
+                  <div className="w-full my-4 flex flex-col text-xs md:text-sm gap-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">ITEM ID</p>
+                      <p className="font-medium text-sm md:text-base">{formatItemId(report.item_id)}</p>
                     </div>
-                    <div>
-                      <p >Category</p>
-                      <p className="font-medium text-xs md:text-sm">{report.category_name}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">Category</p>
+                      <p className="font-medium text-sm md:text-base">{report.category_name}</p>
                     </div>
-                    <div>
-                      <p >Description</p>
-                      <p className="text-xs md:text-sm">{report.description}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">Description</p>
+                      <p className="text-sm md:text-base">{report.description}</p>
                     </div>
-                    <div>
-                      <p >Location Found</p>
-                      <p className=" font-medium text-xs md:text-sm">{report.location_found}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">Location Found</p>
+                      <p className=" font-medium text-sm md:text-base">{report.location_found}</p>
                     </div>
-                    <div>
-                      <p >Date & Time Found</p>
-                      <p className="font-medium text-xs md:text-sm">{formatDateTime(report.found_date)}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">Date & Time Found</p>
+                      <p className="font-medium text-sm md:text-base">{formatDateTime(report.found_date)}</p>
                     </div>
-                    <div>
-                      <p >Current Location</p>
-                      <p className="font-medium text-xs md:text-sm">{report.office_name}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-medium text-black/50">Current Location</p>
+                      <p className="font-medium text-sm md:text-base">{report.office_name}</p>
                     </div>
                   </div>
                   <HorizontalBreak />
