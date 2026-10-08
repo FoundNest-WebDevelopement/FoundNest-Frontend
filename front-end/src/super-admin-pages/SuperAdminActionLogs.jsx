@@ -6,6 +6,7 @@ import formatDateTime from "../utils/formatDataTimeNew";
 import { formatActionType } from "../utils/formatActionType";
 import WebLoading from "../global-components/WebLoading";
 import ExportModal from "../global-components/ExportModal";
+import Button from "../global-components/Button";
 
 // Maps DB enum values to filter pill labels shown in the UI.
 // NOTE: a few of these (deactivate variants, unlock) don't have their own
@@ -256,8 +257,8 @@ export default function SuperAdminActionLogs() {
                             <button
                                 type="button"
                                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                                className="flex items-center gap-2 bg-white border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium
-                        transition-transform duration-100 active:scale-95 shrink-0"
+                                className="flex items-center h-10 gap-2 bg-white border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium
+                        transition-transform duration-100 active:scale-95 shrink-0 shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
                             >
                                 <Filter size={16} />
                                 Filter
@@ -267,16 +268,9 @@ export default function SuperAdminActionLogs() {
                                 />
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() => setIsExportModalOpen(true)}
-                                disabled={isExporting}
-                                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                        transition-transform duration-100 active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                <Download size={16} />
-                                {isExporting ? "Exporting..." : "Export Logs"}
-                            </button>
+                            <Button icon={Download} label={isExporting? "Exporting..." : "Export Logs"} isBorder={true} isShadow={true} isIcon={true}  disabled={isExporting}
+                                                        onClick={() => setIsExportModalOpen(true)}
+                                                         />
                         </div>
 
 

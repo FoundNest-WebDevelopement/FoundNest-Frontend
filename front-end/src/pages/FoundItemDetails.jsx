@@ -262,7 +262,7 @@ export default function FoundItemDetails() {
 
       {selectedPhoto && (
         <div
-          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[4001]"
+          className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001"
           onClick={() => setSelectedPhoto(null)}
         >
           <button
