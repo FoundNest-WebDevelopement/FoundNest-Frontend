@@ -22,9 +22,7 @@ export default function Feedbacks() {
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportFormat, setExportFormat] = useState("pdf");
-    const [exportStartDate, setExportStartDate] = useState("");
-    const [exportEndDate, setExportEndDate] = useState("");
-    const [exportTouched, setExportTouched] = useState({ start: false, end: false });
+    const [exportScope, setExportScope] = useState("filtered"); // "filtered" | "all"
 
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -95,25 +93,9 @@ export default function Feedbacks() {
         return matchesSearch && matchesStar && matchesStatus && matchesDate;
     });
 
-    const exportErrors = { start: "", end: "" };
-    if (!exportStartDate) {
-        if (exportTouched.start) exportErrors.start = "Start date is required.";
-    } else if (exportStartDate > today) {
-        exportErrors.start = "Start date cannot be in the future.";
-    }
-    if (!exportEndDate) {
-        if (exportTouched.end) exportErrors.end = "End date is required.";
-    } else if (exportEndDate > today) {
-        exportErrors.end = "End date cannot be in the future.";
-    } else if (exportStartDate && exportStartDate > exportEndDate) {
-        exportErrors.end = "End date must be on or after the start date.";
-    }
-    const isExportValid = Boolean(exportStartDate && exportEndDate && !exportErrors.start && !exportErrors.end);
-
-    const reviewsToExport = visibleReviews.filter((review) => {
-        const reviewDate = toLocalISODate(new Date(review.created_at));
-        return reviewDate >= exportStartDate && reviewDate <= exportEndDate;
-    });
+    const reviewsToExport = exportScope === "all" ? reviews : visibleReviews;
+    const noReviewsToExport = exportScope === "filtered" && visibleReviews.length === 0;
+    const isExportValid = !noReviewsToExport;
 
     useEffect(() => {
         fetchReviews();
@@ -355,7 +337,7 @@ export default function Feedbacks() {
             headStyles: { fillColor: [153, 0, 0] },
         });
 
-        doc.save(`feedbacks-report-${exportStartDate}-to-${exportEndDate}.pdf`);
+        doc.save(`feedbacks-report-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`);
     };
 
     const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -380,14 +362,13 @@ export default function Feedbacks() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `feedbacks-report-${exportStartDate}-to-${exportEndDate}.csv`;
+        link.download = `feedbacks-report-${exportScope === "all" ? "ALL" : "FILTERED"}.csv`;
         link.click();
         URL.revokeObjectURL(url);
     };
 
     const handleExport = () => {
         if (!isExportValid) {
-            setExportTouched({ start: true, end: true });
             return;
         }
 
@@ -398,16 +379,12 @@ export default function Feedbacks() {
         }
 
         setIsExportModalOpen(false);
-        setExportStartDate("");
-        setExportEndDate("");
-        setExportTouched({ start: false, end: false });
+        setExportScope("filtered");
     };
 
     const handleCloseExportModal = () => {
         setIsExportModalOpen(false);
-        setExportStartDate("");
-        setExportEndDate("");
-        setExportTouched({ start: false, end: false });
+        setExportScope("filtered");
     };
 
     const renderStars = (rating) => {
@@ -507,7 +484,7 @@ export default function Feedbacks() {
                             onClick={handleClearFilters}
                             className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
                         >
-                            Clear
+                            Clear Filters
                         </button>
                     </div>
                 </div>
@@ -857,50 +834,31 @@ export default function Feedbacks() {
                         </div>
 
                         <div className="p-4">
-                            <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
-
-                            <div className="grid grid-cols-2 gap-3 mb-4 items-start">
-                                <div className="flex flex-col gap-1">
-                                    <label htmlFor="feedback-export-start" className="text-sm font-medium text-[#1A1208]">
-                                        Start Date <span className="text-[#C0392B]">*</span>
-                                    </label>
+                            <div className="flex flex-col gap-2 mb-4">
+                                <p className="text-sm font-semibold text-[#1A1208]">Export Scope</p>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
                                     <input
-                                        id="feedback-export-start"
-                                        type="date"
-                                        value={exportStartDate}
-                                        max={today}
-                                        onChange={(e) => setExportStartDate(e.target.value)}
-                                        onBlur={() => setExportTouched((t) => ({ ...t, start: true }))}
-                                        aria-invalid={Boolean(exportErrors.start)}
-                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
-                                            exportErrors.start ? "border-[#C0392B] focus:border-[#C0392B]" : "border-[#DDD9CF] focus:border-primary"
-                                        }`}
+                                        type="radio"
+                                        name="feedback-export-scope"
+                                        checked={exportScope === "filtered"}
+                                        onChange={() => setExportScope("filtered")}
+                                        className="accent-primary cursor-pointer"
                                     />
-                                    {exportErrors.start && (
-                                        <p className="text-xs text-[#C0392B]">{exportErrors.start}</p>
-                                    )}
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label htmlFor="feedback-export-end" className="text-sm font-medium text-[#1A1208]">
-                                        End Date <span className="text-[#C0392B]">*</span>
-                                    </label>
+                                    Current Filtered View ({visibleReviews.length} Item{visibleReviews.length === 1 ? "" : "s"})
+                                </label>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
                                     <input
-                                        id="feedback-export-end"
-                                        type="date"
-                                        value={exportEndDate}
-                                        min={exportStartDate || undefined}
-                                        max={today}
-                                        onChange={(e) => setExportEndDate(e.target.value)}
-                                        onBlur={() => setExportTouched((t) => ({ ...t, end: true }))}
-                                        aria-invalid={Boolean(exportErrors.end)}
-                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
-                                            exportErrors.end ? "border-[#C0392B] focus:border-[#C0392B]" : "border-[#DDD9CF] focus:border-primary"
-                                        }`}
+                                        type="radio"
+                                        name="feedback-export-scope"
+                                        checked={exportScope === "all"}
+                                        onChange={() => setExportScope("all")}
+                                        className="accent-primary cursor-pointer"
                                     />
-                                    {exportErrors.end && (
-                                        <p className="text-xs text-[#C0392B]">{exportErrors.end}</p>
-                                    )}
-                                </div>
+                                    All Items (All Time)
+                                </label>
+                                {noReviewsToExport && (
+                                    <p className="text-xs text-[#C0392B]">No items match the current filters.</p>
+                                )}
                             </div>
 
                             <div className="flex flex-col gap-2 mb-4">
@@ -939,7 +897,7 @@ export default function Feedbacks() {
                                     className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                         transition-transform duration-100 enabled:active:scale-95
                                         disabled:opacity-40 disabled:cursor-not-allowed"
-                                    disabled={!isExportValid}
+                                    disabled={noReviewsToExport}
                                     onClick={handleExport}
                                 >
                                     Export
