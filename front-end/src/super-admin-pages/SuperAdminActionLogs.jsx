@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { Search, Filter, Download, ChevronDown } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatActionType } from "../utils/formatActionType";
 import WebLoading from "../global-components/WebLoading";
-import ExportModal from "../global-components/ExportModal";
 import Button from "../global-components/Button";
 
 // Maps DB enum values to filter pill labels shown in the UI.
@@ -71,8 +73,6 @@ const toLocalISODate = (d = new Date()) => {
 export default function SuperAdminActionLogs() {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const userId = localStorage.getItem("user_id")
-
     const superAdminUserId = localStorage.getItem("user_id");
 
     const [logs, setLogs] = useState([]);
@@ -87,6 +87,8 @@ export default function SuperAdminActionLogs() {
     const [dateTo, setDateTo] = useState("");
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState("pdf");
+    const [exportScope, setExportScope] = useState("filtered"); // "filtered" | "all"
 
     const [expandedLogId, setExpandedLogId] = useState(null);
 
@@ -203,6 +205,88 @@ export default function SuperAdminActionLogs() {
     const activePage = Math.min(currentPage, totalPages);
     const startIndex = (activePage - 1) * itemsPerPage;
     const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+    const logsToExport = exportScope === "all" ? logs : filteredLogs;
+    const noLogsToExport = exportScope === "filtered" && filteredLogs.length === 0;
+
+    const logExportRow = (log) => {
+        const performedBy = log.first_name
+            ? `${log.first_name} ${log.last_name}${log.user_role ? ` (${formatActionType(log.user_role)})` : ""}`
+            : "N/A";
+
+        return [
+            formatLogId(log.action_log_id),
+            formatDateTime(log.created_at),
+            formatActionType(log.action_type),
+            formatRecordId(log.entity_type, log.entity_id),
+            log.description || "No additional details.",
+            performedBy,
+        ];
+    };
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text("Action Logs Report", 14, 16);
+        doc.setFontSize(10);
+        doc.text(
+            `Generated: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })}`,
+            14,
+            22
+        );
+
+        autoTable(doc, {
+            startY: 28,
+            head: [["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"]],
+            body: logsToExport.map(logExportRow),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [153, 0, 0] },
+        });
+
+        doc.save(`action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`);
+    };
+
+    const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const handleExportCSV = () => {
+        const header = ["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"];
+        const rows = logsToExport.map(logExportRow);
+
+        const csvContent = [header, ...rows]
+            .map((row) => row.map(csvEscape).join(","))
+            .join("\r\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExport = () => {
+        if (noLogsToExport) return;
+
+        if (exportFormat === "pdf") {
+            handleExportPDF();
+        } else {
+            handleExportCSV();
+        }
+
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
+
+    const handleCloseExportModal = () => {
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
 
 
 
@@ -542,15 +626,96 @@ export default function SuperAdminActionLogs() {
                     </>
                 )
             }
-            {isExportModalOpen && (
-                <ExportModal
-                    title="Export Action Logs"
-                    endpoint="/api/export/action-logs"
-                    queryParams={{ userId }}
-                    filenamePrefix="ACTION_LOGS"
-                    onClose={() => setIsExportModalOpen(false)}
-                    onUpdate={fetchLogs}
-                />
+            {isExportModalOpen && createPortal(
+                <div
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center z-1040"
+                    onClick={handleCloseExportModal}
+                >
+                    <div
+                        className="relative bg-white rounded-lg w-100 max-w-[90vw]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                            <p className="font-semibold">Export Action Logs</p>
+                            <button onClick={handleCloseExportModal}>
+                                <i className="fa-solid fa-x text-sm text-white" />
+                            </button>
+                        </div>
+
+                        <div className="p-4">
+                            <div className="flex flex-col gap-2 mb-4">
+                                <p className="text-sm font-semibold text-[#1A1208]">Export Scope</p>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
+                                    <input
+                                        type="radio"
+                                        name="action-log-export-scope"
+                                        checked={exportScope === "filtered"}
+                                        onChange={() => setExportScope("filtered")}
+                                        className="accent-primary cursor-pointer"
+                                    />
+                                    Current Filtered View ({filteredLogs.length} Log{filteredLogs.length === 1 ? "" : "s"})
+                                </label>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
+                                    <input
+                                        type="radio"
+                                        name="action-log-export-scope"
+                                        checked={exportScope === "all"}
+                                        onChange={() => setExportScope("all")}
+                                        className="accent-primary cursor-pointer"
+                                    />
+                                    All Logs (All Time)
+                                </label>
+                                {noLogsToExport && (
+                                    <p className="text-xs text-[#C0392B]">No logs match the current filters.</p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-2 mb-4">
+                                <label className="text-sm font-medium text-[#1A1208]">Format</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("pdf")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "pdf" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        PDF
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExportFormat("csv")}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-transform active:scale-95
+                                            ${exportFormat === "csv" ? "bg-primary text-white border-primary" : "bg-white text-[#6B5C42] border-[#DDD9CF]"}`}
+                                    >
+                                        CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
+                                        transition-transform duration-100 active:scale-95"
+                                    onClick={handleCloseExportModal}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
+                                        transition-transform duration-100 enabled:active:scale-95
+                                        disabled:opacity-40 disabled:cursor-not-allowed"
+                                    disabled={noLogsToExport}
+                                    onClick={handleExport}
+                                >
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
 
         </div>
