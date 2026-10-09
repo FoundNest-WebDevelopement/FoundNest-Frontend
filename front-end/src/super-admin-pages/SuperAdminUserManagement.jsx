@@ -31,10 +31,11 @@ export default function SuperAdminUserMangement() {
     const navigatedUserId = searchParams.get("userId");
 
     const FILTERS = [
-    { label: "All", value: null },
-    { label: "Students", value: "user" },
+    { label: "All Roles", value: null },
+    { label: "Student", value: "user" },
     { label: "Faculty", value: "faculty" },
-    { label: "Admins", value: "admin" },
+    { label: "Admin", value: "admin" },
+    { label: "Super Admin", value: "super_admin" },
 ];
 
     const [activeFilter, setActiveFilter] = useState(FILTERS[0].value);
@@ -180,22 +181,7 @@ const paddedUserId =
 
                         />
                     </div>
-                    <div className="flex mx-5 h-full flex-1 justify-center items-center gap-4">
-                            {FILTERS.map((filter) => (
-                                <button
-                                    key={filter.label}
-                                    onClick={() => setActiveFilter(filter.value)}
-                                    className={`px-4 h-full rounded-full text-xs ${
-                                        activeFilter === filter.value
-                                            ? "bg-primary text-white"
-                                            : "text-black"
-                                    }`}
-                                >
-                                    {filter.label}
-                                </button>
-                            ))}
-                            
-                    </div>
+                    <div className="flex-1" />
                     <div className="h-full w-fit  flex items-center gap-1 xl:gap-5 shrink-0">
                         <Button icon={Download} label={isExporting? "Exporting..." : "Export Users"} isBorder={true} isShadow={true} isIcon={true}  disabled={isExporting}
                             onClick={()=>setIsExportModalOpen(true)}
@@ -204,6 +190,16 @@ const paddedUserId =
                 </div>
 
                 <div className="bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.1)] rounded-md px-4 py-3 w-full flex items-center gap-3 flex-wrap">
+                    <select
+                        value={activeFilter ?? ""}
+                        onChange={(e) => setActiveFilter(e.target.value || null)}
+                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm text-[#4B2D23] outline-none flex-1 min-w-32"
+                    >
+                        {FILTERS.map((filter) => (
+                            <option key={filter.label} value={filter.value ?? ""}>{filter.label}</option>
+                        ))}
+                    </select>
+
                     <select
                         value={collegeFilter}
                         onChange={(e) => setCollegeFilter(e.target.value)}
