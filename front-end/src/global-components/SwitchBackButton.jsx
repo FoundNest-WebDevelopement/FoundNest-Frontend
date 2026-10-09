@@ -84,18 +84,11 @@ export default function SwitchBackButton() {
     return (
         <>
             <button
-                onClick={() => {
-                    if (officeInactive) {
-                        toast.error(disabledMessage);
-                        return;
-                    }
-                    setOpenConfirm(true);
-                }}
-                disabled={isLoading}
+                onClick={() => setOpenConfirm(true)}
+                disabled={isLoading || officeInactive}
                 title={officeInactive ? disabledMessage : undefined}
-                className={`flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
-                    transition-transform duration-100 active:scale-95 cursor-pointer disabled:cursor-not-allowed
-                    ${officeInactive ? "opacity-50" : "disabled:opacity-50"}`}
+                className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
+                    transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isLoading ? "Switching..." : label}
             </button>
