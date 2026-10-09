@@ -64,6 +64,7 @@ export default function SuperAdminGlobalConfiguration() {
     const [viewingAdminsCenter, setViewingAdminsCenter] = useState(null);
     const [isLoadingCenters, setIsLoadingCenters] = useState(false);
     const [centerSearch, setCenterSearch] = useState("");
+    const [centerStatusFilter, setCenterStatusFilter] = useState("ALL");
     const [openAddCenter, setOpenAddCenter] = useState(false);
 
     const [exportTemplate, setExportTemplate] = useState(null);
@@ -282,9 +283,23 @@ export default function SuperAdminGlobalConfiguration() {
         return matchesSearch && matchesStatus && matchesType;
     });
 
-    const filteredCenters = centers.filter((center) =>
-        center.office_name?.toLowerCase().includes(centerSearch.toLowerCase())
-    );
+    const filteredCenters = centers.filter((center) => {
+        const query = centerSearch.toLowerCase();
+
+        const formattedCenterId = `CTR-${String(center.office_id).padStart(3, "0")}`.toLowerCase();
+
+        const matchesSearch =
+            center.office_name?.toLowerCase().includes(query) ||
+            formattedCenterId.includes(query) ||
+            String(center.office_id).includes(query);
+
+        const matchesStatus =
+            centerStatusFilter === "ALL" ||
+            (centerStatusFilter === "ACTIVE" && center.status === true) ||
+            (centerStatusFilter === "INACTIVE" && center.status === false);
+
+        return matchesSearch && matchesStatus;
+    });
 
     const handleEditPolicy = (policy) => {
         setEditingPolicy(policy);
@@ -548,15 +563,26 @@ export default function SuperAdminGlobalConfiguration() {
             {activeTab === "CENTERS" && (
                 <>
                     <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 w-full max-w-xs shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
-                            <Search size={16} className="text-[#9A8F7C]" />
-                            <input
-                                type="text"
-                                placeholder="Search centers..."
-                                value={centerSearch}
-                                onChange={(e) => setCenterSearch(e.target.value)}
-                                className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
-                            />
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-2 bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 min-w-100 shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]">
+                                <Search size={16} className="text-[#9A8F7C]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by ID or name..."
+                                    value={centerSearch}
+                                    onChange={(e) => setCenterSearch(e.target.value)}
+                                    className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
+                                />
+                            </div>
+                            <select
+                                value={centerStatusFilter}
+                                onChange={(e) => setCenterStatusFilter(e.target.value)}
+                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
                         </div>
 
                         <Button
