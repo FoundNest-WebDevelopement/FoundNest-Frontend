@@ -653,7 +653,7 @@ export default function Feedbacks() {
                                 </div>
                                 <div>
                                     <p className="font-semibold text-[#4B2D23]">
-                                        {selectedReview.student_number || selectedReview.email}
+                                        {`${selectedReview.first_name || ""} ${selectedReview.last_name || ""}`.trim() || selectedReview.student_number || selectedReview.email}
                                     </p>
                                     <div className="text-lg">
                                         {renderStars(selectedReview.rating)}
