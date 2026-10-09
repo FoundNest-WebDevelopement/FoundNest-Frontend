@@ -21,6 +21,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
 
     const [locationOptions, setLocationOptions] = useState([]);
     const [existingCenters, setExistingCenters] = useState([]);
+    const [allCenters, setAllCenters] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState("");
 
@@ -55,6 +56,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                 const data = await response.json();
 
                 if (response.ok && Array.isArray(data)) {
+                    setAllCenters(data.filter((c) => c.office_id !== center.office_id));
                     setExistingCenters(
                         data.filter((c) => c.latitude && c.longitude && c.office_id !== center.office_id)
                     );
@@ -83,6 +85,14 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
 
         if (!officeName.trim()) {
             setError("Center name is required.");
+            return;
+        }
+
+        const isDuplicateName = allCenters.some(
+            (c) => c.office_name?.trim().toLowerCase() === officeName.trim().toLowerCase()
+        );
+        if (isDuplicateName) {
+            setError("A center with this name already exists.");
             return;
         }
 
@@ -232,20 +242,23 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                                     <label className="text-sm font-medium text-[#1A1208]">
                                         Center Building <span className="text-[#C0392B]">*</span>
                                     </label>
-                                    <select
-                                        value={locationName}
-                                        onChange={(e) => { setLocationName(e.target.value); setError(""); }}
-                                        className={`border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary ${
-                                            locationName ? "text-[#1A1208]" : "text-[#9A8F7C]"
-                                        }`}
-                                    >
-                                        <option value="" disabled hidden>Select building</option>
-                                        {locationOptions.map((loc) => (
-                                            <option key={loc} value={loc} className="text-[#1A1208]">
-                                                {loc}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            value={locationName}
+                                            onChange={(e) => { setLocationName(e.target.value); setError(""); }}
+                                            className={`w-full border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary appearance-none pr-10 ${
+                                                locationName ? "text-[#1A1208]" : "text-[#9A8F7C]"
+                                            }`}
+                                        >
+                                            <option value="" disabled hidden>Select building</option>
+                                            {locationOptions.map((loc) => (
+                                                <option key={loc} value={loc} className="text-[#1A1208]">
+                                                    {loc}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9A8F7C]" />
+                                    </div>
                                 </div>
 
                                 {error && (
@@ -335,7 +348,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving || !hasChanges || latitude === null || longitude === null}
+                            disabled={isSaving || !hasChanges || !officeName.trim() || !operatingHours.trim() || latitude === null || longitude === null}
                             onClick={() => setOpenConfirmDialog(true)}
                         >
                             {isSaving ? "Saving..." : "Save Changes"}
