@@ -35,16 +35,6 @@ const ACTIVITY_FILTERS = [
     { label: "Transaction Reverted", value: "TRANSACTION_REVERTED" },
 ];
 
-// Local calendar date — not toISOString(), which converts to UTC first and
-// silently shifts the date back a day in timezones ahead of UTC (e.g. Manila).
-function todayLocalISO() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-}
-
 const ACTIVITY_LABELS = ACTIVITY_FILTERS.reduce((acc, filter) => {
     acc[filter.value] = filter.label;
     return acc;
@@ -79,11 +69,8 @@ export default function SuperAdminSystemReportDetail() {
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [exportAll, setExportAll] = useState(false);
-    const [exportStartDate, setExportStartDate] = useState("");
-    const [exportEndDate, setExportEndDate] = useState("");
+    const [exportScope, setExportScope] = useState("filtered"); // "filtered" | "all"
     const [exportFormat, setExportFormat] = useState("csv");
-    const [exportError, setExportError] = useState("");
 
     const [search, setSearch] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -190,42 +177,21 @@ export default function SuperAdminSystemReportDetail() {
     };
 
     const openExportModal = () => {
-        setExportAll(false);
-        setExportStartDate(dateFrom || "");
-        setExportEndDate(dateTo || "");
+        setExportScope("filtered");
         setExportFormat("csv");
-        setExportError("");
         setIsExportModalOpen(true);
     };
 
     const handleExport = async () => {
-        if (!exportAll) {
-            if (!exportStartDate || !exportEndDate) {
-                setExportError("Start date and end date are required, or check \"Export All Time Records\".");
-                return;
-            }
-            if (new Date(exportStartDate) > new Date(exportEndDate)) {
-                setExportError("Start date must be before end date.");
-                return;
-            }
-            const today = new Date();
-            today.setHours(23, 59, 59, 999);
-            if (new Date(exportStartDate) > today || new Date(exportEndDate) > today) {
-                setExportError("Export dates cannot be in the future.");
-                return;
-            }
-        }
-
         try {
             setIsExporting(true);
-            setExportError("");
 
             const params = new URLSearchParams();
             if (search.trim()) params.set("search", search.trim());
             if (selectedActivityTypes.length > 0) params.set("activity", selectedActivityTypes.join(","));
-            if (!exportAll) {
-                params.set("date_from", exportStartDate);
-                params.set("date_to", exportEndDate);
+            if (exportScope === "filtered") {
+                if (dateFrom) params.set("date_from", dateFrom);
+                if (dateTo) params.set("date_to", dateTo);
             }
             if (selectedAdmin !== "all") params.set("admin_id", selectedAdmin);
             params.set("format", exportFormat);
@@ -241,7 +207,7 @@ export default function SuperAdminSystemReportDetail() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `office-${officeId}-activity-log.${exportFormat}`;
+            link.download = `office-${officeId}-activity-log-${exportScope === "all" ? "ALL" : "FILTERED"}.${exportFormat}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -252,7 +218,6 @@ export default function SuperAdminSystemReportDetail() {
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to export activity log.");
-            setExportError(err.message || "Failed to export activity log.");
         } finally {
             setIsExporting(false);
         }
@@ -678,51 +643,29 @@ export default function SuperAdminSystemReportDetail() {
                         </div>
 
                         <div className="p-4">
-                            <label className="flex items-center gap-2 mb-4 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={exportAll}
-                                    onChange={(e) => { setExportAll(e.target.checked); setExportError(""); }}
-                                    className="w-4 h-4 accent-primary cursor-pointer"
-                                />
-                                <span className="text-sm font-medium text-[#1A1208]">Export All Time Records</span>
-                            </label>
-
-                            <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
-
-                            <div className="grid grid-cols-2 gap-3 mb-1">
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-sm font-medium text-[#1A1208]">
-                                        Start Date {!exportAll && <span className="text-[#C0392B]">*</span>}
-                                    </label>
+                            <div className="flex flex-col gap-2 mb-4">
+                                <p className="text-sm font-semibold text-[#1A1208]">Export Scope</p>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
                                     <input
-                                        type="date"
-                                        value={exportStartDate}
-                                        max={todayLocalISO()}
-                                        disabled={exportAll}
-                                        onChange={(e) => { setExportStartDate(e.target.value); setExportError(""); }}
-                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
-                                            disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
+                                        type="radio"
+                                        name="system-report-export-scope"
+                                        checked={exportScope === "filtered"}
+                                        onChange={() => setExportScope("filtered")}
+                                        className="accent-primary cursor-pointer"
                                     />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-sm font-medium text-[#1A1208]">
-                                        End Date {!exportAll && <span className="text-[#C0392B]">*</span>}
-                                    </label>
+                                    Current Filtered View ({total} Log{total === 1 ? "" : "s"})
+                                </label>
+                                <label className="flex items-center gap-2 text-sm text-[#1A1208] cursor-pointer select-none">
                                     <input
-                                        type="date"
-                                        value={exportEndDate}
-                                        max={todayLocalISO()}
-                                        disabled={exportAll}
-                                        onChange={(e) => { setExportEndDate(e.target.value); setExportError(""); }}
-                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
-                                            disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
+                                        type="radio"
+                                        name="system-report-export-scope"
+                                        checked={exportScope === "all"}
+                                        onChange={() => setExportScope("all")}
+                                        className="accent-primary cursor-pointer"
                                     />
-                                </div>
+                                    All Logs (All Time)
+                                </label>
                             </div>
-                            {exportAll && (
-                                <p className="text-xs text-[#9A8F7C] mb-3">Disabled while "Export All Time Records" is checked.</p>
-                            )}
 
                             <div className="flex flex-col gap-2 mb-4 mt-3">
                                 <label className="text-sm font-medium text-[#1A1208]">Format</label>
@@ -746,8 +689,6 @@ export default function SuperAdminSystemReportDetail() {
                                 </div>
                             </div>
 
-                            {exportError && <p className="text-xs text-[#C0392B] mb-2">{exportError}</p>}
-
                             <div className="flex gap-2">
                                 <button
                                     type="button"
@@ -763,7 +704,7 @@ export default function SuperAdminSystemReportDetail() {
                                     className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                         transition-transform duration-100 enabled:active:scale-95
                                         disabled:opacity-40 disabled:cursor-not-allowed"
-                                    disabled={isExporting || (!exportAll && (!exportStartDate || !exportEndDate))}
+                                    disabled={isExporting}
                                     onClick={handleExport}
                                 >
                                     {isExporting ? "Exporting..." : "Export"}
