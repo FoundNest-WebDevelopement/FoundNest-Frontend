@@ -529,7 +529,7 @@ export default function Feedbacks() {
                                                 FB-{String(review.review_id).padStart(5, "0")}
                                             </td>
                                             <td className="align-middle text-center">
-                                                {review.student_number || review.email}
+                                                {`${review.first_name || ""} ${review.last_name || ""}`.trim() || review.student_number || review.email}
                                             </td>
                                             <td className="align-middle text-center text-lg">
                                                 {renderStars(review.rating)}
