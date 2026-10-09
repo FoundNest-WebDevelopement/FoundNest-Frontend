@@ -105,8 +105,14 @@ export default function TransactionManagementModal(
 
     return (
         <>
-            <div className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
-                <div className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col">
+            <div
+                className="fixed  inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center"
+                onClick={handleCloseModal}
+            >
+                <div
+                    className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <div className="w-full h-15 bg-primary items-center flex pl-2 gap-4 shrink-0 sticky top-0 z-50">
                         <p className="text-white font-semibold text-md xl:text-lg pl-2">Transacntion Details</p>
                         <div className="ml-auto pr-6">
