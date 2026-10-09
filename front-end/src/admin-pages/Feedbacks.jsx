@@ -678,7 +678,7 @@ export default function Feedbacks() {
                                 selectedReview.is_archived ? (
                                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                         <p className="text-sm text-gray-500">
-                                            This feedback is archived. Unarchive this feedback to send a response.
+                                            This feedback is archived. Unarchive it to send a response.
                                         </p>
                                     </div>
                                 ) : (
@@ -731,22 +731,30 @@ export default function Feedbacks() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => setIsEditingResponse(true)}
-                                            className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-gray-50 transition active:scale-95 cursor-pointer"
-                                        >
-                                            <Pencil size={14} />
-                                            Edit Response
-                                        </button>
-                                        <button
-                                            onClick={() => setPendingDeleteResponse(true)}
-                                            className="flex items-center gap-2 border border-[#C0392B]/30 text-[#C0392B] rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-[#FBEAEA] transition active:scale-95 cursor-pointer"
-                                        >
-                                            <Trash2 size={14} />
-                                            Delete Response
-                                        </button>
-                                    </div>
+                                    {selectedReview.is_archived ? (
+                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                            <p className="text-sm text-gray-500">
+                                                This feedback is archived. Unarchive it to edit or delete this response.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setIsEditingResponse(true)}
+                                                className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium w-fit hover:bg-gray-50 transition active:scale-95 cursor-pointer"
+                                            >
+                                                <Pencil size={14} />
+                                                Edit Response
+                                            </button>
+                                            <button
+                                                onClick={() => setPendingDeleteResponse(true)}
+                                                className="flex items-center gap-2 bg-[#C0392B] text-white rounded-lg px-4 py-3 text-sm font-medium w-fit hover:opacity-90 transition active:scale-95 cursor-pointer"
+                                            >
+                                                <Trash2 size={14} />
+                                                Delete Response
+                                            </button>
+                                        </div>
+                                    )}
                                 </>
                             )}
 
