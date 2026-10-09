@@ -445,25 +445,31 @@ export default function SuperAdminGlobalConfiguration() {
                                     className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
                                 />
                             </div>
-                            <select
-                                value={locationStatusFilter}
-                                onChange={(e) => setLocationStatusFilter(e.target.value)}
-                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
-                            </select>
-                            <select
-                                value={locationTypeFilter}
-                                onChange={(e) => setLocationTypeFilter(e.target.value)}
-                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
-                            >
-                                <option value="ALL">All Types</option>
-                                <option value="COLLEGE">College Building</option>
-                                <option value="SHARED_SPACE">Shared Student Spaces</option>
-                                <option value="GATE">Gates</option>
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={locationStatusFilter}
+                                    onChange={(e) => setLocationStatusFilter(e.target.value)}
+                                    className="bg-white border border-[#E5E1D8] rounded-lg pl-3 pr-8 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] appearance-none"
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="INACTIVE">Inactive</option>
+                                </select>
+                                <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B5C42]" />
+                            </div>
+                            <div className="relative">
+                                <select
+                                    value={locationTypeFilter}
+                                    onChange={(e) => setLocationTypeFilter(e.target.value)}
+                                    className="bg-white border border-[#E5E1D8] rounded-lg pl-3 pr-8 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] appearance-none"
+                                >
+                                    <option value="ALL">All Types</option>
+                                    <option value="COLLEGE">College Building</option>
+                                    <option value="SHARED_SPACE">Shared Student Spaces</option>
+                                    <option value="GATE">Gates</option>
+                                </select>
+                                <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B5C42]" />
+                            </div>
                         </div>
 
                         <Button
@@ -513,15 +519,18 @@ export default function SuperAdminGlobalConfiguration() {
                                 className="w-full text-sm outline-none placeholder:text-[#9A8F7C] "
                             />
                         </div>
-                          <select
-            value={categoryStatusFilter}
-            onChange={(e) => setCategoryStatusFilter(e.target.value)}
-            className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
-        >
-            <option value="ALL">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-        </select>
+                          <div className="relative">
+            <select
+                value={categoryStatusFilter}
+                onChange={(e) => setCategoryStatusFilter(e.target.value)}
+                className="bg-white border border-[#E5E1D8] rounded-lg pl-3 pr-8 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] appearance-none"
+            >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+            </select>
+            <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B5C42]" />
+        </div>
                         </div>
                       
 
@@ -574,15 +583,18 @@ export default function SuperAdminGlobalConfiguration() {
                                     className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
                                 />
                             </div>
-                            <select
-                                value={centerStatusFilter}
-                                onChange={(e) => setCenterStatusFilter(e.target.value)}
-                                className="bg-white border border-[#E5E1D8] rounded-lg px-3 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={centerStatusFilter}
+                                    onChange={(e) => setCenterStatusFilter(e.target.value)}
+                                    className="bg-white border border-[#E5E1D8] rounded-lg pl-3 pr-8 py-2 text-sm text-[#6B5C42] outline-none cursor-pointer shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] appearance-none"
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="INACTIVE">Inactive</option>
+                                </select>
+                                <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B5C42]" />
+                            </div>
                         </div>
 
                         <Button
