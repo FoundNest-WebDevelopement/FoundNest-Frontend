@@ -57,6 +57,7 @@ export default function TransferPrivilegesModal({ onClose }) {
     const targetFullName = selectedUser
         ? `${selectedUser.first_name || ""} ${selectedUser.last_name || ""}`.trim()
         : "";
+    const targetEmail = selectedUser?.email || "";
 
     const handleProceedToConfirm = () => {
         if (!selectedUser) return;
@@ -65,8 +66,8 @@ export default function TransferPrivilegesModal({ onClose }) {
     };
 
     const handleSendOtp = async () => {
-        if (confirmText.trim() !== targetFullName) {
-            setError("The name you typed doesn't match. Please type it exactly as shown.");
+        if (confirmText.trim().toLowerCase() !== targetEmail.toLowerCase()) {
+            setError("The email you typed doesn't match. Please type it exactly as shown.");
             return;
         }
 
@@ -229,7 +230,8 @@ export default function TransferPrivilegesModal({ onClose }) {
 
                         <p className="text-sm text-[#1A1208] text-center">
                             Are you sure you want to transfer Super Admin privileges to{" "}
-                            <span className="font-semibold">{targetFullName}</span>?
+                            <span className="font-semibold">{targetFullName}</span>{" "}
+                            ({targetEmail})?
                             <br />
                             <span className="text-xs text-[#C0392B]">
                                 You will be demoted to a regular user account after this action.
@@ -238,13 +240,13 @@ export default function TransferPrivilegesModal({ onClose }) {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-[#1A1208]">
-                                Type <span className="font-semibold">{targetFullName}</span> to confirm
+                                Type <span className="font-semibold">{targetEmail}</span> to confirm
                             </label>
                             <input
                                 type="text"
                                 value={confirmText}
                                 onChange={(e) => { setConfirmText(e.target.value); setError(""); }}
-                                placeholder={targetFullName}
+                                placeholder={targetEmail}
                                 className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                             />
                         </div>
