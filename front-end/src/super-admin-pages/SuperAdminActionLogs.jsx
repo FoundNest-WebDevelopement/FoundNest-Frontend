@@ -8,6 +8,15 @@ import WebLoading from "../global-components/WebLoading";
 import ExportModal from "../global-components/ExportModal";
 import Button from "../global-components/Button";
 
+// Active Role capsules shown at the top of the filter panel.
+// Values match the `user_level` column on action_logs
+// ('user' is displayed as "End User").
+const USER_LEVEL_FILTERS = [
+    { label: "Super Admin", value: "super_admin" },
+    { label: "Admin", value: "admin" },
+    { label: "End User", value: "user" },
+];
+
 // Maps DB enum values to filter pill labels shown in the UI.
 // NOTE: a few of these (deactivate variants, unlock) don't have their own
 // enum value yet in action_log_type — they reuse the closest existing type
@@ -22,6 +31,7 @@ const ACTION_TYPE_FILTERS = [
     { label: "Edited Policy", value: "UPDATE_POLICY" },
     { label: "Added Location", value: "CREATE_LOCATION" },
     { label: "Edited Location", value: "UPDATE_LOCATION" },
+    { label: "Deleted Location", value: "DELETE_LOCATION" },
     { label: "Deactivated Location", value: "DEACTIVATE_LOCATION" },
     { label: "Added Category", value: "CREATE_CATEGORY" },
     { label: "Edited Category", value: "UPDATE_CATEGORY" },
@@ -32,9 +42,69 @@ const ACTION_TYPE_FILTERS = [
     { label: "Locked User Account", value: "LOCK_ACCOUNT" },
     { label: "Unlocked User Account", value: "UNLOCK_ACCOUNT" },
     { label: "Reset Password", value: "RESET_PASSWORD" },
+    { label: "Logged In", value: "LOGIN" },
+    { label: "Created Report", value: "CREATE_REPORT" },
+    { label: "Updated Report", value: "UPDATE_REPORT" },
+    { label: "Cancelled Report", value: "CANCEL_REPORT" },
+    { label: "Resolved Report", value: "RESOLVE_REPORT" },
+    { label: "Archived Report", value: "ARCHIVE_REPORT" },
+    { label: "Restored Report", value: "RESTORE_REPORT" },
+    { label: "Reverted Claim", value: "REVERT_CLAIM" },
+    { label: "Reopened Report", value: "REOPEN_REPORT" },
+    { label: "Disposed Item", value: "DISPOSED_ITEM" },
+    { label: "Generated Report", value: "GENERATE_REPORT" },
     { label: "Exported CSV", value: "EXPORT_CSV" },
     { label: "Exported PDF", value: "EXPORT_PDF" },
 ];
+
+// Which action types belong to each active-role context. Selecting an
+// Active Role narrows the Action Type pills to that role's list.
+// "ALL" shows the full union list.
+const ACTION_TYPES_BY_ROLE = {
+    super_admin: [
+        "CREATE_ADMIN",
+        "REVOKE_ADMIN",
+        "TRANSFER_SUPER_ADMIN",
+        "CREATE_POLICY",
+        "UPDATE_POLICY",
+        "CREATE_LOCATION",
+        "UPDATE_LOCATION",
+        "DELETE_LOCATION",
+        "DEACTIVATE_LOCATION",
+        "CREATE_CATEGORY",
+        "UPDATE_CATEGORY",
+        "DEACTIVATE_CATEGORY",
+        "CREATE_OFFICE",
+        "UPDATE_OFFICE",
+        "DEACTIVATE_OFFICE",
+        "LOCK_ACCOUNT",
+        "UNLOCK_ACCOUNT",
+        "RESET_PASSWORD",
+        "LOGIN",
+        "GENERATE_REPORT",
+        "EXPORT_CSV",
+        "EXPORT_PDF",
+    ],
+    admin: [
+        "LOGIN",
+        "CREATE_REPORT",
+        "UPDATE_REPORT",
+        "ARCHIVE_REPORT",
+        "RESTORE_REPORT",
+        "RESOLVE_REPORT",
+        "REVERT_CLAIM",
+        "REOPEN_REPORT",
+        "DISPOSED_ITEM",
+        "EXPORT_CSV",
+        "EXPORT_PDF",
+    ],
+    user: [
+        "LOGIN",
+        "CREATE_REPORT",
+        "UPDATE_REPORT",
+        "CANCEL_REPORT",
+    ],
+};
 
 // Badge color per action type — grouped loosely by "severity"/category
 const ACTION_TYPE_COLORS = {
@@ -45,19 +115,55 @@ const ACTION_TYPE_COLORS = {
     UPDATE_POLICY: "bg-[#EDE7F6] text-[#6A1B9A]",
     CREATE_LOCATION: "bg-[#E6F1FB] text-[#2980B9]",
     UPDATE_LOCATION: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DELETE_LOCATION: "bg-[#F9ECEC] text-[#C0392B]",
+    DEACTIVATE_LOCATION: "bg-[#F9ECEC] text-[#C0392B]",
     CREATE_CATEGORY: "bg-[#E6F1FB] text-[#2980B9]",
     UPDATE_CATEGORY: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DEACTIVATE_CATEGORY: "bg-[#F9ECEC] text-[#C0392B]",
     CREATE_OFFICE: "bg-[#E6F1FB] text-[#2980B9]",
     UPDATE_OFFICE: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DEACTIVATE_OFFICE: "bg-[#F9ECEC] text-[#C0392B]",
     LOCK_ACCOUNT: "bg-[#F9ECEC] text-[#C0392B]",
+    UNLOCK_ACCOUNT: "bg-[#E6F1FB] text-[#2980B9]",
     RESET_PASSWORD: "bg-[#F9ECEC] text-[#C0392B]",
+    LOGIN: "bg-[#E8F5E9] text-[#2E7D32]",
+    CREATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_REPORT: "bg-[#EDE7F6] text-[#6A1B9A]",
+    CANCEL_REPORT: "bg-[#F9ECEC] text-[#C0392B]",
+    RESOLVE_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    ARCHIVE_REPORT: "bg-[#FFF3CD] text-[#856404]",
+    RESTORE_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    REVERT_CLAIM: "bg-[#F9ECEC] text-[#C0392B]",
+    REOPEN_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    DISPOSED_ITEM: "bg-[#F9ECEC] text-[#C0392B]",
     EXPORT_CSV: "bg-gray-200 text-gray-700",
     EXPORT_PDF: "bg-gray-200 text-gray-700",
     GENERATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
 };
 
+// Badge color per user level (active role)
+const USER_LEVEL_COLORS = {
+    super_admin: "bg-[#EDE7F6] text-[#6A1B9A]",
+    admin: "bg-[#E6F1FB] text-[#2980B9]",
+    user: "bg-[#E8F5E9] text-[#2E7D32]",
+};
+
+const USER_LEVEL_LABELS = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    user: "End User",
+};
+
 const getActionTypeColor = (actionType) =>
     ACTION_TYPE_COLORS[actionType] || "bg-gray-200 text-gray-700";
+
+const getUserLevelColor = (userLevel) =>
+    USER_LEVEL_COLORS[userLevel] || "bg-gray-200 text-gray-700";
+
+const formatUserLevel = (userLevel = "") => {
+    if (!userLevel) return "Unknown";
+    return USER_LEVEL_LABELS[userLevel] || formatActionType(userLevel);
+};
 
 // Local YYYY-MM-DD (toISOString() uses UTC, which is off by a day for part of
 // the day in timezones ahead of/behind UTC).
@@ -82,6 +188,7 @@ export default function SuperAdminActionLogs() {
 
     const [search, setSearch] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [selectedUserLevel, setSelectedUserLevel] = useState("ALL"); // "ALL" means all roles
     const [selectedActionTypes, setSelectedActionTypes] = useState([]); // [] means "All"
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
@@ -147,6 +254,23 @@ export default function SuperAdminActionLogs() {
         fetchLogs();
     }, []);
 
+    // Action Type pills visible for the currently selected Active Role.
+    const visibleActionFilters = useMemo(() => {
+        if (selectedUserLevel === "ALL") return ACTION_TYPE_FILTERS;
+        const allowed = ACTION_TYPES_BY_ROLE[selectedUserLevel] || [];
+        return ACTION_TYPE_FILTERS.filter((f) => allowed.includes(f.value));
+    }, [selectedUserLevel]);
+
+    const selectUserLevel = (value) => {
+        setSelectedUserLevel(value);
+        // Prune selected action types that don't exist in the new role context
+        // so we never sit in an impossible role + action combination.
+        if (value !== "ALL") {
+            const allowed = ACTION_TYPES_BY_ROLE[value] || [];
+            setSelectedActionTypes((prev) => prev.filter((v) => allowed.includes(v)));
+        }
+    };
+
     const toggleActionType = (value) => {
         if (value === "ALL") {
             setSelectedActionTypes([]);
@@ -163,9 +287,10 @@ export default function SuperAdminActionLogs() {
     // Filters apply live, so just go back to page 1 whenever one of them changes.
     useEffect(() => {
         setCurrentPage(1);
-    }, [dateFrom, selectedActionTypes, dateTo]);
+    }, [dateFrom, selectedActionTypes, selectedUserLevel, dateTo]);
 
     const handleClearFilters = () => {
+        setSelectedUserLevel("ALL");
         setSelectedActionTypes([]);
         setDateFrom("");
         setDateTo("");
@@ -182,8 +307,13 @@ export default function SuperAdminActionLogs() {
             const matchesSearch =
                 search.trim() === "" ||
                 formatActionType(log.action_type).toLowerCase().includes(search.toLowerCase()) ||
+                formatUserLevel(log.user_level).toLowerCase().includes(search.toLowerCase()) ||
                 formatRecordId(log.entity_type, log.entity_id).toLowerCase().includes(search.toLowerCase()) ||
                 log.description?.toLowerCase().includes(search.toLowerCase());
+
+            const matchesUserLevel =
+                selectedUserLevel === "ALL" ||
+                log.user_level === selectedUserLevel;
 
             const matchesActionType =
                 selectedActionTypes.length === 0 ||
@@ -195,9 +325,9 @@ export default function SuperAdminActionLogs() {
             const matchesDateFrom = !activeDateFrom || logDate >= new Date(activeDateFrom + "T00:00:00");
             const matchesDateTo = !activeDateTo || logDate <= new Date(activeDateTo + "T23:59:59");
 
-            return matchesSearch && matchesActionType && matchesDateFrom && matchesDateTo;
+            return matchesSearch && matchesUserLevel && matchesActionType && matchesDateFrom && matchesDateTo;
         });
-    }, [logs, search, selectedActionTypes, activeDateFrom, activeDateTo]);
+    }, [logs, search, selectedUserLevel, selectedActionTypes, activeDateFrom, activeDateTo]);
 
     const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
     const activePage = Math.min(currentPage, totalPages);
@@ -234,6 +364,13 @@ export default function SuperAdminActionLogs() {
             : "border-[#DDD9CF] focus:border-primary"
         }`;
 
+    const pillClass = (isActive) =>
+        `px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
+        ${isActive
+            ? "bg-primary text-white border-primary"
+            : "bg-white text-[#6B5C42] border-[#DDD9CF]"
+        }`;
+
     return (
         <div className="w-full flex flex-col gap-4 bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7">
             {!isLogs ?
@@ -244,7 +381,7 @@ export default function SuperAdminActionLogs() {
                                 <Search size={16} className="text-[#9A8F7C]" />
                                 <input
                                     type="text"
-                                    placeholder="Search by action type or affected record..."
+                                    placeholder="Search by action type, active role, or affected record..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
@@ -277,38 +414,64 @@ export default function SuperAdminActionLogs() {
                         {isFilterOpen && (
                             <div className="bg-white border border-[#DDD9CF] rounded-lg p-5 shadow-[0_2px_4px_0px_rgba(0,0,0,0.1)] flex flex-col gap-5">
                                 <div className="flex flex-col md:flex-row gap-6">
-                                    <div className="flex-1 flex flex-col gap-3">
-                                        <p className="text-sm font-semibold text-[#1A1208]">Action Type</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleActionType("ALL")}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
-                                        ${selectedActionTypes.length === 0
-                                                        ? "bg-primary text-white border-primary"
-                                                        : "bg-white text-[#6B5C42] border-[#DDD9CF]"
-                                                    }`}
-                                            >
-                                                All
-                                            </button>
+                                    <div className="flex-1 flex flex-col gap-5">
+                                        <div className="flex flex-col gap-3">
+                                            <p className="text-sm font-semibold text-[#1A1208]">Active Role</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selectUserLevel("ALL")}
+                                                    className={pillClass(selectedUserLevel === "ALL")}
+                                                >
+                                                    All
+                                                </button>
 
-                                            {ACTION_TYPE_FILTERS.map((filter) => {
-                                                const isActive = selectedActionTypes.includes(filter.value);
-                                                return (
-                                                    <button
-                                                        key={filter.label}
-                                                        type="button"
-                                                        onClick={() => toggleActionType(filter.value)}
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
-                                                ${isActive
-                                                                ? "bg-primary text-white border-primary"
-                                                                : "bg-white text-[#6B5C42] border-[#DDD9CF]"
-                                                            }`}
-                                                    >
-                                                        {filter.label}
-                                                    </button>
-                                                );
-                                            })}
+                                                {USER_LEVEL_FILTERS.map((filter) => {
+                                                    const isActive = selectedUserLevel === filter.value;
+                                                    return (
+                                                        <button
+                                                            key={filter.value}
+                                                            type="button"
+                                                            onClick={() => selectUserLevel(filter.value)}
+                                                            className={pillClass(isActive)}
+                                                        >
+                                                            {filter.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {selectedUserLevel !== "ALL" && (
+                                                <p className="text-xs text-[#9A8F7C]">
+                                                    Active Role: {formatUserLevel(selectedUserLevel)}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-3">
+                                            <p className="text-sm font-semibold text-[#1A1208]">Action Type</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleActionType("ALL")}
+                                                    className={pillClass(selectedActionTypes.length === 0)}
+                                                >
+                                                    All
+                                                </button>
+
+                                                {visibleActionFilters.map((filter) => {
+                                                    const isActive = selectedActionTypes.includes(filter.value);
+                                                    return (
+                                                        <button
+                                                            key={filter.label}
+                                                            type="button"
+                                                            onClick={() => toggleActionType(filter.value)}
+                                                            className={pillClass(isActive)}
+                                                        >
+                                                            {filter.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -316,16 +479,26 @@ export default function SuperAdminActionLogs() {
                                         <p className="text-sm font-semibold text-[#1A1208]">Date Range</p>
 
                                         <div className="flex flex-col gap-1">
-                                            <input
-                                                type="date"
-                                                aria-label="Start date"
-                                                value={dateFrom}
-                                                max={today}
-                                                onChange={(e) => setDateFrom(e.target.value)}
-                                                aria-invalid={Boolean(dateErrors.from)}
-                                                aria-describedby={dateErrors.from ? "filter-start-error" : undefined}
-                                                className={dateInputClass(dateErrors.from)}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    aria-label="Start date"
+                                                    value={dateFrom}
+                                                    max={today}
+                                                    onChange={(e) => setDateFrom(e.target.value)}
+                                                    onClick={(e) => {
+                                                        try { e.target.showPicker?.(); } catch { /* picker already open */ }
+                                                    }}
+                                                    aria-invalid={Boolean(dateErrors.from)}
+                                                    aria-describedby={dateErrors.from ? "filter-start-error" : undefined}
+                                                    className={`${dateInputClass(dateErrors.from)} ${dateFrom ? "text-[#1A1208]" : "text-transparent select-none selection:bg-transparent"} cursor-pointer`}
+                                                />
+                                                {!dateFrom && (
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9A8F7C] pointer-events-none">
+                                                        Start Date
+                                                    </span>
+                                                )}
+                                            </div>
                                             {dateErrors.from && (
                                                 <p id="filter-start-error" className="text-xs text-[#C0392B]">
                                                     {dateErrors.from}
@@ -334,17 +507,27 @@ export default function SuperAdminActionLogs() {
                                         </div>
 
                                         <div className="flex flex-col gap-1">
-                                            <input
-                                                type="date"
-                                                aria-label="End date"
-                                                value={dateTo}
-                                                min={dateFrom || undefined}
-                                                max={today}
-                                                onChange={(e) => setDateTo(e.target.value)}
-                                                aria-invalid={Boolean(dateErrors.to)}
-                                                aria-describedby={dateErrors.to ? "filter-end-error" : undefined}
-                                                className={dateInputClass(dateErrors.to)}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    aria-label="End date"
+                                                    value={dateTo}
+                                                    min={dateFrom || undefined}
+                                                    max={today}
+                                                    onChange={(e) => setDateTo(e.target.value)}
+                                                    onClick={(e) => {
+                                                        try { e.target.showPicker?.(); } catch { /* picker already open */ }
+                                                    }}
+                                                    aria-invalid={Boolean(dateErrors.to)}
+                                                    aria-describedby={dateErrors.to ? "filter-end-error" : undefined}
+                                                    className={`${dateInputClass(dateErrors.to)} ${dateTo ? "text-[#1A1208]" : "text-transparent select-none selection:bg-transparent"} cursor-pointer`}
+                                                />
+                                                {!dateTo && (
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9A8F7C] pointer-events-none">
+                                                        End Date
+                                                    </span>
+                                                )}
+                                            </div>
                                             {dateErrors.to && (
                                                 <p id="filter-end-error" className="text-xs text-[#C0392B]">
                                                     {dateErrors.to}
@@ -380,6 +563,7 @@ export default function SuperAdminActionLogs() {
                                             <th className="w-10 whitespace-nowrap"></th>
                                             <th className="w-24 whitespace-nowrap">LOG ID</th>
                                             <th className="w-40">TIMESTAMP</th>
+                                            <th className="w-40 whitespace-nowrap">ACTIVE ROLE</th>
                                             <th className="w-52 whitespace-nowrap">ACTION TYPE</th>
                                             <th className="w-32">AFFECTED RECORD</th>
                                             <th className="w-full">
@@ -409,7 +593,7 @@ export default function SuperAdminActionLogs() {
                                                 const description = log.description || "No additional details.";
                                                 const isLong = description.length > 60;
                                                 const performedBy = log.first_name
-                                                    ? `${log.first_name} ${log.last_name}${log.user_role ? ` (${formatActionType(log.user_role)})` : ""}`
+                                                    ? `${log.first_name} ${log.last_name}`
                                                     : "N/A";
 
                                                 return (
@@ -430,7 +614,16 @@ export default function SuperAdminActionLogs() {
 
                                                             <td className="align-top py-3 whitespace-nowrap">
                                                                 <span
-                                                                    className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block 
+                                                                    className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block
+                                                            ${getUserLevelColor(log.user_level)}`}
+                                                                >
+                                                                    {formatUserLevel(log.user_level)}
+                                                                </span>
+                                                            </td>
+
+                                                            <td className="align-top py-3 whitespace-nowrap">
+                                                                <span
+                                                                    className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block
                                                             ${getActionTypeColor(log.action_type)}`}
                                                                 >
                                                                     {formatActionType(log.action_type)}
@@ -462,7 +655,7 @@ export default function SuperAdminActionLogs() {
 
                                                         {isExpanded && (
                                                             <tr className="bg-[#FFF8E7]">
-                                                                <td colSpan={6} className="p-0  w-full ">
+                                                                <td colSpan={7} className="p-0  w-full ">
                                                                     <div className="w-full py-4">
                                                                         <div className="border-l-4  border-l-[#D4A017] py-4 px-2 flex flex-col gap-2 ml-15 pl-6">
                                                                             <p className="text-sm font-semibold text-[#1A1208]">
@@ -476,6 +669,7 @@ export default function SuperAdminActionLogs() {
                                                                                 <span>Log ID: {formatLogId(log.action_log_id)}</span>
                                                                                 <span>Record: {formatRecordId(log.entity_type, log.entity_id)}</span>
                                                                                 <span>Performed by: {performedBy}</span>
+                                                                                <span>Performed as: {formatUserLevel(log.user_level)}</span>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -551,6 +745,8 @@ export default function SuperAdminActionLogs() {
                     filenamePrefix="ACTION_LOGS"
                     onClose={() => setIsExportModalOpen(false)}
                     onUpdate={fetchLogs}
+                    scopeExport
+                    filteredIds={filteredLogs.map((log) => log.action_log_id)}
                 />
             )}
 

@@ -650,29 +650,38 @@ export default function Report() {
 
             <Field label="Category" htmlFor="category" required error={errors.category}>
               <div className="relative">
-                <select
-                  id="category"
-                  value={categoryID}
-                  disabled={viewOnly || categories.length === 0 || isAnalyzing}
-                  onChange={(e) => {
-                    setCategoryID(e.target.value);
-                    clearError("category");
-                  }}
-                  className={fieldClass(
-                    !!errors.category,
-                    `h-12.5 appearance-none pr-10 ${categoryID ? "text-[#333]" : "text-black/60"
-                    } disabled:opacity-60`
-                  )}
-                >
-                  <option value="" >
-                    {categories.length === 0 ? "Loading categories..." : "Select Category"}
-                  </option>
-                  {categories.map((cat) => (
-                    <option key={cat.category_id} value={String(cat.category_id)}>
-                      {cat.category_name}
-                    </option>
-                  ))}
-                </select>
+<select
+  id="category"
+  value={categoryID}
+  disabled={viewOnly || categories.length === 0 || isAnalyzing}
+  onChange={(e) => {
+    setCategoryID(e.target.value);
+    clearError("category");
+  }}
+  className={fieldClass(
+    !!errors.category,
+    "h-12.5 appearance-none pr-10 disabled:opacity-60"
+  )}
+  style={{
+    color: categoryID === "" ? "#8C7A70" : "#000000",
+  }}
+>
+  <option value="" className="text-[#8C7A70]">
+    {categories.length === 0
+      ? "Loading categories..."
+      : "Select Category"}
+  </option>
+
+  {categories.map((cat) => (
+    <option
+      key={cat.category_id}
+      value={String(cat.category_id)}
+      className="text-black"
+    >
+      {cat.category_name}
+    </option>
+  ))}
+</select>
                 <i className="fa-solid fa-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-primary" />
               </div>
             </Field>
