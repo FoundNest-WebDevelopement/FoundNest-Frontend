@@ -16,39 +16,52 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
         return `${y}-${m}-${day}`;
     })();
 
+    const EARLIEST_DATE = "1970-01-01";
+
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [exportAll, setExportAll] = useState(false);
     const [officeId, setOfficeId] = useState(defaultOfficeId);
     const [format, setFormat] = useState("csv");
     const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState("");
 
+    const handleExportAllChange = (e) => {
+        setExportAll(e.target.checked);
+        setError("");
+    };
+
     const handleExport = async () => {
-        if (!startDate || !endDate) {
-            setError("Start date and end date are required.");
-            return;
+        if (!exportAll) {
+            if (!startDate || !endDate) {
+                setError("Start date and end date are required, or check \"Export All Time\".");
+                return;
+            }
+
+            const todayCheck = new Date();
+            todayCheck.setHours(23, 59, 59, 999);
+
+            if (new Date(startDate) > new Date(endDate)) {
+                setError("Start date must be before end date.");
+                return;
+            }
+
+            if (new Date(startDate) > todayCheck || new Date(endDate) > todayCheck) {
+                setError("Report dates cannot be in the future.");
+                return;
+            }
         }
 
-        const todayCheck = new Date();
-        todayCheck.setHours(23, 59, 59, 999);
-
-        if (new Date(startDate) > new Date(endDate)) {
-            setError("Start date must be before end date.");
-            return;
-        }
-
-        if (new Date(startDate) > todayCheck || new Date(endDate) > todayCheck) {
-            setError("Report dates cannot be in the future.");
-            return;
-        }
+        const effectiveStart = exportAll ? EARLIEST_DATE : startDate;
+        const effectiveEnd = exportAll ? today : endDate;
 
         try {
             setIsExporting(true);
             setError("");
 
             const params = new URLSearchParams({
-                start_date: startDate,
-                end_date: endDate,
+                start_date: effectiveStart,
+                end_date: effectiveEnd,
                 office_id: officeId,
                 format,
             });
@@ -66,7 +79,7 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `system-report-${startDate}-to-${endDate}.${format}`;
+            link.download = `system-report-${exportAll ? "ALL" : `${startDate}-to-${endDate}`}.${format}`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -93,38 +106,53 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="w-full h-10 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
-                    <p className="font-semibold">Generate Report</p>
+                    <p className="font-semibold">Export Report</p>
                     <button onClick={onClose}>
                         <i className="fa-solid fa-x text-sm text-white" />
                     </button>
                 </div>
 
                 <div className="p-4">
-                    <p className="text-sm font-semibold text-[#1A1208] mb-2">Report Period</p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-[#1A1208]">Report Period</p>
+                        <label className="flex items-center gap-1.5 text-sm text-[#6B5C42] cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={exportAll}
+                                onChange={handleExportAllChange}
+                                className="accent-primary cursor-pointer"
+                            />
+                            Export All Time
+                        </label>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-[#1A1208]">
-                                Start Date <span className="text-[#C0392B]">*</span>
+                                Start Date {!exportAll && <span className="text-[#C0392B]">*</span>}
                             </label>
                             <input
                                 type="date"
                                 value={startDate}
                                 max={today}
+                                disabled={exportAll}
                                 onChange={(e) => { setStartDate(e.target.value); setError(""); }}
-                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
+                                    disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
                             />
                         </div>
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-[#1A1208]">
-                                End Date <span className="text-[#C0392B]">*</span>
+                                End Date {!exportAll && <span className="text-[#C0392B]">*</span>}
                             </label>
                             <input
                                 type="date"
                                 value={endDate}
                                 max={today}
+                                disabled={exportAll}
                                 onChange={(e) => { setEndDate(e.target.value); setError(""); }}
-                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary
+                                    disabled:bg-[#F5F5F5] disabled:text-[#6B5C42] disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
@@ -187,7 +215,7 @@ export default function GenerateReportModal({ centers, onClose, defaultOfficeId 
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isExporting || !startDate || !endDate}
+                            disabled={isExporting || (!exportAll && (!startDate || !endDate))}
                             onClick={handleExport}
                         >
                             {isExporting ? "Exporting..." : "Export"}

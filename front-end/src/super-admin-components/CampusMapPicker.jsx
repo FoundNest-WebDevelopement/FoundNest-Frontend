@@ -5,6 +5,21 @@ import "leaflet/dist/leaflet.css";
 
 const BULSU_CENTER = { lat: 14.8574, lng: 120.8146 };
 
+// Loose bounding box around the BulSU main campus — generous enough to cover
+// every hall/gate, but tight enough to stop pins from being dropped off-campus.
+const BULSU_BOUNDS = [
+    [14.8535, 120.8105], // SW corner
+    [14.8615, 120.8185], // NE corner
+];
+
+const clampToBounds = (lat, lng) => {
+    const [[swLat, swLng], [neLat, neLng]] = BULSU_BOUNDS;
+    return [
+        Math.min(Math.max(lat, swLat), neLat),
+        Math.min(Math.max(lng, swLng), neLng),
+    ];
+};
+
 const activeMarkerIcon = (label) =>
     new L.DivIcon({
         className: "",
@@ -38,7 +53,8 @@ const referenceMarkerIcon = (label) =>
 function MapClickHandler({ onPick }) {
     useMapEvents({
         click: (e) => {
-            onPick(e.latlng.lat, e.latlng.lng);
+            const [lat, lng] = clampToBounds(e.latlng.lat, e.latlng.lng);
+            onPick(lat, lng);
         },
     });
     return null;
@@ -64,6 +80,8 @@ export default function CampusMapPicker({
                 zoom={17}
                 className="h-full w-full z-0"
                 zoomControl={true}
+                maxBounds={BULSU_BOUNDS}
+                maxBoundsViscosity={1.0}
             >
                 <TileLayer
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -89,7 +107,8 @@ export default function CampusMapPicker({
                         eventHandlers={{
                             dragend: (e) => {
                                 const { lat, lng } = e.target.getLatLng();
-                                onChange(lat, lng);
+                                const [clampedLat, clampedLng] = clampToBounds(lat, lng);
+                                onChange(clampedLat, clampedLng);
                             },
                         }}
                     />

@@ -121,6 +121,10 @@ export default function Profile() {
   const [originalContact, setOriginalContact] = useState("");
   const user_id = localStorage.getItem("user_id");
 
+  const isActingAsUser =
+    localStorage.getItem("acting_as_admin") === "true" ||
+    localStorage.getItem("acting_as_super_admin") === "true";
+
   const [user, setUser] = useState({
     name: "",
     studentId: "",
@@ -392,7 +396,11 @@ export default function Profile() {
               {/* Change Password */}
               <button
                 onClick={() => setPage("changePassword")}
-                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
+                disabled={isActingAsUser}
+                title={isActingAsUser ? "Disabled while acting as End User" : undefined}
+                className={`flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100 ${
+                  isActingAsUser ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 <ChangePasswordIcon />
                 <p className="flex-1 text-sm text-left text-[#4B2D23]">

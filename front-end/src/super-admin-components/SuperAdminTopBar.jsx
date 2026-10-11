@@ -1,7 +1,7 @@
 import icon from "../assets/lfms_icon.png"
 import { NavLink } from "react-router-dom";
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import AdminNotificationDropdown from "../admin-components/AdminNotificationDropdown";
 import SuperAdminNotificationDropdown from "./SuperAdminNotificationDropDown";
@@ -10,13 +10,24 @@ import SuperAdminModeSwitcher from "./SuperAdminModeSwitcher";
 export default function SuperAdminTopBar({tabName}) {
     const API_URL = import.meta.env.VITE_API_URL;
     const fullName = localStorage.getItem("first_name") + " " + localStorage.getItem("last_name");
-    const userId = localStorage.getItem("user_id"); 
+    const userId = localStorage.getItem("user_id");
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
      const imageUrl = localStorage.getItem("profile_image_url") || null;
+     const notifRef = useRef(null);
 
-    
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (notifRef.current && !notifRef.current.contains(e.target)) {
+                setIsNotifOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+
 
     useEffect(() => {
         if (!userId) return;
@@ -134,7 +145,7 @@ const markAllAdminNotificationsAsRead = async () => {
                         </div>
                         <div className="flex items-center gap-2 ">
                             <SuperAdminModeSwitcher />
-                            <div className="relative group flex items-center justify-center">
+                            <div className="relative group flex items-center justify-center" ref={notifRef}>
                                 <button
                                     className={`text-primary outline-none relative cursor-pointer
                                     `}

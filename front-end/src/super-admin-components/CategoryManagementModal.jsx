@@ -94,7 +94,7 @@ export default function CategoryManagementModal({
         <>
             <div
                 className="fixed inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center"
-                // onClick={() => (isChanged ? setOpenCancelEdit(true) : setSelectedCategory(null))}
+                onClick={handleClosePanel}
             >
                 <div
                     className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col"

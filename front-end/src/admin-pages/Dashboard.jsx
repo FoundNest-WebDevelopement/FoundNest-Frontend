@@ -278,9 +278,17 @@ export default function Dashboard() {
                         ) : (
                             recentActions.map((action, i) => (
                                 <div key={i} className="flex gap-3 items-start border-l-4 border-[#FDC502] pl-3 py-1">
-                                    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                        <i className="fa-regular fa-circle-user text-gray-400 text-xl"></i>
-                                    </div>
+                                    {action.profile_image_url ? (
+                                        <img
+                                            src={action.profile_image_url}
+                                            alt=""
+                                            className="w-9 h-9 rounded-full object-cover shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <i className="fa-regular fa-circle-user text-gray-400 text-xl"></i>
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="text-sm font-semibold text-[#1A1208]">
                                             {action.first_name} {action.last_name}

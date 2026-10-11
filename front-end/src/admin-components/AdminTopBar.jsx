@@ -1,7 +1,7 @@
 import icon from "../assets/lfms_icon.png";
 import { NavLink } from "react-router-dom";
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminNotificationDropdown from "./AdminNotificationDropdown";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SwitchBackButton from "../global-components/SwitchBackButton";
@@ -18,11 +18,22 @@ export default function AdminTopBar({ tabName }) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef(null);
 
   const userId = localStorage.getItem("user_id");
   const role = localStorage.getItem("role");
   const officeLocation = localStorage.getItem("office_name") || "Office Admin";
   const officeId = localStorage.getItem("office_location")
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
 
   useEffect(() => {
@@ -154,7 +165,7 @@ export default function AdminTopBar({ tabName }) {
             <ActingSuperAdminSwitcher />
             <SwitchBackButton />
             <SwitchToUserButton />
-            <div className="relative group flex items-center justify-center">
+            <div className="relative group flex items-center justify-center" ref={notifRef}>
               <button
                 className={`text-primary outline-none relative cursor-pointer
             `}

@@ -8,6 +8,7 @@ import { isPasswordStrong } from "../utils/passwordRules";
 export default function AdminProfile() {
   const API_URL = import.meta.env.VITE_API_URL;
   const userId = localStorage.getItem("user_id");
+  const isActingAsAdmin = localStorage.getItem("acting_as_super_admin") === "true";
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -250,7 +251,13 @@ export default function AdminProfile() {
               </p>
               <button
                 onClick={() => setOpenChangePassword(true)}
-                className="text-sm text-left text-gray-500 hover:text-primary transition-colors cursor-pointer"
+                disabled={isActingAsAdmin}
+                title={isActingAsAdmin ? "Disabled while acting as Admin" : undefined}
+                className={`text-sm text-left transition-colors ${
+                  isActingAsAdmin
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-500 hover:text-primary cursor-pointer"
+                }`}
               >
                 Change Password
               </button>

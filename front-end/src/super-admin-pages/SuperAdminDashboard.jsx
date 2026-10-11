@@ -372,7 +372,15 @@ if (!stats || !counters) {
                                 key={action.action_log_id}
                                 className="flex items-start gap-3 bg-[#F5F5F3] rounded-lg px-4 py-3"
                             >
-                                <UserCircle2 size={28} className="text-[#1A1208] shrink-0 mt-0.5" strokeWidth={1.5} />
+                                {action.profile_image_url ? (
+                                    <img
+                                        src={action.profile_image_url}
+                                        alt=""
+                                        className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
+                                    />
+                                ) : (
+                                    <UserCircle2 size={28} className="text-[#1A1208] shrink-0 mt-0.5" strokeWidth={1.5} />
+                                )}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-sm font-semibold text-[#1A1208]">

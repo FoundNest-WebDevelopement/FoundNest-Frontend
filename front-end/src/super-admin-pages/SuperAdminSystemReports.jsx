@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import GenerateReportModal from "../super-admin-components/GenerateReportModal";
@@ -74,11 +74,11 @@ if (isLoading || !stats) {
                 <button
                     type="button"
                     onClick={() => setOpenGenerateReport(true)}
-                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
+                    className="flex items-center gap-2 border border-primary text-primary bg-white px-4 py-2 rounded-md text-sm font-medium
                         transition-transform duration-100 active:scale-95 shrink-0"
                 >
-                    <Plus size={16} />
-                    Generate Report
+                    <Download size={16} />
+                    Export Report
                 </button>
             </div>
 
@@ -93,6 +93,8 @@ if (isLoading || !stats) {
                                     <th>ITEMS CLAIMED</th>
                                     <th>CLAIM RATE</th>
                                     <th>UNCLAIMED ITEMS</th>
+                                    <th>DONATED ITEMS</th>
+                                    <th>DISPOSED ITEMS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -109,11 +111,13 @@ if (isLoading || !stats) {
                                         <td className="align-middle">{center.items_claimed}</td>
                                         <td className="align-middle font-semibold">{center.claim_rate}%</td>
                                         <td className="align-middle">{center.unclaimed_items}</td>
+                                        <td className="align-middle">{center.donated_items}</td>
+                                        <td className="align-middle">{center.disposed_items}</td>
                                     </tr>
                                 ))}
                                 {paginatedCenters.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-8 text-[#6B5C42]">
+                                        <td colSpan={7} className="text-center py-8 text-[#6B5C42]">
                                             No Records to display.
                                         </td>
                                     </tr>

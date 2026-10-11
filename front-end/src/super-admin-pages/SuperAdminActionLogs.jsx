@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { Search, Filter, Download, ChevronDown } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import formatDateTime from "../utils/formatDataTimeNew";
 import { formatActionType } from "../utils/formatActionType";
 import WebLoading from "../global-components/WebLoading";
-import ExportModal from "../global-components/ExportModal";
 import Button from "../global-components/Button";
+import ExportModal from "../global-components/ExportModal";
 
 // Active Role capsules shown at the top of the filter panel.
 // Values match the `user_level` column on action_logs
@@ -177,8 +180,6 @@ const toLocalISODate = (d = new Date()) => {
 export default function SuperAdminActionLogs() {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const userId = localStorage.getItem("user_id")
-
     const superAdminUserId = localStorage.getItem("user_id");
 
     const [logs, setLogs] = useState([]);
@@ -194,6 +195,8 @@ export default function SuperAdminActionLogs() {
     const [dateTo, setDateTo] = useState("");
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState("pdf");
+    const [exportScope, setExportScope] = useState("filtered"); // "filtered" | "all"
 
     const [expandedLogId, setExpandedLogId] = useState(null);
 
@@ -333,6 +336,88 @@ export default function SuperAdminActionLogs() {
     const activePage = Math.min(currentPage, totalPages);
     const startIndex = (activePage - 1) * itemsPerPage;
     const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+    const logsToExport = exportScope === "all" ? logs : filteredLogs;
+    const noLogsToExport = exportScope === "filtered" && filteredLogs.length === 0;
+
+    const logExportRow = (log) => {
+        const performedBy = log.first_name
+            ? `${log.first_name} ${log.last_name}${log.user_role ? ` (${formatActionType(log.user_role)})` : ""}`
+            : "N/A";
+
+        return [
+            formatLogId(log.action_log_id),
+            formatDateTime(log.created_at),
+            formatActionType(log.action_type),
+            formatRecordId(log.entity_type, log.entity_id),
+            log.description || "No additional details.",
+            performedBy,
+        ];
+    };
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text("Action Logs Report", 14, 16);
+        doc.setFontSize(10);
+        doc.text(
+            `Generated: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })}`,
+            14,
+            22
+        );
+
+        autoTable(doc, {
+            startY: 28,
+            head: [["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"]],
+            body: logsToExport.map(logExportRow),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [153, 0, 0] },
+        });
+
+        doc.save(`action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`);
+    };
+
+    const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const handleExportCSV = () => {
+        const header = ["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"];
+        const rows = logsToExport.map(logExportRow);
+
+        const csvContent = [header, ...rows]
+            .map((row) => row.map(csvEscape).join(","))
+            .join("\r\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExport = () => {
+        if (noLogsToExport) return;
+
+        if (exportFormat === "pdf") {
+            handleExportPDF();
+        } else {
+            handleExportCSV();
+        }
+
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
+
+    const handleCloseExportModal = () => {
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
 
 
 
@@ -545,8 +630,7 @@ export default function SuperAdminActionLogs() {
                                     <button
                                         type="button"
                                         onClick={handleClearFilters}
-                                        className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium
-                                transition-transform duration-100 active:scale-95"
+                                        className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
                                     >
                                         Clear Filters
                                     </button>
@@ -741,7 +825,7 @@ export default function SuperAdminActionLogs() {
                 <ExportModal
                     title="Export Action Logs"
                     endpoint="/api/export/action-logs"
-                    queryParams={{ userId }}
+                    queryParams={{ superAdminUserId }}
                     filenamePrefix="ACTION_LOGS"
                     onClose={() => setIsExportModalOpen(false)}
                     onUpdate={fetchLogs}

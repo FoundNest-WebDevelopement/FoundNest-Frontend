@@ -136,7 +136,10 @@ export default function LocationManagementModal({
 
     return (
         <>
-            <div className="fixed inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center">
+            <div
+                className="fixed inset-0 z-100 w-screen h-screen bg-black/20 flex items-center justify-center"
+                onClick={handleClosePanel}
+            >
                 <div
                     className="absolute top-0 right-0 h-full w-3/10 bg-white flex flex-col"
                     onClick={(e) => e.stopPropagation()}
@@ -189,26 +192,25 @@ export default function LocationManagementModal({
                                         </p>
                                     </div>
 
-                                    <div className="flex">
-                                        <div className="flex flex-col gap-1 flex-1">
-                                            <p className="text-xs text-[#6B5C42]">TYPE</p>
-                                            <p className="text-xs">
-                                                {TYPE_LABELS[selectedLocation.location_type] || selectedLocation.location_type}
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-[#6B5C42]">TYPE</p>
+                                        <p className="text-xs">
+                                            {TYPE_LABELS[selectedLocation.location_type] || selectedLocation.location_type}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-[#6B5C42]">STATUS</p>
+                                        <div
+                                            className={`px-3 py-1 rounded-full text-xs font-medium w-fit
+                                                ${selectedLocation.status === true && "bg-green-100 text-green-700"}
+                                                ${selectedLocation.status === false && "bg-gray-200 text-gray-700"}
+                                            `}
+                                        >
+                                            <p>
+                                                {selectedLocation.status === true && "Active"}
+                                                {selectedLocation.status === false && "Inactive"}
                                             </p>
-                                        </div>
-                                        <div className="flex flex-col gap-1 flex-1">
-                                            <p className="text-xs text-[#6B5C42]">STATUS</p>
-                                            <div
-                                                className={`px-3 py-1 rounded-full text-xs font-medium w-fit
-                                                    ${selectedLocation.status === true && "bg-green-100 text-green-700"}
-                                                    ${selectedLocation.status === false && "bg-gray-200 text-gray-700"}
-                                                `}
-                                            >
-                                                <p>
-                                                    {selectedLocation.status === true && "Active"}
-                                                    {selectedLocation.status === false && "Inactive"}
-                                                </p>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

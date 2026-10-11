@@ -17,7 +17,6 @@ export default function ExportModal({
     onClose,
     onUpdate,
     queryParams = {},
-    officeName,
     scopeExport = false,
     filteredIds = [],
     exportDisabled = false,
@@ -163,12 +162,6 @@ export default function ExportModal({
                 </div>
 
                 <div className="p-4">
-                    {officeName && (
-                        <p className="text-xs text-[#6B5C42] mb-3">
-                            Exporting data for <span className="font-semibold text-[#1A1208]">{officeName}</span>
-                        </p>
-                    )}
-
                     {exportDisabled && exportDisabledReason && (
                         <p className="text-xs text-[#C0392B] mb-3 bg-[#FBEAEA] border border-[#C0392B]/30 rounded-md px-3 py-2">
                             {exportDisabledReason}

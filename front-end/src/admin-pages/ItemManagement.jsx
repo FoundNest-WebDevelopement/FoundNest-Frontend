@@ -310,7 +310,13 @@ useEffect(() => {
               <AdminDateInput placeholder="End Date" value={dateFoundTo} onChange={setDateFoundTo} min={dateFoundFrom || undefined} max={today} />
             </div>
             <div className="h-full w-fit flex items-center justify-center ml-20 gap-1">
-              <AdminButton isIcon={false} label="Clear Filters" isSolid={true} isBorder={false} isShadow={false} onClick={handleClearFilters} />
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
+              >
+                Clear Filters
+              </button>
             </div>
           </div>
         </div>

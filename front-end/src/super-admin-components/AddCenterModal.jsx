@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Building2 } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -19,11 +19,13 @@ export default function AddCenterModal({ onClose, onUpdated }) {
 
     const [locationOptions, setLocationOptions] = useState([]);
     const [existingCenters, setExistingCenters] = useState([]);
+    const [allCenters, setAllCenters] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState("");
 
     const [openConfirmAdd, setOpenConfirmAdd] = useState(false);
     const [openCancelAdd, setOpenCancelAdd] = useState(false);
+    const mouseDownOnBackdrop = useRef(false);
 
     const checkProgress =
         officeName !== "" ||
@@ -31,6 +33,12 @@ export default function AddCenterModal({ onClose, onUpdated }) {
         operatingHours !== "" ||
         notes !== "" ||
         latitude !== null;
+
+    const isDuplicateName =
+        officeName.trim() !== "" &&
+        allCenters.some(
+            (c) => c.office_name?.trim().toLowerCase() === officeName.trim().toLowerCase()
+        );
 
     useEffect(() => {
         const loadLocationOptions = async () => {
@@ -55,6 +63,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                 const data = await response.json();
 
                 if (response.ok && Array.isArray(data)) {
+                    setAllCenters(data);
                     setExistingCenters(data.filter((c) => c.latitude && c.longitude));
                 }
             } catch (err) {
@@ -67,8 +76,15 @@ export default function AddCenterModal({ onClose, onUpdated }) {
     }, []);
 
     const handleSubmit = async () => {
+        setOpenConfirmAdd(false);
+
         if (!officeName.trim()) {
             setError("Center name is required.");
+            return;
+        }
+
+        if (isDuplicateName) {
+            setError("A center with this name already exists.");
             return;
         }
 
@@ -88,7 +104,6 @@ export default function AddCenterModal({ onClose, onUpdated }) {
         }
 
         try {
-            setOpenConfirmAdd(false);
             setIsSaving(true);
             setError("");
 
@@ -137,7 +152,12 @@ export default function AddCenterModal({ onClose, onUpdated }) {
             {createPortal(
             <div
                 className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
-                onClick={() => !isSaving && onClose()}
+                onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+                onClick={(e) => {
+                    if (!isSaving && mouseDownOnBackdrop.current && e.target === e.currentTarget) {
+                        onClose();
+                    }
+                }}
             >
                 <div
                     className="relative bg-white rounded-lg w-[900px] max-w-[92vw]"
@@ -163,8 +183,15 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                         value={officeName}
                                         onChange={(e) => { setOfficeName(e.target.value); setError(""); }}
                                         placeholder="e.g. Pimentel Hall FoundNest Office"
-                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
+                                            isDuplicateName
+                                                ? "border-[#C0392B] focus:border-[#C0392B]"
+                                                : "border-[#DDD9CF] focus:border-primary"
+                                        }`}
                                     />
+                                    {isDuplicateName && (
+                                        <p className="text-xs text-[#C0392B]">A center with this name already exists.</p>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col gap-1">
@@ -209,18 +236,23 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                                     <label className="text-sm font-medium text-[#1A1208]">
                                         Center Building <span className="text-[#C0392B]">*</span>
                                     </label>
-                                    <select
-                                        value={locationName}
-                                        onChange={(e) => { setLocationName(e.target.value); setError(""); }}
-                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
-                                    >
-                                        <option value="" disabled hidden>e.g. Pimentel Hall</option>
-                                        {locationOptions.map((loc) => (
-                                            <option key={loc} value={loc}>
-                                                {loc}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            value={locationName}
+                                            onChange={(e) => { setLocationName(e.target.value); setError(""); }}
+                                            className={`w-full border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary appearance-none pr-10 ${
+                                                locationName ? "text-[#1A1208]" : "text-[#9A8F7C]"
+                                            }`}
+                                        >
+                                            <option value="" disabled hidden>e.g. Pimentel Hall</option>
+                                            {locationOptions.map((loc) => (
+                                                <option key={loc} value={loc} className="text-[#1A1208]">
+                                                    {loc}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9A8F7C]" />
+                                    </div>
                                 </div>
 
                                 {error && (
@@ -290,7 +322,7 @@ export default function AddCenterModal({ onClose, onUpdated }) {
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving || officeName === "" || operatingHours === "" || locationName === "" || latitude === null || longitude === null}
+                            disabled={isSaving || !officeName.trim() || isDuplicateName || !operatingHours.trim() || locationName === "" || latitude === null || longitude === null}
                             onClick={() => setOpenConfirmAdd(true)}
                         >
                             {isSaving ? "Saving..." : "Save Center"}
