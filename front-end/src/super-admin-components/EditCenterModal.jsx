@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
@@ -27,6 +27,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
 
     const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
     const [openCancelConfirmDialog, setOpenCancelConfirmDialog] = useState(false);
+    const mouseDownOnBackdrop = useRef(false);
 
     useEffect(() => {
         const loadLocationOptions = async () => {
@@ -80,6 +81,12 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
         latitude !== (center?.latitude ? Number(center.latitude) : null) ||
         longitude !== (center?.longitude ? Number(center.longitude) : null);
 
+    const isDuplicateName =
+        officeName.trim() !== "" &&
+        allCenters.some(
+            (c) => c.office_name?.trim().toLowerCase() === officeName.trim().toLowerCase()
+        );
+
     const handleSubmit = async () => {
         setOpenConfirmDialog(false);
 
@@ -88,9 +95,6 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
             return;
         }
 
-        const isDuplicateName = allCenters.some(
-            (c) => c.office_name?.trim().toLowerCase() === officeName.trim().toLowerCase()
-        );
         if (isDuplicateName) {
             setError("A center with this name already exists.");
             return;
@@ -157,7 +161,12 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
             {createPortal(
             <div
                 className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
-                onClick={() => !isSaving && onClose()}
+                onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+                onClick={(e) => {
+                    if (!isSaving && mouseDownOnBackdrop.current && e.target === e.currentTarget) {
+                        onClose();
+                    }
+                }}
             >
                 <div
                     className="relative bg-white rounded-lg w-[900px] max-w-[92vw]"
@@ -198,8 +207,15 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                                         type="text"
                                         value={officeName}
                                         onChange={(e) => { setOfficeName(e.target.value); setError(""); }}
-                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
+                                            isDuplicateName
+                                                ? "border-[#C0392B] focus:border-[#C0392B]"
+                                                : "border-[#DDD9CF] focus:border-primary"
+                                        }`}
                                     />
+                                    {isDuplicateName && (
+                                        <p className="text-xs text-[#C0392B]">A center with this name already exists.</p>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col gap-1">
@@ -348,7 +364,7 @@ export default function EditCenterModal({ center, onClose, onUpdated }) {
                             className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
                                 transition-transform duration-100 enabled:active:scale-95
                                 disabled:opacity-40 disabled:cursor-not-allowed"
-                            disabled={isSaving || !hasChanges || !officeName.trim() || !operatingHours.trim() || latitude === null || longitude === null}
+                            disabled={isSaving || !hasChanges || !officeName.trim() || isDuplicateName || !operatingHours.trim() || latitude === null || longitude === null}
                             onClick={() => setOpenConfirmDialog(true)}
                         >
                             {isSaving ? "Saving..." : "Save Changes"}
