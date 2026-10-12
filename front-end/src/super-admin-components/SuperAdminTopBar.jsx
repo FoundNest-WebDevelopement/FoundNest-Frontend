@@ -143,7 +143,7 @@ const markAllAdminNotificationsAsRead = async () => {
                         <div className="font-semibold text-xl">
                             <p>{tabName}</p>
                         </div>
-                        <div className="flex items-center gap-2 ">
+                        <div className="flex items-center gap-7">
                             <SuperAdminModeSwitcher />
                             <div className="relative group flex items-center justify-center" ref={notifRef}>
                                 <button
