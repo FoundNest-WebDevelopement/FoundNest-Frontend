@@ -157,7 +157,7 @@ export default function Feedbacks() {
             );
             setSelectedReview((prev) => ({ ...prev, ...data.review }));
             setIsEditingResponse(false);
-            toast.success("Response submitted successfully.");
+            toast.success("Response Edited successfully.");
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to submit response.");
