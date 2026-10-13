@@ -52,10 +52,14 @@ export default function SideNav() {
 
   const go = (to) => (e) => {
     e.preventDefault();
-    if (to === pathname) return;
-    const result = requestNavigation(() => navigate(to));
+    // Clicking the tab you are already on navigates to it again: the page is reset to the tab's
+    // start (e.g. Profile closes Account Details / QR Item). Unsaved edits still raise the
+    // "discard changes?" dialog first, because this goes through the same guard.
+    const result = requestNavigation(() =>
+      navigate(to, { replace: to === pathname, state: { reset: Date.now() } })
+    );
     if (result === "blocked") {
-      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 1500 });
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 2000 });
     }
   };
 

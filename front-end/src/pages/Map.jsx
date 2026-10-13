@@ -141,6 +141,7 @@ export default function Map() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
   const [sheetShown, setSheetShown] = useState(false);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
@@ -276,7 +277,19 @@ export default function Map() {
   const isChanged = rating !== initialRating || reviewText.trim() !== initialText.trim();
   const canSubmit = isEditing ? isChanged && rating > 0 : rating > 0;
 
+  // A new review posts straight away; changing an existing one asks first
+  const handleSubmitPress = () => {
+    if (!online) {
+      setAlertMessage("You are currently offline. Cannot post review.");
+      return;
+    }
+    if (!canSubmit) return;
+    if (myReview) setConfirmUpdate(true);
+    else handlePostReview();
+  };
+
   const handlePostReview = async () => {
+    setConfirmUpdate(false);
     if (!online) {
       setAlertMessage("You are currently offline. Cannot post review.");
       return;
@@ -600,7 +613,7 @@ export default function Map() {
 
                     <button
                       type="button"
-                      onClick={handlePostReview}
+                      onClick={handleSubmitPress}
                       disabled={isSubmitting || isDeleting || loadingReviews || !online || !canSubmit}
                       className={`w-full p-3 rounded-lg flex items-center justify-center mt-3 ${
                         !online || !canSubmit
@@ -661,6 +674,16 @@ export default function Map() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmUpdate && (
+        <AlertDialog
+          message="Update your review with these changes?"
+          b1Label="Cancel"
+          b2Label="Update"
+          b1OnClick={() => setConfirmUpdate(false)}
+          b2OnClick={handlePostReview}
+        />
       )}
 
       {confirmDelete && (

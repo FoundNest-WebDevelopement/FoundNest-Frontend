@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertDialog from "../components/AlertDialog";
 import PasswordChecklist from "../user-native/PasswordChecklist";
@@ -6,6 +6,7 @@ import StackHeader from "../user-native/StackHeader";
 import Icon from "../user-native/Icon";
 import { isPasswordStrong } from "../utils/passwordRules";
 import { changePassword } from "../utils/authApi";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
 function PasswordField({ label, value, onChange, show, onToggle, error, children }) {
   return (
@@ -55,6 +56,13 @@ export default function ChangePassword({ onBack }) {
   const [discardMode, setDiscardMode] = useState("leave");
 
   const hasChanges = currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0;
+
+  // Typed passwords also guard the side navigation / tab bar (not just the back arrow)
+  const { setDirty } = useUnsavedChangesGuard();
+  useEffect(() => {
+    setDirty(hasChanges);
+    return () => setDirty(false);
+  }, [hasChanges, setDirty]);
   const isFormFilled =
     currentPassword.trim().length > 0 && newPassword.trim().length > 0 && confirmPassword.trim().length > 0;
   const isNewPasswordValid = isPasswordStrong(newPassword);

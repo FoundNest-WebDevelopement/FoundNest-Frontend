@@ -23,7 +23,7 @@ const LIMITS = { itemName: 50, description: 500, contents: 100 };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 1500 });
+const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 2000 });
 
 function disposeScanner(instance) {
   // Multiple code paths (effect cleanup, decode callback, delayed start()
@@ -961,6 +961,19 @@ export default function QRItem({ onBack }) {
     }
   };
 
+  // The scanner is a fixed full-screen view: the page behind it must not scroll
+  useEffect(() => {
+    if (page !== "scan" && page !== "scanResult") return;
+    const html = document.documentElement.style.overflow;
+    const body = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = html;
+      document.body.style.overflow = body;
+    };
+  }, [page]);
+
   // QR Scanner
   useEffect(() => {
     if (page !== "scan" || !scannerRef.current) return;
@@ -1522,11 +1535,11 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "scan") {
     return (
-      <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col">
+      <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col">
         <StackHeader title="Scan An Item" onBack={() => setPage("main")} />
 
         {!scannerError ? (
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-h-0">
             <div
               id="qr-reader"
               ref={scannerRef}
@@ -1574,7 +1587,7 @@ export default function QRItem({ onBack }) {
 
     if (status === "loading" || !scanResult) {
       return (
-        <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col">
+        <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col">
           <StackHeader title="Scan An Item" onBack={() => setPage("main")} />
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="w-9 h-9 border-[3px] border-white border-t-transparent rounded-full animate-spin" />

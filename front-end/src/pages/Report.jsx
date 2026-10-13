@@ -39,8 +39,8 @@ const MIN_LENGTHS = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 1500 });
-const showToastLight = (message) => toast.custom(() => <Toast message={message}  />, { duration: 1500 });
+const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 2000 });
+const showToastLight = (message) => toast.custom(() => <Toast message={message}  />, { duration: 2000 });
 
 const sanitizeInput = sanitizeText;
 

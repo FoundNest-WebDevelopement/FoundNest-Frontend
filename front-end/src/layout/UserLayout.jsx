@@ -9,7 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 const NO_TAB_BAR = [/^\/notifications(\/|$)/];
 
 function UserLayout() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const showTabBar = !NO_TAB_BAR.some((re) => re.test(pathname));
 
   return (
@@ -17,7 +17,7 @@ function UserLayout() {
       <UnsavedChangesProvider>
         <ToastContainer
           position="top-right"
-          autoClose={1500}
+          autoClose={2000}
           toastStyle={{
             width: "100%",
           }}
@@ -30,7 +30,8 @@ function UserLayout() {
           <div
             className={`user-column max-w-3xl lg:max-w-none mx-auto w-full ${showTabBar ? "pb-[70px] lg:pb-0" : ""}`}
           >
-            <Outlet />
+            {/* a new `reset` stamp (sidebar re-click) remounts the page, giving it a fresh start */}
+            <Outlet key={state?.reset ?? "route"} />
           </div>
         </div>
 

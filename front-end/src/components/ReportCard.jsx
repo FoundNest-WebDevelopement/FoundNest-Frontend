@@ -37,7 +37,7 @@ function loadNotifications() {
   return promise;
 }
 
-const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 1500 });
+const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 2000 });
 
 function ImageFallback({ className, size }) {
   return (

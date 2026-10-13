@@ -91,6 +91,8 @@ export function Dropdown({ value, options, onChange, placeholder, disabled = fal
   }, [open]);
 
   const selected = options.find((o) => String(o.value) === String(value));
+  // Disabled (e.g. while the AI scans the photo) darkens the field like the text boxes; a read-only view does not
+  const darkened = disabled && !viewOnly;
 
   return (
     <div className={`${flush ? "" : "px-5"} relative`} ref={ref}>
@@ -100,15 +102,17 @@ export function Dropdown({ value, options, onChange, placeholder, disabled = fal
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`w-full h-[50px] bg-white rounded-lg px-3 flex items-center justify-between text-left ${
-          variant === "qr"
+        className={`w-full h-[50px] rounded-lg px-3 flex items-center justify-between text-left ${
+          darkened
+            ? "bg-[#E2D7CC] border border-[#C5B8AC]"
+            : variant === "qr"
             ? error
               ? "border-[1.5px] border-[#C62828]"
               : "border border-[#D6D6D6]"
             : `border ${error ? "border-[#C62828]" : "border-black/[0.08]"}`
-        } ${disabled && !viewOnly ? "bg-[#E2D7CC]" : ""}`}
+        } ${darkened ? "" : "bg-white"}`}
       >
-        <span className={`text-[16px] truncate ${selected ? "text-[#1a1a1a]" : "text-[#8C7A70]"}`}>
+        <span className={`text-[16px] truncate ${darkened ? "text-[#888888]" : selected ? "text-[#1a1a1a]" : "text-[#8C7A70]"}`}>
           {selected ? selected.label : placeholder}
         </span>
         {!disabled && <Icon family="material" name="keyboard-arrow-down" size={24} color="#8B0000" />}

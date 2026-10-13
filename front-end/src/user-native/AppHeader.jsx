@@ -57,7 +57,7 @@ export default function AppHeader({ title, desktopTitle, onBack, redDesktop = fa
     if (location.pathname === "/notifications") return;
     const result = requestNavigation(() => navigate("/notifications"));
     if (result === "blocked") {
-      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 1500 });
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 2000 });
     }
   };
 
@@ -74,7 +74,7 @@ export default function AppHeader({ title, desktopTitle, onBack, redDesktop = fa
           </button>
         )}
 
-        <p className={`text-[18px] font-bold leading-6 text-primary ${redDesktop ? "lg:text-white" : ""}`}>
+        <p className={`text-[18px] font-bold leading-6 text-primary lg:text-[22px] lg:leading-[normal] ${redDesktop ? "lg:text-white" : ""}`}>
           <span className="lg:hidden">{title}</span>
           <span className="hidden lg:inline">{desktopTitle ?? title}</span>
         </p>

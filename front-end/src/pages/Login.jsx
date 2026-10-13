@@ -1,8 +1,8 @@
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
-import logowhite from "../assets/logowhite.png";
+import nestLogo from "../assets/nest-logo.png";
 import bsulogo from "../assets/bsulogo.png";
-import bsu from "../assets/bsu.jpg";
+import loginBg from "../assets/login-bg.jpg";
 import { useState, useEffect } from "react";
 import RoleSelectionModal from "../super-admin-components/RoleSelectionModal";
 import AdminRoleSelectionModal from "../admin-components/AdminRoleSelectionModal";
@@ -187,7 +187,7 @@ const DesktopLogin = (
       style={{
         position: "absolute",
         inset: 0,
-        backgroundImage: `url(${bsu})`,
+        backgroundImage: `url(${loginBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -389,9 +389,10 @@ const DesktopLogin = (
 
         <div className="flex flex-col items-center">
           <img
-            src={logowhite}
+            src={nestLogo}
             alt="FoundNest"
-            className="w-52 h-52 object-contain"
+            // the artwork is maroon; brightness-0 + invert turns it white on the red panel (alpha is kept)
+            className="w-52 h-52 object-contain brightness-0 invert"
           />
 
           <p className="text-white text-[25px] font-bold mt-2">

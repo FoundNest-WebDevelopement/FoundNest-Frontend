@@ -36,7 +36,7 @@ export default function TabBar() {
     if (to === path) return;
     const result = requestNavigation(() => navigate(to));
     if (result === "blocked") {
-      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 1500 });
+      toast.custom(() => <Toast message="Please wait until scanning finishes." solid />, { duration: 2000 });
     }
   };
 

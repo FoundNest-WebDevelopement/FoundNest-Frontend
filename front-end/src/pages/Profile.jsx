@@ -12,6 +12,7 @@ import StackHeader from "../user-native/StackHeader";
 import Icon from "../user-native/Icon";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { isMobileDevice } from "../utils/isMobileDevice";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 import SafeImage from "../user-native/SafeImage";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -20,7 +21,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 const showToast = (message, type = "success") =>
-  toast.custom(() => <Toast message={message} solid type={type} />, { duration: 1500 });
+  toast.custom(() => <Toast message={message} solid type={type} />, { duration: 2000 });
 
 // The contact number can be stored as +639XXXXXXXXX (web) or 09XXXXXXXXX (mobile).
 // The form shows it the way the native app does (09XXXXXXXXX) and saves +63XXXXXXXXXX.
@@ -241,6 +242,14 @@ export default function Profile() {
   // Same rule as the native app: 09 followed by 9 digits
   const validateContact = (value) => /^09\d{9}$/.test(value.trim());
   const hasChanges = contactNumber !== originalContact;
+
+  // An unsaved contact-number edit also guards the side navigation / tab bar (not just the back arrow)
+  const { setDirty } = useUnsavedChangesGuard();
+  useEffect(() => {
+    if (page !== "accountDetails") return;
+    setDirty(hasChanges);
+    return () => setDirty(false);
+  }, [page, hasChanges, setDirty]);
 
   const handleSavePress = () => {
     if (!validateContact(contactNumber)) {

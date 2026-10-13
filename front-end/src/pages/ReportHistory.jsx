@@ -9,6 +9,8 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 const API_URL = import.meta.env.VITE_API_URL;
 const STATUS_OPTIONS = ["open", "cancelled", "resolved"];
 const FILTERS_KEY = "reportHistoryFilters";
+// Default view: only open reports (pick "All" in the Status filter to see every report)
+const DEFAULT_STATUSES = ["open"];
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -72,7 +74,7 @@ export default function ReportHistory() {
 
   const [search, setSearch] = useState(saved.search ?? "");
   const [selectedCategories, setSelectedCategories] = useState(saved.selectedCategories ?? []);
-  const [selectedStatuses, setSelectedStatuses] = useState(saved.selectedStatuses ?? []);
+  const [selectedStatuses, setSelectedStatuses] = useState(saved.selectedStatuses ?? DEFAULT_STATUSES);
   const [activeMenu, setActiveMenu] = useState(null); // "category" | "status" | null
 
   // "Matched" toggle, cycled on every click: all reports -> only matched -> only unmatched -> all
@@ -156,8 +158,9 @@ export default function ReportHistory() {
     });
   }, [reports, search, selectedCategories, selectedStatuses, matchMode, matchesByReport, matchesLoaded]);
 
-  const hasActiveFilters =
-    search.length > 0 || selectedCategories.length > 0 || selectedStatuses.length > 0 || matchMode !== "all";
+  const statusIsDefault =
+    selectedStatuses.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every((s) => selectedStatuses.includes(s));
+  const hasActiveFilters = search.length > 0 || selectedCategories.length > 0 || !statusIsDefault || matchMode !== "all";
 
   const cycleMatchMode = () => {
     setActiveMenu(null);
@@ -169,7 +172,7 @@ export default function ReportHistory() {
   const clearFilters = () => {
     setSearch("");
     setSelectedCategories([]);
-    setSelectedStatuses([]);
+    setSelectedStatuses(DEFAULT_STATUSES);
     setMatchMode("all");
     setActiveMenu(null);
   };
@@ -292,7 +295,7 @@ export default function ReportHistory() {
               <FilterTrigger
                 label={summaryLabel("Status", selectedStatuses, capitalize)}
                 open={activeMenu === "status"}
-                active={selectedStatuses.length > 0}
+                active={!statusIsDefault}
                 onClick={() => toggleMenu("status")}
               />
               <button

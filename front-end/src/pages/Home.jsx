@@ -70,7 +70,7 @@ function ActionCard({ icon, title, subtitle, onClick }) {
 }
 
 // Auto-sliding, infinitely looping "Recent Finds" carousel (RecentFindsCarousel in the native app).
-function RecentFindsCarousel({ items, activeIndex, onIndexChange, onOpen }) {
+function RecentFindsStrip({ items, activeIndex, onIndexChange, onOpen }) {
   const scrollRef = useRef(null);
   const interacting = useRef(false);
   const settleTimer = useRef(null);
@@ -124,6 +124,7 @@ function RecentFindsCarousel({ items, activeIndex, onIndexChange, onOpen }) {
   const pause = () => {
     interacting.current = true;
   };
+
   const resume = () => {
     setTimeout(() => {
       interacting.current = false;
@@ -192,6 +193,148 @@ function RecentFindsCarousel({ items, activeIndex, onIndexChange, onOpen }) {
       )}
     </div>
   );
+}
+
+// Desktop (lg+) "Recent Finds": a cover-flow. The active find is a large card in the middle, the
+// previous / next ones peek out dimmed and slightly smaller on both sides, arrows move between
+// them and clicking a side card brings it to the front.
+function RecentFindsCoverflow({ items, activeIndex, onIndexChange, onOpen }) {
+  const count = items.length;
+  const half = Math.floor(count / 2);
+  const paused = useRef(false);
+
+  useEffect(() => {
+    if (count <= 1) return;
+    const timer = setInterval(() => {
+      if (!paused.current) onIndexChange((activeIndex + 1) % count);
+    }, AUTO_SCROLL_INTERVAL);
+    return () => clearInterval(timer);
+  }, [activeIndex, count, onIndexChange]);
+
+  const go = (index) => onIndexChange(((index % count) + count) % count);
+
+  return (
+    <div
+      className="mb-[45px]"
+      onMouseEnter={() => {
+        paused.current = true;
+      }}
+      onMouseLeave={() => {
+        paused.current = false;
+      }}
+    >
+      <div className="relative h-[270px] overflow-hidden">
+        {items.map((item, index) => {
+          // signed distance from the active card, wrapped so the strip loops (-half..half)
+          const d = ((index - activeIndex + count + half) % count) - half;
+          const center = d === 0;
+          const visible = Math.abs(d) <= 1;
+
+          return (
+            <div
+              key={`cover-${item.found_report_id ?? item.item_id ?? index}`}
+              role="button"
+              tabIndex={visible ? 0 : -1}
+              aria-label={center ? `Open ${item.item_name}` : `Show ${item.item_name}`}
+              onClick={() => (center ? onOpen(item) : go(index))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") center ? onOpen(item) : go(index);
+              }}
+              className="absolute top-1/2 left-1/2 w-[62%] h-[240px] cursor-pointer"
+              style={{
+                transform: `translate(-50%, -50%) translateX(${d * 78}%) scale(${center ? 1 : 0.85})`,
+                zIndex: center ? 2 : 1,
+                opacity: visible ? 1 : 0,
+                pointerEvents: visible ? "auto" : "none",
+                transition: "transform 450ms ease, opacity 450ms ease",
+              }}
+            >
+              <div
+                className="relative w-full h-full rounded-2xl overflow-hidden flex flex-col justify-end bg-cover bg-center text-left"
+                style={{
+                  backgroundColor: "#7B1F1F",
+                  backgroundImage: item.image_url ? `url("${item.image_url}")` : undefined,
+                  boxShadow: center ? "0 8px 24px rgba(0,0,0,0.35)" : "none",
+                }}
+              >
+                <span className="block bg-black/45 px-4 py-3.5">
+                  <span className="block truncate text-white text-[20px] font-extrabold mb-2">{item.item_name}</span>
+                  <span className="block h-px bg-white/60 mb-2.5" />
+                  <span className="flex items-center gap-1.5 mb-1">
+                    <Icon name="calendar-outline" size={16} color="#fff" />
+                    <span className="flex-1 min-w-0 truncate text-white text-[13px]">{formatFoundDate(item.found_date)}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 mb-1">
+                    <Icon name="location-outline" size={16} color="#fff" />
+                    <span className="flex-1 min-w-0 truncate text-white text-[13px]">{item.location_found}</span>
+                  </span>
+                </span>
+                {/* the cards behind the active one are dimmed */}
+                <span
+                  className="absolute inset-0 bg-black/55 pointer-events-none transition-opacity duration-[450ms]"
+                  style={{ opacity: center ? 0 : 1 }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {count > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => go(activeIndex - 1)}
+              aria-label="Previous find"
+              className="absolute left-[5%] top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-black/45 hover:bg-black/65 flex items-center justify-center active:opacity-80"
+            >
+              <Icon name="chevron-back" size={26} color="#FFFFFF" />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(activeIndex + 1)}
+              aria-label="Next find"
+              className="absolute right-[5%] top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-black/45 hover:bg-black/65 flex items-center justify-center active:opacity-80"
+            >
+              <Icon name="chevron-forward" size={26} color="#FFFFFF" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {count > 1 && (
+        <>
+          <div className="flex justify-center gap-2 mt-3.5">
+            {items.map((report, index) => (
+              <button
+                key={report.found_report_id ?? report.item_id ?? index}
+                type="button"
+                onClick={() => go(index)}
+                aria-label={`Go to find ${index + 1}`}
+                className={`h-1 rounded-sm ${index === activeIndex ? "w-10 bg-[#FFF8F0]" : "w-7 bg-white/25"}`}
+              />
+            ))}
+          </div>
+          <p className="text-white/85 text-xs text-center mt-2">
+            {activeIndex + 1} / {count}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Swipe strip on phones / tablets, cover-flow from the lg breakpoint up
+function RecentFindsCarousel(props) {
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return isDesktop ? <RecentFindsCoverflow {...props} /> : <RecentFindsStrip {...props} />;
 }
 
 export default function Home() {
@@ -352,11 +495,11 @@ export default function Home() {
         {/* Lost Item Report */}
         <div className="mt-7">
           <div className="flex items-center justify-between mb-3.5">
-            <p className="text-white text-[20px] font-bold">Recent Lost Item Report</p>
+            <p className="min-w-0 truncate whitespace-nowrap text-white text-[20px] font-bold">Recent Lost Report</p>
             <button
               type="button"
               onClick={() => navigate(`/profile/report-history/${user_id}`)}
-              className="text-[#F5D76E] text-[14px] font-semibold active:opacity-70"
+              className="shrink-0 whitespace-nowrap ml-3 text-[#F5D76E] text-[14px] font-semibold active:opacity-70"
             >
               Go to My Reports &gt;
             </button>
