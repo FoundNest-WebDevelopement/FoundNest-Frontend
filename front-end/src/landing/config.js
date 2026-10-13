@@ -26,15 +26,15 @@ export const NAV_LINKS = [
 ];
 
 // Illustrative items for the "Browse Recent Found Items" carousel. /api/found-reports/public needs a
-// signed-in user, so the public page shows examples. Categories use the names the real system has;
-// none of these are real records.
+// signed-in user, so the public page shows examples. Categories use the names the real system has and
+// the places are real Center Locations (office names from /api/offices); none of the items are real records.
 export const PREVIEW_ITEMS = [
-  { id: "p1", name: "Black folding umbrella", category: "Personal Items", place: "Near the library", icon: "Umbrella" },
-  { id: "p2", name: "Smartphone with blue case", category: "Electronics", place: "Activity Center", icon: "Smartphone" },
-  { id: "p3", name: "Brown leather wallet", category: "Personal Items", place: "Heroes Park", icon: "Wallet" },
-  { id: "p4", name: "Student ID and lanyard", category: "Official Documents", place: "Main gate area", icon: "IdCard" },
-  { id: "p5", name: "Wireless earphones", category: "Electronics & Gadgets", place: "Bulsu E-Library", icon: "Headphones" },
-  { id: "p6", name: "Gray zip-up jacket", category: "Clothing and Accessories", place: "Covered court", icon: "Shirt" },
-  { id: "p7", name: "Badminton racket", category: "Sports Equipment", place: "Gymnasium", icon: "Dumbbell" },
-  { id: "p8", name: "Set of keys", category: "Personal Items", place: "Near the canteen", icon: "KeyRound" },
+  { id: "p1", name: "Black folding umbrella", category: "Personal Items", place: "Pimentel Hall", icon: "Umbrella" },
+  { id: "p2", name: "Smartphone with blue case", category: "Electronics", place: "Alvarado Hall", icon: "Smartphone" },
+  { id: "p3", name: "Brown leather wallet", category: "Personal Items", place: "Natividad Hall", icon: "Wallet" },
+  { id: "p4", name: "Student ID and lanyard", category: "Official Documents", place: "Federizo Hall", icon: "IdCard" },
+  { id: "p5", name: "Wireless earphones", category: "Electronics & Gadgets", place: "Roxas Hall", icon: "Headphones" },
+  { id: "p6", name: "Gray zip-up jacket", category: "Clothing and Accessories", place: "Mendoza Hall", icon: "Shirt" },
+  { id: "p7", name: "Badminton racket", category: "Sports Equipment", place: "Alvarado Hall", icon: "Dumbbell" },
+  { id: "p8", name: "Set of keys", category: "Personal Items", place: "Natividad Hall", icon: "KeyRound" },
 ];

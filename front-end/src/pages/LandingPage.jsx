@@ -217,21 +217,21 @@ function Hero() {
 const STEPS = [
   {
     n: "01",
-    category: "STEP 01 — REPORT ONLINE",
+    category: "STEP 01: REPORT ONLINE",
     title: "Submit a Lost Report",
     text: "File your lost item details on your account to start the tracking process instantly.",
     Visual: ReportVignette,
   },
   {
     n: "02",
-    category: "STEP 02 — MATCH & TRACK",
+    category: "STEP 02: MATCH & TRACK",
     title: "Automated Item Matching",
     text: "Our smart system compares your report details with surrendered inventory logs to speed up recovery.",
     Visual: MatchVignette,
   },
   {
     n: "03",
-    category: "STEP 03 — CLAIM ITEM",
+    category: "STEP 03: CLAIM ITEM",
     title: "Verify & Recover",
     text: "Visit the designated office where your item is stored, verify, and claim your belonging.",
     Visual: ClaimVignette,
@@ -543,7 +543,7 @@ function LandingContent() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "FoundNest — Bulacan State University Lost and Found";
+    document.title = "FoundNest | Bulacan State University Lost and Found";
 
     // Deep links such as /#office-map
     const id = window.location.hash.slice(1);
