@@ -8,6 +8,7 @@ import AppHeader from "../user-native/AppHeader";
 import Icon from "../user-native/Icon";
 import AlertDialog from "../components/AlertDialog";
 import useSheetDrag from "../user-native/useSheetDrag";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -252,6 +253,26 @@ export default function Map() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offices, focusOfficeId]);
 
+  const isEditing = !!myReview;
+  const isChanged = rating !== initialRating || reviewText.trim() !== initialText.trim();
+  const canSubmit = isEditing ? isChanged && rating > 0 : rating > 0;
+
+  // A rating / comment that was typed but not posted or updated yet
+  const hasUnsavedReview = !!selectedOffice && !isSubmitting && !isDeleting && isChanged;
+
+  // Leaving the office panel (close, another office, side navigation) with unsaved edits asks first
+  const { setDirty } = useUnsavedChangesGuard();
+  useEffect(() => {
+    setDirty(hasUnsavedReview);
+    return () => setDirty(false);
+  }, [hasUnsavedReview, setDirty]);
+
+  const [pendingLeave, setPendingLeave] = useState(null);
+  const guardLeave = (action) => {
+    if (hasUnsavedReview) setPendingLeave(() => action);
+    else action();
+  };
+
   const handleClose = useCallback(() => {
     setSelectedOffice(null);
     setReviews([]);
@@ -260,10 +281,11 @@ export default function Map() {
     setReviewText("");
   }, []);
 
-  const closeSheet = () => {
-    setSheetShown(false);
-    setTimeout(handleClose, 200);
-  };
+  const closeSheet = () =>
+    guardLeave(() => {
+      setSheetShown(false);
+      setTimeout(handleClose, 200);
+    });
 
   const { dragY, dragging, handlers } = useSheetDrag(closeSheet);
 
@@ -273,9 +295,6 @@ export default function Map() {
     return data.message || fallback;
   };
 
-  const isEditing = !!myReview;
-  const isChanged = rating !== initialRating || reviewText.trim() !== initialText.trim();
-  const canSubmit = isEditing ? isChanged && rating > 0 : rating > 0;
 
   // A new review posts straight away; changing an existing one asks first
   const handleSubmitPress = () => {
@@ -401,10 +420,12 @@ export default function Map() {
   };
 
   const selectFromDropdown = (office) => {
-    setFlyToOffice({ ...office });
-    setSearchQuery(office.office_name);
     setDropdownVisible(false);
-    openOffice(office);
+    guardLeave(() => {
+      setFlyToOffice({ ...office });
+      setSearchQuery(office.office_name);
+      openOffice(office);
+    });
   };
 
   return (
@@ -482,7 +503,7 @@ export default function Map() {
               position={[office.lat, office.lng]}
               icon={createMarkerIcon(office.office_name)}
               eventHandlers={{
-                click: () => openOffice(office),
+                click: () => guardLeave(() => openOffice(office)),
               }}
             />
           ))}
@@ -674,6 +695,20 @@ export default function Map() {
             </div>
           </div>
         </div>
+      )}
+
+      {pendingLeave && (
+        <AlertDialog
+          message="Discard changes? Unsaved edits will be lost."
+          b1Label="Keep Editing"
+          b2Label="Discard"
+          b1OnClick={() => setPendingLeave(null)}
+          b2OnClick={() => {
+            const action = pendingLeave;
+            setPendingLeave(null);
+            action();
+          }}
+        />
       )}
 
       {confirmUpdate && (

@@ -1,0 +1,290 @@
+/* FoundNest public landing page — design tokens and the few styles utilities can't express.
+   Everything is scoped to .fn-landing so the rest of the application is unaffected. */
+
+.fn-landing {
+  /* colour */
+  --fn-maroon: #990000;
+  --fn-maroon-deep: #5e0707;
+  --fn-ink: #2a1410;
+  --fn-muted: #6b564e;
+  --fn-cream: #fbf4ea;
+  --fn-paper: #fffcf7;
+  --fn-sand: #f0e2cf;
+  --fn-gold: #f2b63d;
+  --fn-rule: rgba(42, 20, 16, 0.16);
+  /* shape */
+  --fn-r-sm: 10px;
+  --fn-r-md: 18px;
+  --fn-r-lg: 28px;
+  /* motion */
+  --fn-ease: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --fn-dur: 0.28s;
+
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fn-ink);
+  background: var(--fn-cream);
+  line-height: 1.6;
+  overflow-x: clip;
+}
+
+/* Editorial display type: a system serif keeps the page distinctive without another web font */
+.fn-display {
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+}
+
+.fn-eyebrow {
+  text-wrap: balance;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fn-maroon);
+}
+
+.fn-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 640px) {
+  .fn-container {
+    padding-inline: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .fn-container {
+    padding-inline: 2.5rem;
+  }
+}
+
+.fn-section {
+  padding-block: 4.5rem;
+  scroll-margin-top: 72px;
+  outline: none;
+}
+@media (min-width: 1024px) {
+  .fn-section {
+    padding-block: 7rem;
+  }
+}
+
+.fn-rule {
+  height: 1px;
+  background: var(--fn-rule);
+}
+
+/* ---- buttons ---------------------------------------------------------------- */
+.fn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 48px;
+  padding: 0 1.5rem;
+  border: 2px solid transparent;
+  border-radius: var(--fn-r-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--fn-dur) var(--fn-ease),
+    background-color var(--fn-dur) var(--fn-ease),
+    color var(--fn-dur) var(--fn-ease),
+    border-color var(--fn-dur) var(--fn-ease),
+    box-shadow var(--fn-dur) var(--fn-ease);
+}
+.fn-btn:hover {
+  transform: translateY(-2px);
+}
+.fn-btn:active {
+  transform: translateY(0);
+}
+.fn-btn--primary {
+  background: var(--fn-maroon);
+  color: #fff;
+}
+.fn-btn--primary:hover {
+  background: var(--fn-maroon-deep);
+  box-shadow: 0 12px 24px -12px rgba(94, 7, 7, 0.7);
+}
+.fn-btn--outline {
+  border-color: var(--fn-ink);
+  color: var(--fn-ink);
+  background: transparent;
+}
+.fn-btn--outline:hover {
+  background: var(--fn-ink);
+  color: var(--fn-cream);
+}
+.fn-btn--light {
+  background: #fff;
+  color: var(--fn-maroon-deep);
+}
+.fn-btn--light:hover {
+  background: var(--fn-gold);
+  box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.5);
+}
+.fn-btn--dark {
+  background: var(--fn-maroon-deep);
+  color: #fff;
+}
+.fn-btn--dark:hover {
+  background: var(--fn-ink);
+  box-shadow: 0 12px 24px -12px rgba(42, 20, 16, 0.7);
+}
+.fn-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---- text links --------------------------------------------------------------- */
+.fn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--fn-maroon);
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 2px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size var(--fn-dur) var(--fn-ease);
+}
+.fn-link:hover {
+  background-size: 100% 2px;
+}
+
+/* current section in the navigation */
+.fn-link[aria-current="location"] {
+  background-size: 100% 2px;
+}
+
+/* ---- focus: visible on light and dark surfaces ------------------------------------ */
+.fn-landing :focus-visible {
+  outline: 3px solid var(--fn-maroon);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.fn-on-dark :focus-visible {
+  outline-color: var(--fn-gold);
+}
+
+/* ---- scroll reveal (disabled for reduced-motion users) --------------------------------- */
+.fn-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s var(--fn-ease),
+    transform 0.7s var(--fn-ease);
+}
+.fn-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fn-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .fn-btn,
+  .fn-link {
+    transition: none;
+  }
+  .fn-btn:hover {
+    transform: none;
+  }
+}
+
+/* ---- looping carousel: the card row is rendered twice and slides left by exactly one copy ------ */
+.fn-marquee {
+  overflow: hidden;
+  padding-block: 0.75rem 1.5rem;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+.fn-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: fn-marquee 48s linear infinite;
+}
+.fn-marquee:hover .fn-marquee-track {
+  animation-play-state: paused;
+}
+.fn-marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 1.25rem;
+  padding-right: 1.25rem;
+}
+@keyframes fn-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* Reduced motion: no automatic movement, the row can be scrolled by hand instead */
+@media (prefers-reduced-motion: reduce) {
+  .fn-marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .fn-marquee-track {
+    animation: none;
+  }
+}
+
+/* ---- office map ---------------------------------------------------------------------------- */
+/* Leaflet's panes use z-indexes up to 1000; isolating the map keeps them below the sticky header */
+.fn-map {
+  isolation: isolate;
+}
+.fn-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  font-family: inherit;
+  border-radius: inherit;
+  background: var(--fn-sand);
+}
+.fn-map .leaflet-popup-content {
+  margin: 12px 14px;
+  font-family: inherit;
+}
+.fn-pin {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--fn-maroon);
+  border: 3px solid #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  transition:
+    background-color var(--fn-dur) var(--fn-ease),
+    transform var(--fn-dur) var(--fn-ease);
+}
+.fn-pin::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+}
+.fn-pin--active {
+  background: var(--fn-gold);
+  transform: rotate(-45deg) scale(1.2);
+}
+.fn-pin--active::after {
+  background: var(--fn-maroon-deep);
+}

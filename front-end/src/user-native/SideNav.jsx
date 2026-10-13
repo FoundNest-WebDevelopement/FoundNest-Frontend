@@ -46,7 +46,7 @@ export default function SideNav() {
       const rememberedEmail = localStorage.getItem("remembered_email");
       localStorage.clear();
       if (rememberedEmail) localStorage.setItem("remembered_email", rememberedEmail);
-      navigate("/");
+      navigate("/login");
     }
   };
 

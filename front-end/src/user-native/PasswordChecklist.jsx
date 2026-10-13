@@ -7,10 +7,12 @@ export default function PasswordChecklist({ password }) {
     <div className="mt-2 flex flex-col gap-1 pl-1">
       {PASSWORD_RULES.map((rule) => {
         const met = rule.test(password);
-        const color = met ? "#2E7D32" : "#C0392B";
+        // nothing typed yet: neutral hints instead of red "failed" marks
+        const pristine = password.length === 0;
+        const color = pristine ? "#8C7A70" : met ? "#2E7D32" : "#C0392B";
         return (
           <div key={rule.key} className="flex items-center gap-1.5">
-            <Icon name={met ? "checkmark-circle" : "close-circle"} size={16} color={color} />
+            <Icon name={pristine ? "ellipse-outline" : met ? "checkmark-circle" : "close-circle"} size={16} color={color} />
             <span className="text-[13px]" style={{ color }}>
               {rule.label}
             </span>

@@ -407,7 +407,7 @@ function ForgotPassword() {
               </div>
 
               <div className="bg-[#FFF3E0] rounded-md px-4 py-3 mb-3">
-                <PasswordChecklist password={newPassword} variant="light" />
+                <PasswordChecklist password={newPassword} variant="light" neutralWhenEmpty />
               </div>
 
               <div className="relative mb-2">
@@ -636,7 +636,7 @@ function ForgotPassword() {
               </button>
             </div>
 
-            <PasswordChecklist password={newPassword} />
+            <PasswordChecklist password={newPassword} neutralWhenEmpty />
 
             <div className="relative">
               <input

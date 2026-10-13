@@ -334,7 +334,7 @@ export default function Profile() {
       if (rememberedEmail) {
         localStorage.setItem("remembered_email", rememberedEmail);
       }
-      navigate("/");
+      navigate("/login");
     }
   };
 
