@@ -1,0 +1,839 @@
+import { useState, useEffect, useMemo, Fragment } from "react";
+import { createPortal } from "react-dom";
+import { Search, Filter, Download, ChevronDown } from "lucide-react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast } from "react-toastify";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import formatDateTime from "../utils/formatDataTimeNew";
+import { formatActionType } from "../utils/formatActionType";
+import WebLoading from "../global-components/WebLoading";
+import Button from "../global-components/Button";
+import ExportModal from "../global-components/ExportModal";
+
+// Active Role capsules shown at the top of the filter panel.
+// Values match the `user_level` column on action_logs
+// ('user' is displayed as "End User").
+const USER_LEVEL_FILTERS = [
+    { label: "Super Admin", value: "super_admin" },
+    { label: "Admin", value: "admin" },
+    { label: "End User", value: "user" },
+];
+
+// Maps DB enum values to filter pill labels shown in the UI.
+// NOTE: a few of these (deactivate variants, unlock) don't have their own
+// enum value yet in action_log_type — they reuse the closest existing type
+// (e.g. UPDATE_LOCATION for both "Edited Location" and "Deactivated Location").
+// If you want these to be filterable as truly separate events, you'll need
+// to add dedicated enum values (e.g. DEACTIVATE_LOCATION, UNLOCK_ACCOUNT).
+const ACTION_TYPE_FILTERS = [
+    { label: "Granted Admin Privileges", value: "CREATE_ADMIN" },
+    { label: "Revoked Admin Privileges", value: "REVOKE_ADMIN" },
+    { label: "Transferred Super Admin Privileges", value: "TRANSFER_SUPER_ADMIN" },
+    { label: "Added Policy", value: "CREATE_POLICY" },
+    { label: "Edited Policy", value: "UPDATE_POLICY" },
+    { label: "Added Location", value: "CREATE_LOCATION" },
+    { label: "Edited Location", value: "UPDATE_LOCATION" },
+    { label: "Deleted Location", value: "DELETE_LOCATION" },
+    { label: "Deactivated Location", value: "DEACTIVATE_LOCATION" },
+    { label: "Added Category", value: "CREATE_CATEGORY" },
+    { label: "Edited Category", value: "UPDATE_CATEGORY" },
+    { label: "Deactivated Category", value: "DEACTIVATE_CATEGORY" },
+    { label: "Added Center", value: "CREATE_OFFICE" },
+    { label: "Edited Center", value: "UPDATE_OFFICE" },
+    { label: "Deactivated Center", value: "DEACTIVATE_OFFICE" },
+    { label: "Locked User Account", value: "LOCK_ACCOUNT" },
+    { label: "Unlocked User Account", value: "UNLOCK_ACCOUNT" },
+    { label: "Reset Password", value: "RESET_PASSWORD" },
+    { label: "Logged In", value: "LOGIN" },
+    { label: "Created Report", value: "CREATE_REPORT" },
+    { label: "Updated Report", value: "UPDATE_REPORT" },
+    { label: "Cancelled Report", value: "CANCEL_REPORT" },
+    { label: "Resolved Report", value: "RESOLVE_REPORT" },
+    { label: "Archived Report", value: "ARCHIVE_REPORT" },
+    { label: "Restored Report", value: "RESTORE_REPORT" },
+    { label: "Reverted Claim", value: "REVERT_CLAIM" },
+    { label: "Reopened Report", value: "REOPEN_REPORT" },
+    { label: "Disposed Item", value: "DISPOSED_ITEM" },
+    { label: "Generated Report", value: "GENERATE_REPORT" },
+    { label: "Exported CSV", value: "EXPORT_CSV" },
+    { label: "Exported PDF", value: "EXPORT_PDF" },
+];
+
+// Which action types belong to each active-role context. Selecting an
+// Active Role narrows the Action Type pills to that role's list.
+// "ALL" shows the full union list.
+const ACTION_TYPES_BY_ROLE = {
+    super_admin: [
+        "CREATE_ADMIN",
+        "REVOKE_ADMIN",
+        "TRANSFER_SUPER_ADMIN",
+        "CREATE_POLICY",
+        "UPDATE_POLICY",
+        "CREATE_LOCATION",
+        "UPDATE_LOCATION",
+        "DELETE_LOCATION",
+        "DEACTIVATE_LOCATION",
+        "CREATE_CATEGORY",
+        "UPDATE_CATEGORY",
+        "DEACTIVATE_CATEGORY",
+        "CREATE_OFFICE",
+        "UPDATE_OFFICE",
+        "DEACTIVATE_OFFICE",
+        "LOCK_ACCOUNT",
+        "UNLOCK_ACCOUNT",
+        "RESET_PASSWORD",
+        "LOGIN",
+        "GENERATE_REPORT",
+        "EXPORT_CSV",
+        "EXPORT_PDF",
+    ],
+    admin: [
+        "LOGIN",
+        "CREATE_REPORT",
+        "UPDATE_REPORT",
+        "ARCHIVE_REPORT",
+        "RESTORE_REPORT",
+        "RESOLVE_REPORT",
+        "REVERT_CLAIM",
+        "REOPEN_REPORT",
+        "DISPOSED_ITEM",
+        "EXPORT_CSV",
+        "EXPORT_PDF",
+    ],
+    user: [
+        "LOGIN",
+        "CREATE_REPORT",
+        "UPDATE_REPORT",
+        "CANCEL_REPORT",
+    ],
+};
+
+// Badge color per action type — grouped loosely by "severity"/category
+const ACTION_TYPE_COLORS = {
+    CREATE_ADMIN: "bg-[#FFF3CD] text-[#856404]",
+    REVOKE_ADMIN: "bg-[#F9ECEC] text-[#C0392B]",
+    TRANSFER_SUPER_ADMIN: "bg-[#EDE7F6] text-[#6A1B9A]",
+    CREATE_POLICY: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_POLICY: "bg-[#EDE7F6] text-[#6A1B9A]",
+    CREATE_LOCATION: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_LOCATION: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DELETE_LOCATION: "bg-[#F9ECEC] text-[#C0392B]",
+    DEACTIVATE_LOCATION: "bg-[#F9ECEC] text-[#C0392B]",
+    CREATE_CATEGORY: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_CATEGORY: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DEACTIVATE_CATEGORY: "bg-[#F9ECEC] text-[#C0392B]",
+    CREATE_OFFICE: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_OFFICE: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DEACTIVATE_OFFICE: "bg-[#F9ECEC] text-[#C0392B]",
+    LOCK_ACCOUNT: "bg-[#F9ECEC] text-[#C0392B]",
+    UNLOCK_ACCOUNT: "bg-[#E6F1FB] text-[#2980B9]",
+    RESET_PASSWORD: "bg-[#F9ECEC] text-[#C0392B]",
+    LOGIN: "bg-[#E8F5E9] text-[#2E7D32]",
+    CREATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
+    UPDATE_REPORT: "bg-[#EDE7F6] text-[#6A1B9A]",
+    CANCEL_REPORT: "bg-[#F9ECEC] text-[#C0392B]",
+    RESOLVE_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    ARCHIVE_REPORT: "bg-[#FFF3CD] text-[#856404]",
+    RESTORE_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    REVERT_CLAIM: "bg-[#F9ECEC] text-[#C0392B]",
+    REOPEN_REPORT: "bg-[#E8F5E9] text-[#2E7D32]",
+    DISPOSED_ITEM: "bg-[#F9ECEC] text-[#C0392B]",
+    EXPORT_CSV: "bg-gray-200 text-gray-700",
+    EXPORT_PDF: "bg-gray-200 text-gray-700",
+    GENERATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
+};
+
+// Badge color per user level (active role)
+const USER_LEVEL_COLORS = {
+    super_admin: "bg-[#EDE7F6] text-[#6A1B9A]",
+    admin: "bg-[#E6F1FB] text-[#2980B9]",
+    user: "bg-[#E8F5E9] text-[#2E7D32]",
+};
+
+const USER_LEVEL_LABELS = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    user: "End User",
+};
+
+const getActionTypeColor = (actionType) =>
+    ACTION_TYPE_COLORS[actionType] || "bg-gray-200 text-gray-700";
+
+const getUserLevelColor = (userLevel) =>
+    USER_LEVEL_COLORS[userLevel] || "bg-gray-200 text-gray-700";
+
+const formatUserLevel = (userLevel = "") => {
+    if (!userLevel) return "Unknown";
+    return USER_LEVEL_LABELS[userLevel] || formatActionType(userLevel);
+};
+
+// Local YYYY-MM-DD (toISOString() uses UTC, which is off by a day for part of
+// the day in timezones ahead of/behind UTC).
+const toLocalISODate = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
+
+export default function SuperAdminActionLogs() {
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    const superAdminUserId = localStorage.getItem("user_id");
+
+    const [logs, setLogs] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isLogs, setIsLogs] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    const [search, setSearch] = useState("");
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [selectedUserLevel, setSelectedUserLevel] = useState("ALL"); // "ALL" means all roles
+    const [selectedActionTypes, setSelectedActionTypes] = useState([]); // [] means "All"
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState("pdf");
+    const [exportScope, setExportScope] = useState("filtered"); // "filtered" | "all"
+
+    const [expandedLogId, setExpandedLogId] = useState(null);
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [tableHeight, setTableHeight] = useState("");
+    const [itemsPerPage, setItemsPerPage] = useState();
+
+    const today = toLocalISODate();
+
+    // ---- Live date validation (derived from state on every render) ----
+    // Both dates are optional here, so there are no "required" errors.
+    // ISO date strings (YYYY-MM-DD) compare correctly as plain strings.
+    const dateErrors = { from: "", to: "" };
+
+    if (dateFrom && dateFrom > today) {
+        dateErrors.from = "Start date cannot be in the future.";
+    }
+
+    if (dateTo) {
+        if (dateTo > today) {
+            dateErrors.to = "End date cannot be in the future.";
+        } else if (dateFrom && dateFrom > dateTo) {
+            dateErrors.to = "End date must be on or after the start date.";
+        }
+    }
+
+    const hasDateError = Boolean(dateErrors.from || dateErrors.to);
+
+    const formatLogId = (id) => `LOG-${String(id).padStart(5, "0")}`;
+    const formatRecordId = (entityType, entityId) => {
+        if (!entityType || !entityId) return "N/A";
+        const prefix = entityType.slice(0, 3).toUpperCase();
+        return `${prefix}-${String(entityId).padStart(5, "0")}`;
+    };
+
+    const fetchLogs = async () => {
+        try {
+            setIsLoading(true);
+            setIsLogs(true);
+            const response = await fetchWithAuth(`${API_URL}/api/action-logs/user/${superAdminUserId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to fetch action logs.");
+            }
+
+            setLogs(data);
+            setIsLogs(false);
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLogs();
+    }, []);
+
+    // Action Type pills visible for the currently selected Active Role.
+    const visibleActionFilters = useMemo(() => {
+        if (selectedUserLevel === "ALL") return ACTION_TYPE_FILTERS;
+        const allowed = ACTION_TYPES_BY_ROLE[selectedUserLevel] || [];
+        return ACTION_TYPE_FILTERS.filter((f) => allowed.includes(f.value));
+    }, [selectedUserLevel]);
+
+    const selectUserLevel = (value) => {
+        setSelectedUserLevel(value);
+        // Prune selected action types that don't exist in the new role context
+        // so we never sit in an impossible role + action combination.
+        if (value !== "ALL") {
+            const allowed = ACTION_TYPES_BY_ROLE[value] || [];
+            setSelectedActionTypes((prev) => prev.filter((v) => allowed.includes(v)));
+        }
+    };
+
+    const toggleActionType = (value) => {
+        if (value === "ALL") {
+            setSelectedActionTypes([]);
+            return;
+        }
+
+        setSelectedActionTypes((prev) =>
+            prev.includes(value)
+                ? prev.filter((v) => v !== value)
+                : [...prev, value]
+        );
+    };
+
+    // Filters apply live, so just go back to page 1 whenever one of them changes.
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [dateFrom, selectedActionTypes, selectedUserLevel, dateTo]);
+
+    const handleClearFilters = () => {
+        setSelectedUserLevel("ALL");
+        setSelectedActionTypes([]);
+        setDateFrom("");
+        setDateTo("");
+        setCurrentPage(1);
+    };
+
+    // When the date range is wrong, the dates are ignored completely
+    // (neither the start nor the end filters the table).
+    const activeDateFrom = hasDateError ? "" : dateFrom;
+    const activeDateTo = hasDateError ? "" : dateTo;
+
+    const filteredLogs = useMemo(() => {
+        return logs?.filter((log) => {
+            const matchesSearch =
+                search.trim() === "" ||
+                formatActionType(log.action_type).toLowerCase().includes(search.toLowerCase()) ||
+                formatUserLevel(log.user_level).toLowerCase().includes(search.toLowerCase()) ||
+                formatRecordId(log.entity_type, log.entity_id).toLowerCase().includes(search.toLowerCase()) ||
+                log.description?.toLowerCase().includes(search.toLowerCase());
+
+            const matchesUserLevel =
+                selectedUserLevel === "ALL" ||
+                log.user_level === selectedUserLevel;
+
+            const matchesActionType =
+                selectedActionTypes.length === 0 ||
+                selectedActionTypes.includes(log.action_type);
+
+            // Both bounds are parsed as local time. (A bare "YYYY-MM-DD" string is
+            // parsed as UTC, which would skip the first hours of the start day.)
+            const logDate = new Date(log.created_at);
+            const matchesDateFrom = !activeDateFrom || logDate >= new Date(activeDateFrom + "T00:00:00");
+            const matchesDateTo = !activeDateTo || logDate <= new Date(activeDateTo + "T23:59:59");
+
+            return matchesSearch && matchesUserLevel && matchesActionType && matchesDateFrom && matchesDateTo;
+        });
+    }, [logs, search, selectedUserLevel, selectedActionTypes, activeDateFrom, activeDateTo]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
+    const activePage = Math.min(currentPage, totalPages);
+    const startIndex = (activePage - 1) * itemsPerPage;
+    const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+    const logsToExport = exportScope === "all" ? logs : filteredLogs;
+    const noLogsToExport = exportScope === "filtered" && filteredLogs.length === 0;
+
+    const logExportRow = (log) => {
+        const performedBy = log.first_name
+            ? `${log.first_name} ${log.last_name}${log.user_role ? ` (${formatActionType(log.user_role)})` : ""}`
+            : "N/A";
+
+        return [
+            formatLogId(log.action_log_id),
+            formatDateTime(log.created_at),
+            formatActionType(log.action_type),
+            formatRecordId(log.entity_type, log.entity_id),
+            log.description || "No additional details.",
+            performedBy,
+        ];
+    };
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text("Action Logs Report", 14, 16);
+        doc.setFontSize(10);
+        doc.text(
+            `Generated: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })}`,
+            14,
+            22
+        );
+
+        autoTable(doc, {
+            startY: 28,
+            head: [["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"]],
+            body: logsToExport.map(logExportRow),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [153, 0, 0] },
+        });
+
+        doc.save(`action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`);
+    };
+
+    const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const handleExportCSV = () => {
+        const header = ["Log ID", "Timestamp", "Action Type", "Affected Record", "Details", "Performed By"];
+        const rows = logsToExport.map(logExportRow);
+
+        const csvContent = [header, ...rows]
+            .map((row) => row.map(csvEscape).join(","))
+            .join("\r\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `action-logs-${exportScope === "all" ? "ALL" : "FILTERED"}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExport = () => {
+        if (noLogsToExport) return;
+
+        if (exportFormat === "pdf") {
+            handleExportPDF();
+        } else {
+            handleExportCSV();
+        }
+
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
+
+    const handleCloseExportModal = () => {
+        setIsExportModalOpen(false);
+        setExportScope("filtered");
+    };
+
+
+
+    useEffect(() => {
+        const updateTableSize = () => {
+            const height = window.innerHeight;
+
+            if (height > 732) {
+                setTableHeight("min-h-160");
+                setItemsPerPage(10);
+            } else {
+                setTableHeight("min-h-115");
+                setItemsPerPage(7);
+            }
+        };
+
+        updateTableSize();
+
+        window.addEventListener("resize", updateTableSize);
+
+        return () => {
+            window.removeEventListener("resize", updateTableSize);
+        };
+    }, []);
+
+    const dateInputClass = (hasError) =>
+        `w-full border rounded-md px-3 py-2 text-sm outline-none ${hasError
+            ? "border-[#C0392B] focus:border-[#C0392B]"
+            : "border-[#DDD9CF] focus:border-primary"
+        }`;
+
+    const pillClass = (isActive) =>
+        `px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
+        ${isActive
+            ? "bg-primary text-white border-primary"
+            : "bg-white text-[#6B5C42] border-[#DDD9CF]"
+        }`;
+
+    return (
+        <div className="w-full flex flex-col gap-4 bg-[#F5F5F5] px-5 pt-5 xl:px-10 xl:pt-7">
+            {!isLogs ?
+                (
+                    <>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-white border border-[#DDD9CF] rounded-lg px-3 py-2 flex-1 shadow-[0_2px_4px_0px_rgba(0,0,0,0.1)]">
+                                <Search size={16} className="text-[#9A8F7C]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by action type, active role, or affected record..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full text-sm outline-none placeholder:text-[#9A8F7C]"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                {/* spacer */}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsFilterOpen((prev) => !prev)}
+                                className="flex items-center h-10 gap-2 bg-white border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium
+                        transition-transform duration-100 active:scale-95 shrink-0 shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)]"
+                            >
+                                <Filter size={16} />
+                                Filter
+                                <ChevronDown
+                                    size={14}
+                                    className={`transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`}
+                                />
+                            </button>
+
+                            <Button icon={Download} label={isExporting? "Exporting..." : "Export Logs"} isBorder={true} isShadow={true} isIcon={true}  disabled={isExporting}
+                                                        onClick={() => setIsExportModalOpen(true)}
+                                                         />
+                        </div>
+
+
+                        {isFilterOpen && (
+                            <div className="bg-white border border-[#DDD9CF] rounded-lg p-5 shadow-[0_2px_4px_0px_rgba(0,0,0,0.1)] flex flex-col gap-5">
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    <div className="flex-1 flex flex-col gap-5">
+                                        <div className="flex flex-col gap-3">
+                                            <p className="text-sm font-semibold text-[#1A1208]">Active Role</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selectUserLevel("ALL")}
+                                                    className={pillClass(selectedUserLevel === "ALL")}
+                                                >
+                                                    All
+                                                </button>
+
+                                                {USER_LEVEL_FILTERS.map((filter) => {
+                                                    const isActive = selectedUserLevel === filter.value;
+                                                    return (
+                                                        <button
+                                                            key={filter.value}
+                                                            type="button"
+                                                            onClick={() => selectUserLevel(filter.value)}
+                                                            className={pillClass(isActive)}
+                                                        >
+                                                            {filter.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {selectedUserLevel !== "ALL" && (
+                                                <p className="text-xs text-[#9A8F7C]">
+                                                    Active Role: {formatUserLevel(selectedUserLevel)}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-3">
+                                            <p className="text-sm font-semibold text-[#1A1208]">Action Type</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleActionType("ALL")}
+                                                    className={pillClass(selectedActionTypes.length === 0)}
+                                                >
+                                                    All
+                                                </button>
+
+                                                {visibleActionFilters.map((filter) => {
+                                                    const isActive = selectedActionTypes.includes(filter.value);
+                                                    return (
+                                                        <button
+                                                            key={filter.label}
+                                                            type="button"
+                                                            onClick={() => toggleActionType(filter.value)}
+                                                            className={pillClass(isActive)}
+                                                        >
+                                                            {filter.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 md:w-56 shrink-0">
+                                        <p className="text-sm font-semibold text-[#1A1208]">Date Range</p>
+
+                                        <div className="flex flex-col gap-1">
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    aria-label="Start date"
+                                                    value={dateFrom}
+                                                    max={today}
+                                                    onChange={(e) => setDateFrom(e.target.value)}
+                                                    onClick={(e) => {
+                                                        try { e.target.showPicker?.(); } catch { /* picker already open */ }
+                                                    }}
+                                                    aria-invalid={Boolean(dateErrors.from)}
+                                                    aria-describedby={dateErrors.from ? "filter-start-error" : undefined}
+                                                    className={`${dateInputClass(dateErrors.from)} ${dateFrom ? "text-[#1A1208]" : "text-transparent select-none selection:bg-transparent"} cursor-pointer`}
+                                                />
+                                                {!dateFrom && (
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9A8F7C] pointer-events-none">
+                                                        Start Date
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {dateErrors.from && (
+                                                <p id="filter-start-error" className="text-xs text-[#C0392B]">
+                                                    {dateErrors.from}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-1">
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    aria-label="End date"
+                                                    value={dateTo}
+                                                    min={dateFrom || undefined}
+                                                    max={today}
+                                                    onChange={(e) => setDateTo(e.target.value)}
+                                                    onClick={(e) => {
+                                                        try { e.target.showPicker?.(); } catch { /* picker already open */ }
+                                                    }}
+                                                    aria-invalid={Boolean(dateErrors.to)}
+                                                    aria-describedby={dateErrors.to ? "filter-end-error" : undefined}
+                                                    className={`${dateInputClass(dateErrors.to)} ${dateTo ? "text-[#1A1208]" : "text-transparent select-none selection:bg-transparent"} cursor-pointer`}
+                                                />
+                                                {!dateTo && (
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9A8F7C] pointer-events-none">
+                                                        End Date
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {dateErrors.to && (
+                                                <p id="filter-end-error" className="text-xs text-[#C0392B]">
+                                                    {dateErrors.to}
+                                                </p>
+                                            )}
+                                        </div>
+
+
+                                    </div>
+                                </div>
+
+                                <hr className="border-[#DDD9CF]" />
+
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleClearFilters}
+                                        className="text-primary text-sm font-semibold hover:underline cursor-pointer whitespace-nowrap"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Table */}
+                        <div className={`h-fit ${tableHeight} w-full max-w-full min-w-0 rounded-t-xl bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col`}>
+                            <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden bg-white shadow-sm rounded-t-xl">
+                                <table className="table table-zebra table-sm   min-w-full [&_th]:px-2 [&_td]:px-2 text-left">
+                                    <thead className="bg-primary text-white text-center">
+                                        <tr>
+                                            <th className="w-10 whitespace-nowrap"></th>
+                                            <th className="w-24 whitespace-nowrap">LOG ID</th>
+                                            <th className="w-40">TIMESTAMP</th>
+                                            <th className="w-40 whitespace-nowrap">ACTIVE ROLE</th>
+                                            <th className="w-52 whitespace-nowrap">ACTION TYPE</th>
+                                            <th className="w-32">AFFECTED RECORD</th>
+                                            <th className="w-full">
+                                                <div className="text-left pl-10">
+                                                    DETAILS
+                                                </div>
+                                            </th>
+
+                                        </tr>
+                                    </thead>
+
+
+                                    <tbody>
+
+
+                                        {isLoading && (
+                                            <tr>
+                                                <td colSpan={5} className="text-center py-8 text-[#6B5C42]">
+                                                    Loading logs...
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {!isLoading &&
+                                            paginatedLogs.map((log, index) => {
+                                                const isExpanded = expandedLogId === log.action_log_id;
+                                                const description = log.description || "No additional details.";
+                                                const isLong = description.length > 60;
+                                                const performedBy = log.first_name
+                                                    ? `${log.first_name} ${log.last_name}`
+                                                    : "N/A";
+
+                                                return (
+                                                    <Fragment key={log.action_log_id}>
+                                                        <tr
+                                                            className={index % 2 === 0 ? "bg-white text-center" : "bg-[#F5F5F5] text-center "}
+                                                        >
+                                                            <td className="align-top py-3 font-medium text-[#1A1208] whitespace-nowrap">
+
+                                                            </td>
+                                                            <td className="align-top py-3 font-medium text-[#1A1208] whitespace-nowrap">
+                                                                {formatLogId(log.action_log_id)}
+                                                            </td>
+
+                                                            <td className="align-top py-3 text-[#6B5C42] whitespace-nowrap">
+                                                                {formatDateTime(log.created_at)}
+                                                            </td>
+
+                                                            <td className="align-top py-3 whitespace-nowrap">
+                                                                <span
+                                                                    className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block
+                                                            ${getUserLevelColor(log.user_level)}`}
+                                                                >
+                                                                    {formatUserLevel(log.user_level)}
+                                                                </span>
+                                                            </td>
+
+                                                            <td className="align-top py-3 whitespace-nowrap">
+                                                                <span
+                                                                    className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block
+                                                            ${getActionTypeColor(log.action_type)}`}
+                                                                >
+                                                                    {formatActionType(log.action_type)}
+                                                                </span>
+                                                            </td>
+
+                                                            <td className="align-top py-3 font-medium text-[#1A1208] whitespace-nowrap">
+                                                                {formatRecordId(log.entity_type, log.entity_id)}
+                                                            </td>
+
+                                                            <td className="align-top py-3 text-[#6B5C42] max-w-md text-left ">
+                                                                <p className="truncate pl-10">{description}</p>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setExpandedLogId(isExpanded ? null : log.action_log_id)
+                                                                    }
+                                                                    className="text-primary text-xs font-medium flex items-center gap-1 mt-1 pl-10"
+                                                                >
+                                                                    <ChevronDown
+                                                                        size={12}
+                                                                        className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""
+                                                                            }`}
+                                                                    />
+                                                                    {isExpanded ? "Collapse" : "Expand"}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+
+                                                        {isExpanded && (
+                                                            <tr className="bg-[#FFF8E7]">
+                                                                <td colSpan={7} className="p-0  w-full ">
+                                                                    <div className="w-full py-4">
+                                                                        <div className="border-l-4  border-l-[#D4A017] py-4 px-2 flex flex-col gap-2 ml-15 pl-6">
+                                                                            <p className="text-sm font-semibold text-[#1A1208]">
+                                                                                Full Details
+                                                                            </p>
+                                                                            <p className="text-sm text-[#1A1208]">
+                                                                                {description}
+                                                                            </p>
+                                                                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-[#9A8F7C] mt-1">
+                                                                                <span>Timestamp: {formatDateTime(log.created_at)}</span>
+                                                                                <span>Log ID: {formatLogId(log.action_log_id)}</span>
+                                                                                <span>Record: {formatRecordId(log.entity_type, log.entity_id)}</span>
+                                                                                <span>Performed by: {performedBy}</span>
+                                                                                <span>Performed as: {formatUserLevel(log.user_level)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </Fragment>
+                                                );
+                                            })}
+
+                                        {!isLoading && paginatedLogs.length === 0 && (
+                                            <tr>
+                                                <td colSpan={7} className="text-center py-8 text-[#6B5C42]">
+                                                    No Records to display.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Pagination */}
+                        <div className="flex items-center justify-between bg-white border border-[#DDD9CF] shadow-[0_4px_4px_0px_rgba(0,0,0,0.25)] rounded-b-xl px-4 py-3 text-xs -mt-3">
+                            <p className="text-[#6B5C42]">
+                                Showing {filteredLogs.length === 0 ? 0 : startIndex + 1}
+                                {" - "}
+                                {Math.min(startIndex + itemsPerPage, filteredLogs.length)}
+                                {" of "}
+                                {filteredLogs.length}
+                            </p>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    disabled={activePage === 1}
+                                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                    className={`border border-primary rounded-md px-3 py-2 text-primary ${activePage === 1 ? "opacity-40 cursor-not-allowed" : "cursor-pointer active:scale-95"
+                                        }`}
+                                >
+                                    Previous
+                                </button>
+
+                                <p className="text-[#6B5C42]">
+                                    Page {activePage} of {totalPages}
+                                </p>
+
+                                <button
+                                    type="button"
+                                    disabled={activePage === totalPages}
+                                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                                    className={`border border-primary rounded-md px-3 py-2 text-primary ${activePage === totalPages ? "opacity-40 cursor-not-allowed" : "cursor-pointer active:scale-95"
+                                        }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )
+                :
+                (
+                    <>
+                        <WebLoading />
+                    </>
+                )
+            }
+            {isExportModalOpen && (
+                <ExportModal
+                    title="Export Action Logs"
+                    endpoint="/api/export/action-logs"
+                    queryParams={{ superAdminUserId }}
+                    filenamePrefix="ACTION_LOGS"
+                    onClose={() => setIsExportModalOpen(false)}
+                    onUpdate={fetchLogs}
+                    scopeExport
+                    filteredIds={filteredLogs.map((log) => log.action_log_id)}
+                />
+            )}
+
+        </div>
+    );
+}

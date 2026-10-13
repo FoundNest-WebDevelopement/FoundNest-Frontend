@@ -1,0 +1,359 @@
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { Building2 } from "lucide-react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast } from "react-toastify";
+import ConfirmDialog from "../global-components/ConfirmDialog";
+import CampusMapPicker from "./CampusMapPicker";
+
+export default function AddCenterModal({ onClose, onUpdated }) {
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    const [officeName, setOfficeName] = useState("");
+    const [floor, setFloor] = useState("");
+    const [operatingHours, setOperatingHours] = useState("");
+    const [notes, setNotes] = useState("");
+    const [locationName, setLocationName] = useState("");
+    const [latitude, setLatitude] = useState(null);
+    const [longitude, setLongitude] = useState(null);
+
+    const [locationOptions, setLocationOptions] = useState([]);
+    const [existingCenters, setExistingCenters] = useState([]);
+    const [allCenters, setAllCenters] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const [openConfirmAdd, setOpenConfirmAdd] = useState(false);
+    const [openCancelAdd, setOpenCancelAdd] = useState(false);
+    const mouseDownOnBackdrop = useRef(false);
+
+    const checkProgress =
+        officeName !== "" ||
+        floor !== "" ||
+        operatingHours !== "" ||
+        notes !== "" ||
+        latitude !== null;
+
+    const isDuplicateName =
+        officeName.trim() !== "" &&
+        allCenters.some(
+            (c) => c.office_name?.trim().toLowerCase() === officeName.trim().toLowerCase()
+        );
+
+    useEffect(() => {
+        const loadLocationOptions = async () => {
+            try {
+                const response = await fetchWithAuth(`${API_URL}/api/locations/active-names`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || "Failed to fetch locations.");
+                }
+
+                setLocationOptions(data);
+            } catch (err) {
+                console.error(err);
+                toast.error(err.message || "Failed to load locations.");
+            }
+        };
+
+        const loadExistingCenters = async () => {
+            try {
+                const response = await fetchWithAuth(`${API_URL}/api/offices-private/list`);
+                const data = await response.json();
+
+                if (response.ok && Array.isArray(data)) {
+                    setAllCenters(data);
+                    setExistingCenters(data.filter((c) => c.latitude && c.longitude));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        loadLocationOptions();
+        loadExistingCenters();
+    }, []);
+
+    const handleSubmit = async () => {
+        setOpenConfirmAdd(false);
+
+        if (!officeName.trim()) {
+            setError("Center name is required.");
+            return;
+        }
+
+        if (isDuplicateName) {
+            setError("A center with this name already exists.");
+            return;
+        }
+
+        if (!operatingHours.trim()) {
+            setError("Operating hours is required.");
+            return;
+        }
+
+        if (!locationName) {
+            setError("Center building is required.");
+            return;
+        }
+
+        if (latitude === null || longitude === null) {
+            setError("Please pin the center's location on the map.");
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            setError("");
+
+            const response = await fetchWithAuth(
+                `${API_URL}/api/offices-private`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        office_name: officeName.trim(),
+                        description: notes.trim(),
+                        location_name: locationName,
+                        floor: floor.trim(),
+                        operating_hours: operatingHours.trim(),
+                        image_url: "",
+                        latitude,
+                        longitude,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || "Failed to add center.");
+            }
+
+            const listResponse = await fetchWithAuth(`${API_URL}/api/offices-private/list`);
+            const listData = await listResponse.json();
+
+            if (Array.isArray(listData)) {
+                onUpdated?.(listData);
+            }
+
+            toast.success(`Center "${officeName.trim()}" added successfully`);
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError(err.message || "Failed to create center.");
+            toast.error(err.message || "Failed to create center.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <>
+            {createPortal(
+            <div
+                className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040]"
+                onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+                onClick={(e) => {
+                    if (!isSaving && mouseDownOnBackdrop.current && e.target === e.currentTarget) {
+                        onClose();
+                    }
+                }}
+            >
+                <div
+                    className="relative bg-white rounded-lg w-[900px] max-w-[92vw]"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="w-full h-12 rounded-t-lg bg-primary text-white flex items-center justify-between px-5">
+                        <p className="font-semibold text-base">Add New Center</p>
+                        <button onClick={() => (checkProgress ? setOpenCancelAdd(true) : onClose())}>
+                            <i className="fa-solid fa-x text-sm text-white" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 max-h-[80vh] overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* LEFT COLUMN — FORM */}
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        Center Name <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={officeName}
+                                        onChange={(e) => { setOfficeName(e.target.value); setError(""); }}
+                                        placeholder="e.g. Pimentel Hall FoundNest Office"
+                                        className={`border rounded-md px-3 py-2 text-sm outline-none ${
+                                            isDuplicateName
+                                                ? "border-[#C0392B] focus:border-[#C0392B]"
+                                                : "border-[#DDD9CF] focus:border-primary"
+                                        }`}
+                                    />
+                                    {isDuplicateName && (
+                                        <p className="text-xs text-[#C0392B]">A center with this name already exists.</p>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        Location Description
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={floor}
+                                        onChange={(e) => { setFloor(e.target.value); setError(""); }}
+                                        placeholder="e.g. 3rd Floor, Room B"
+                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        Operating Hours <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={operatingHours}
+                                        onChange={(e) => { setOperatingHours(e.target.value); setError(""); }}
+                                        placeholder="e.g. Mon–Fri, 8AM–5PM"
+                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#C0392B]">
+                                        Notes
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={notes}
+                                        onChange={(e) => { setNotes(e.target.value); setError(""); }}
+                                        className="border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-sm font-medium text-[#1A1208]">
+                                        Center Building <span className="text-[#C0392B]">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={locationName}
+                                            onChange={(e) => { setLocationName(e.target.value); setError(""); }}
+                                            className={`w-full border border-[#DDD9CF] rounded-md px-3 py-2 text-sm outline-none focus:border-primary appearance-none pr-10 ${
+                                                locationName ? "text-[#1A1208]" : "text-[#9A8F7C]"
+                                            }`}
+                                        >
+                                            <option value="" disabled hidden>e.g. Pimentel Hall</option>
+                                            {locationOptions.map((loc) => (
+                                                <option key={loc} value={loc} className="text-[#1A1208]">
+                                                    {loc}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <i className="fa-solid fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9A8F7C]" />
+                                    </div>
+                                </div>
+
+                                {error && (
+                                    <p className="text-xs text-[#C0392B]">{error}</p>
+                                )}
+                            </div>
+
+                            {/* RIGHT COLUMN — MAP */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium text-[#1A1208]">
+                                    Center Location on Map <span className="text-[#C0392B]">*</span>
+                                </label>
+                                <CampusMapPicker
+                                    latitude={latitude}
+                                    longitude={longitude}
+                                    onChange={(lat, lng) => {
+                                        setLatitude(lat);
+                                        setLongitude(lng);
+                                        setError("");
+                                    }}
+                                    referenceCenters={existingCenters}
+                                    markerLabel={officeName || "New Center"}
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-[#6B5C42]">Latitude</label>
+        <input
+            type="number"
+            step="0.00000001"
+            value={latitude ?? ""}
+            onChange={(e) => { setLatitude(e.target.value === "" ? null : parseFloat(e.target.value)); setError(""); }}
+            placeholder="e.g. 14.85707485"
+            className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
+        />
+    </div>
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-[#6B5C42]">Longitude</label>
+        <input
+            type="number"
+            step="0.00000001"
+            value={longitude ?? ""}
+            onChange={(e) => { setLongitude(e.target.value === "" ? null : parseFloat(e.target.value)); setError(""); }}
+            placeholder="e.g. 120.81371264"
+            className="border border-[#DDD9CF] rounded-md px-3 py-1.5 text-xs outline-none focus:border-primary"
+        />
+    </div>
+</div>
+<p className="text-xs text-[#9A8F7C]">
+    Click the map to place the pin, drag to adjust, or type coordinates directly above.
+</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 px-6 pb-6">
+                        <button
+                            type="button"
+                            className="flex-1 h-10 bg-white border border-primary rounded-lg text-primary text-sm font-medium
+                                transition-transform duration-100 active:scale-95"
+                            onClick={() => (checkProgress ? setOpenCancelAdd(true) : onClose())}
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="button"
+                            className="flex-1 h-10 bg-primary rounded-lg text-white text-sm font-medium
+                                transition-transform duration-100 enabled:active:scale-95
+                                disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={isSaving || !officeName.trim() || isDuplicateName || !operatingHours.trim() || locationName === "" || latitude === null || longitude === null}
+                            onClick={() => setOpenConfirmAdd(true)}
+                        >
+                            {isSaving ? "Saving..." : "Save Center"}
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+            )}
+
+            {openConfirmAdd && (
+                <ConfirmDialog
+                    title="Confirm Add Center"
+                    cancelText="Cancel"
+                    description={
+                        <>
+                            Confirm adding center: <span className="font-semibold">{officeName}</span>?
+                        </>
+                    }
+                    confirmText="Confirm"
+                    onClose={() => setOpenConfirmAdd(false)}
+                    onConfirm={handleSubmit}
+                />
+            )}
+            {openCancelAdd && (
+                <ConfirmDialog
+                    description={"Are you sure you want to discard progress?"}
+                    onClose={() => setOpenCancelAdd(false)}
+                    onConfirm={onClose}
+                />
+            )}
+        </>
+    );
+}

@@ -1,0 +1,34 @@
+export default function AdminTextArea({
+  title,
+  placeholder,
+  value,
+  onChange = () => {},
+  error,
+  titlePrimary,
+  disabled,
+  reqField = false,
+}) {
+  return (
+    <fieldset className="fieldset">
+
+      <legend className={`fieldset-legend font-medium text-sm ${titlePrimary? "text-primary" : "text-black"}`}>
+        {title}
+         {reqField&&<span className="text-primary">*</span>}
+      </legend>
+
+      <div className={`rounded-md ${error ? "p-1 border border-red-600" : ""}`}>
+
+        <textarea
+          className="textarea h-20 bg-white rounded-md w-full border border-[#DDD9CF] text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+
+      </div>
+      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
+
+    </fieldset>
+  );
+}
