@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -35,19 +35,28 @@ function FitOffices({ offices }) {
   return null;
 }
 
-function FlyToActive({ office }) {
+// Whatever was picked last (a pin or a list row) is the single source of truth: the map centres on
+// it and opens ITS popup, which also closes the previous one. `tick` makes re-picking the same
+// office open its popup again.
+function SyncSelection({ office, tick, markerRefs }) {
   const map = useMap();
 
   useEffect(() => {
-    if (office) map.flyTo(office.position, Math.max(map.getZoom(), 17), { duration: 0.9 });
-  }, [map, office]);
+    if (!office) return;
+    map.flyTo(office.position, Math.max(map.getZoom(), 17), { duration: 0.9 });
+    markerRefs.current[office.id]?.openPopup();
+  }, [map, office, tick, markerRefs]);
 
   return null;
 }
 
 export default function OfficeLocator() {
   const [state, setState] = useState({ status: "loading", offices: [] });
-  const [activeId, setActiveId] = useState(null);
+  const [selection, setSelection] = useState({ id: null, tick: 0 });
+  const activeId = selection.id;
+  const select = useCallback((id) => setSelection((s) => ({ id, tick: s.tick + 1 })), []);
+  const markerRefs = useRef({});
+  const rowRefs = useRef({});
   const [attempt, setAttempt] = useState(0);
 
   // Phones: one finger should scroll the page, not drag the map (zoom buttons stay available)
@@ -90,6 +99,11 @@ export default function OfficeLocator() {
   const { status, offices } = state;
   const active = offices.find((o) => o.id === activeId) ?? null;
 
+  // A pin clicked on the map should also bring its row into view in the list
+  useEffect(() => {
+    rowRefs.current[selection.id]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selection]);
+
   return (
     <section id="office-map" tabIndex={-1} className="fn-section bg-[var(--fn-sand)]">
       <div className="fn-container grid gap-12 lg:grid-cols-12 lg:gap-16">
@@ -110,11 +124,16 @@ export default function OfficeLocator() {
               {offices.map((office) => (
                 <li key={office.id} className="border-b border-[var(--fn-rule)]">
                   <button
+                    ref={(el) => {
+                      rowRefs.current[office.id] = el;
+                    }}
                     type="button"
-                    onClick={() => setActiveId(office.id)}
+                    onClick={() => select(office.id)}
                     aria-pressed={office.id === activeId}
-                    className={`group flex w-full items-start gap-4 px-1 py-4 text-left transition-colors ${
-                      office.id === activeId ? "text-[var(--fn-maroon)]" : "hover:text-[var(--fn-maroon)]"
+                    className={`group flex w-full items-start gap-4 border-l-4 px-3 py-4 text-left transition-colors ${
+                      office.id === activeId
+                        ? "border-[var(--fn-maroon)] bg-white/80 text-[var(--fn-maroon)]"
+                        : "border-transparent hover:bg-white/40 hover:text-[var(--fn-maroon)]"
                     }`}
                   >
                     <MapPin className="mt-1 h-5 w-5 shrink-0" aria-hidden="true" />
@@ -171,16 +190,19 @@ export default function OfficeLocator() {
                 >
                   <TileLayer url={MAP_TILE_URL} maxZoom={20} attribution="Map data © Google" />
                   <FitOffices offices={offices} />
-                  <FlyToActive office={active} />
+                  <SyncSelection office={active} tick={selection.tick} markerRefs={markerRefs} />
                   {offices.map((office) => (
                     <Marker
                       key={office.id}
+                      ref={(marker) => {
+                        markerRefs.current[office.id] = marker;
+                      }}
                       position={office.position}
                       icon={pinIcon(office.id === activeId)}
                       title={office.name}
-                      eventHandlers={{ click: () => setActiveId(office.id) }}
+                      eventHandlers={{ click: () => select(office.id) }}
                     >
-                      <Popup>
+                      <Popup autoPan={false}>
                         <strong className="block text-[var(--fn-maroon-deep)]">{office.name}</strong>
                         {office.floor && <span className="block text-sm">{office.floor}</span>}
                         {office.hours && <span className="block text-sm text-[var(--fn-muted)]">{office.hours}</span>}
