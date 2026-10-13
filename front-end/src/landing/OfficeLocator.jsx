@@ -170,11 +170,12 @@ export default function OfficeLocator() {
 
         </Reveal>
 
-        <Reveal delay={120} className="lg:col-span-7">
-          <div className="relative">
+        <Reveal delay={120} className="lg:col-span-7 lg:self-center">
+          {/* the maroon offset block lives inside this padding, so the map group ends exactly on the page margin */}
+          <div className="relative sm:pb-4 sm:pr-4">
             <div
               aria-hidden="true"
-              className="absolute -bottom-4 -right-4 hidden h-full w-full rounded-[var(--fn-r-lg)] bg-[var(--fn-maroon)] sm:block"
+              className="absolute bottom-0 right-0 hidden h-[calc(100%-1rem)] w-[calc(100%-1rem)] rounded-[var(--fn-r-lg)] bg-[var(--fn-maroon)] sm:block"
             />
             <div className="fn-map relative h-[380px] overflow-hidden rounded-[var(--fn-r-lg)] border border-[var(--fn-rule)] bg-white sm:h-[460px] lg:h-[560px]">
               {status === "ready" && offices.length > 0 && (
