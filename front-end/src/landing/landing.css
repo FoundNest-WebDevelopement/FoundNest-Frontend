@@ -178,6 +178,12 @@
 .fn-on-dark :focus-visible {
   outline-color: var(--fn-gold);
 }
+/* Sections are only focused by script (after an in-page link scrolls to them), so they must not
+   draw a focus ring around the whole section; real controls keep theirs. */
+.fn-landing [tabindex="-1"]:focus,
+.fn-landing [tabindex="-1"]:focus-visible {
+  outline: none;
+}
 
 /* ---- scroll reveal (disabled for reduced-motion users) --------------------------------- */
 .fn-reveal {

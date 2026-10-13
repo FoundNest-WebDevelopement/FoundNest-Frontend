@@ -488,7 +488,7 @@ function ForgotPassword() {
 
   // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
   const MobileForgotPassword = (
-    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
+    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden bg-white">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <button
           onClick={() => navigate("/login")}

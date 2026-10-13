@@ -415,7 +415,7 @@ const DesktopLogin = (
 
   // ── MOBILE LAYOUT (original) ─────────────────────────────────────────────
   const MobileLogin = (
-    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
+    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden bg-white">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <img src={rafiki} alt="Login Illustration" className="w-4/5 h-4/5 object-contain object-center" />
       </div>

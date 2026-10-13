@@ -21,7 +21,7 @@ export const APP_DOWNLOAD_FILENAME = "app-release.apk";
 export const NAV_LINKS = [
   { id: "how-it-works", label: "How It Works" },
   { id: "office-map", label: "Office Map" },
-  { id: "recent-items", label: "Recent Items" },
+  { id: "recent-items", label: "Browse Items" },
   { id: "qr-features", label: "QR Features" },
 ];
 
