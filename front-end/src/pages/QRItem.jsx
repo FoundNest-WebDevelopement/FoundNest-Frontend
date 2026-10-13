@@ -1,10 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronRight, Check, X as XIcon, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5Qrcode } from "html5-qrcode";
+import toast from "react-hot-toast";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import { isMobileDevice } from "../utils/isMobileDevice";
+import Toast from "../user-native/Toast";
+import AlertDialog from "../components/AlertDialog";
+import PhotoSheet from "../components/report_components/PhotoSheet";
+import WebcamCaptureModal from "../components/report_components/WebcamCaptureModal";
+import StackHeader from "../user-native/StackHeader";
+import Icon from "../user-native/Icon";
+import ImageViewer from "../user-native/ImageViewer";
+import EmptyNest from "../user-native/EmptyNest";
+import { Dropdown } from "../user-native/form";
+import logo from "../assets/native/app-logo.png";
+import SafeImage from "../user-native/SafeImage";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const LIMITS = { itemName: 50, description: 500, contents: 100 };
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 1500 });
 
 function disposeScanner(instance) {
   // Multiple code paths (effect cleanup, decode callback, delayed start()
@@ -25,140 +44,565 @@ function disposeScanner(instance) {
   }
 }
 
-// Icons
-const RegisterIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7"/>
-    <rect x="14" y="3" width="7" height="7"/>
-    <rect x="3" y="14" width="7" height="7"/>
-    <rect x="14" y="14" width="3" height="3"/>
-  </svg>
-);
+// Same rules as the mobile app: category, name and description are required
+// and the item needs a photo.
+function validateItemForm({ categoryId, itemName, description, hasPhoto }) {
+  const errors = {};
+  if (!categoryId) errors.category = "Please select a category.";
+  if (!itemName.trim()) errors.itemName = "Item name is required.";
+  if (!description.trim()) errors.description = "Description is required.";
+  if (!hasPhoto) errors.image = "Item photo is required.";
+  return errors;
+}
 
-const ViewItemsIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="4" rx="1"/>
-    <rect x="3" y="10" width="18" height="4" rx="1"/>
-    <rect x="3" y="17" width="18" height="4" rx="1"/>
-  </svg>
-);
+// Exact match first, then a partial match either way round (same as the report form)
+function matchCategoryFromAi(aiCategory, categoryList) {
+  const normalized = String(aiCategory ?? "").trim().toLowerCase();
+  if (!normalized || !categoryList?.length) return null;
 
-const ScanIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-    <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-    <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-    <line x1="3" y1="12" x2="21" y2="12"/>
-  </svg>
-);
+  const names = categoryList.map((c) => ({ c, name: String(c.category_name ?? "").toLowerCase() }));
+  const exact = names.find((n) => n.name === normalized);
+  if (exact) return exact.c;
 
-const EditIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B2D23" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-);
-
-const DeleteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6"/>
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-    <path d="M10 11v6"/>
-    <path d="M14 11v6"/>
-    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-  </svg>
-);
-
-const BackHeader = ({ title, onBackPress }) => (
-  <div className="bg-[#990000] px-5 py-4 rounded-b-xl flex items-center gap-3">
-    <button onClick={onBackPress}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 12H5"/>
-        <polyline points="12 19 5 12 12 5"/>
-      </svg>
-    </button>
-    <p className="text-white font-bold text-lg">{title}</p>
-  </div>
-);
-
-const categories = [
-  "Personal Items",
-  "Electronics",
-  "Academic Materials",
-  "Clothing",
-  "Accessories",
-  "Others",
-];
+  const partial = names.find((n) => n.name && (normalized.includes(n.name) || n.name.includes(normalized)));
+  return partial ? partial.c : null;
+}
 
 const emptyForm = {
-  ownerName: `${localStorage.getItem("first_name") || ""} ${localStorage.getItem("last_name") || ""}`.trim(),
-  studentNumber: localStorage.getItem("student_number") || "",
-  courseSection: localStorage.getItem("course_section") || "",
-  contactNumber: "",
-  itemName: "",
-  category: "",
-  image: null,
+  file: null,
   imagePreview: null,
+  categoryId: "",
+  itemName: "",
+  description: "",
+  contents: "",
 };
+
+// Draws the printable card (item name + QR + FoundNest branding) like the native app's ViewShot capture
+async function buildQrCardPng(itemName, qrDataUrl) {
+  const load = (src) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+
+  const [qrImg, logoImg] = await Promise.all([load(qrDataUrl), load(logo)]);
+  const scale = 2;
+  const w = 320 * scale;
+  const h = 392 * scale;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+
+  // card
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.roundRect(0, 0, w, h, 20 * scale);
+  ctx.fill();
+
+  // item name
+  ctx.fillStyle = "#1a1a1a";
+  ctx.font = `700 ${20 * scale}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText(itemName, w / 2, 28 * scale, w - 48 * scale);
+
+  // qr code (200px)
+  ctx.drawImage(qrImg, (w - 200 * scale) / 2, 76 * scale, 200 * scale, 200 * scale);
+
+  // branding
+  ctx.drawImage(logoImg, w / 2 - 66 * scale, 296 * scale, 70 * scale, 70 * scale);
+  ctx.fillStyle = "#8B0000";
+  ctx.font = `700 ${16 * scale}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("FoundNest", w / 2 + 6 * scale, 331 * scale);
+
+  return canvas.toDataURL("image/png");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Field primitives (QrItemFormFields + the screens' own styles)               */
+/* -------------------------------------------------------------------------- */
+
+function QrLabel({ children, required = false }) {
+  return (
+    <p className="text-[15px] font-bold text-[#1a1a1a] mb-1.5">
+      {children}
+      {required && <span className="text-[#C62828]"> *</span>}
+    </p>
+  );
+}
+
+function QrFieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="text-[13px] text-[#C62828] mt-1">
+      {message}
+    </p>
+  );
+}
+
+// Owner details on the Register / Edit forms: sand coloured read-only box
+function OwnerField({ label, value }) {
+  return (
+    <div className="mb-4">
+      <QrLabel>{label}</QrLabel>
+      <div className="bg-[#EDE0D4] rounded-lg px-3.5 h-[50px] flex items-center">
+        <p className="text-[16px] text-[#1a1a1a] truncate">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
+// Read-only value on the item details screen: white box with border
+function ValueField({ label, value, multiline = false }) {
+  return (
+    <div className="mb-4">
+      <QrLabel>{label}</QrLabel>
+      <div
+        className={`bg-white rounded-lg px-3.5 border border-[#D6D6D6] flex items-center ${
+          multiline ? "min-h-20 py-3" : "h-[50px]"
+        }`}
+      >
+        <p className={`text-[16px] text-[#1a1a1a] break-words min-w-0 ${multiline ? "" : "truncate"}`}>{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeading({ children }) {
+  return (
+    <p className="text-[17px] font-black text-[#1a1a1a] border-b border-black/15 pb-2.5 mb-4 mt-1">{children}</p>
+  );
+}
+
+function TextField({ error, multiline, disabled, className = "", ...props }) {
+  const base = `block w-full bg-white rounded-lg px-3.5 text-[16px] text-[#1a1a1a] outline-none placeholder:text-[#8C7A70] disabled:bg-[#E2D7CC] ${
+    error ? "border-[1.5px] border-[#C62828]" : "border border-[#D6D6D6]"
+  }`;
+  return multiline ? (
+    <textarea disabled={disabled} className={`${base} h-[120px] pt-3 resize-none ${className}`} {...props} />
+  ) : (
+    <input disabled={disabled} className={`${base} h-[50px] ${className}`} {...props} />
+  );
+}
+
+// Photo card of the QR forms (uploadCard: radius 24, "Upload Item Photo (Required)")
+function PhotoCard({ image, error, isAnalyzing, canScan, viewOnly = false, onPick, onRemove, onScan }) {
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const [showSheet, setShowSheet] = useState(false);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("File size exceeds 10MB limit");
+      return;
+    }
+    if (!VALID_IMAGE_TYPES.includes(file.type)) {
+      showToast("Invalid file type");
+      return;
+    }
+    onPick(file);
+  };
+
+  const handleTarget = () => {
+    if (image) setViewerOpen(true);
+    else if (!viewOnly) setShowSheet(true);
+  };
+
+  return (
+    <div className="mb-4">
+      <div
+        className="w-full bg-white rounded-3xl py-5 px-5 flex flex-col items-center"
+        style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+      >
+        <button
+          type="button"
+          onClick={handleTarget}
+          disabled={isAnalyzing || (viewOnly && !image)}
+          aria-label={image ? "View photo" : "Add photo"}
+          className="mb-3.5 flex items-center justify-center active:opacity-70"
+        >
+          {isAnalyzing ? (
+            <span className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#CCC] flex items-center justify-center">
+              <span className="inline-block h-9 w-9 animate-spin rounded-full border-[3px] border-[#900000] border-t-transparent" />
+            </span>
+          ) : image ? (
+            <span className="relative block w-[110px] h-[110px]">
+              <SafeImage src={image} alt="Item" className="w-full h-full rounded-2xl object-cover" />
+              {viewOnly ? (
+                <span className="absolute bottom-2 right-2 bg-black/45 rounded-md p-1 flex">
+                  <Icon name="expand-outline" size={18} color="#FFFFFF" />
+                </span>
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Change photo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSheet(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.stopPropagation();
+                      setShowSheet(true);
+                    }
+                  }}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#900000] border-2 border-white flex items-center justify-center active:opacity-80"
+                >
+                  <Icon family="material" name="edit" size={16} color="#FFFFFF" />
+                </span>
+              )}
+            </span>
+          ) : viewOnly ? (
+            <span className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#CCCCCC] flex items-center justify-center">
+              <Icon family="material" name="image-not-supported" size={28} color="#B0A09A" />
+            </span>
+          ) : (
+            <span className="h-20 w-20 rounded-full border-[1.5px] border-dashed border-[#900000] flex items-center justify-center">
+              <span className="h-[60px] w-[60px] rounded-full bg-[#900000] flex items-center justify-center">
+                <Icon family="material" name="add" size={32} color="#FFFFFF" />
+              </span>
+            </span>
+          )}
+        </button>
+
+        <p className={`text-[16px] font-semibold text-[#6B5A52] text-center ${viewOnly ? "" : "mb-2"}`}>
+          {viewOnly ? (image ? "Item Photo" : "No Photo Attached") : isAnalyzing ? "Analyzing Image" : "Upload Item Photo (Required)"}
+        </p>
+
+        {!viewOnly && (
+          <>
+            <p className="text-[13px] text-[#8C7A70] text-center leading-5">
+              *FoundNest AI will help auto-fill details based on your photo.
+            </p>
+
+            <button
+              type="button"
+              onClick={onScan}
+              disabled={!canScan}
+              className="mt-3.5 flex items-center justify-center gap-2.5 py-3 px-6 rounded-[10px] bg-[#900000] disabled:bg-[#A0A0A0] disabled:opacity-70 active:opacity-80"
+            >
+              <Icon name="sparkles-outline" size={22} color="#FFFFFF" />
+              <span className="text-[15px] font-semibold text-white">Scan Image</span>
+            </button>
+          </>
+        )}
+      </div>
+      <QrFieldError message={error} />
+
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+      {showSheet && (
+        <PhotoSheet
+          hasPhoto={!!image}
+          onClose={() => setShowSheet(false)}
+          onTake={() => {
+            setShowSheet(false);
+            if (isMobileDevice()) cameraInputRef.current?.click();
+            else setShowWebcam(true);
+          }}
+          onChoose={() => {
+            setShowSheet(false);
+            galleryInputRef.current?.click();
+          }}
+          onRemove={() => {
+            setShowSheet(false);
+            onRemove();
+          }}
+        />
+      )}
+
+      {showWebcam && (
+        <WebcamCaptureModal
+          onClose={() => setShowWebcam(false)}
+          onCapture={(file) => {
+            setShowWebcam(false);
+            onPick(file);
+          }}
+        />
+      )}
+
+      <ImageViewer uri={image} visible={viewerOpen} onClose={() => setViewerOpen(false)} />
+    </div>
+  );
+}
+
+// Category / name / description / contents shared by the register and edit forms
+function ItemFields({ form, setForm, errors, setErrors, categories, disabled }) {
+  const update = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  return (
+    <>
+      <div className="mb-4">
+        <QrLabel required>Category</QrLabel>
+        <Dropdown
+          variant="qr"
+          flush
+          value={form.categoryId}
+          options={categories.map((c) => ({ value: String(c.category_id), label: c.category_name }))}
+          placeholder={categories.length === 0 ? "Loading categories..." : "Select Category"}
+          disabled={disabled || categories.length === 0}
+          error={!!errors.category}
+          onChange={(val) => {
+            setForm((prev) => ({ ...prev, categoryId: val }));
+            if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
+          }}
+        />
+        <QrFieldError message={errors.category} />
+      </div>
+
+      <div className="mb-4">
+        <QrLabel required>Item Name</QrLabel>
+        <TextField
+          type="text"
+          placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
+          value={form.itemName}
+          maxLength={LIMITS.itemName}
+          disabled={disabled}
+          error={!!errors.itemName}
+          onChange={(e) => update("itemName", e.target.value)}
+        />
+        <QrFieldError message={errors.itemName} />
+      </div>
+
+      <div className="mb-4">
+        <QrLabel required>Detailed Description</QrLabel>
+        <TextField
+          multiline
+          placeholder="Brand, Model, Size, Color, Material, etc."
+          value={form.description}
+          maxLength={LIMITS.description}
+          disabled={disabled}
+          error={!!errors.description}
+          onChange={(e) => update("description", e.target.value)}
+        />
+        <QrFieldError message={errors.description} />
+      </div>
+
+      <div className="mb-4">
+        <QrLabel>Contents (if applicable)</QrLabel>
+        <TextField
+          type="text"
+          placeholder="e.g., Cash amount, ID name"
+          value={form.contents}
+          maxLength={LIMITS.contents}
+          disabled={disabled}
+          onChange={(e) => update("contents", e.target.value)}
+        />
+      </div>
+    </>
+  );
+}
+
+// Cancel + primary button row of the register / edit forms (buttonRow)
+function FormButtons({ onCancel, onSubmit, submitLabel, disabled, busy }) {
+  return (
+    <div className="flex justify-end items-center gap-2.5 mt-2 border-t border-black/10 pt-6">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={busy}
+        className="h-[46px] px-7 rounded-[14px] border-[1.5px] border-primary bg-transparent text-[15px] font-medium text-primary active:opacity-70"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={disabled}
+        className="h-[46px] px-[26px] min-w-[100px] rounded-[14px] bg-primary flex items-center justify-center text-[15px] font-medium text-white active:opacity-80 disabled:bg-[#A0A0A0] disabled:opacity-70"
+      >
+        {busy ? (
+          <span className="inline-block w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+        ) : (
+          submitLabel
+        )}
+      </button>
+    </div>
+  );
+}
+
+// Result card + download used after register / edit and when viewing an item's QR (QrItemSuccessScreen)
+function QrCardScreen({ banner, itemName, qrCodeUrl, bottomLabel, onBottom, isView }) {
+  const handleDownload = async () => {
+    if (!qrCodeUrl) return;
+    try {
+      const png = await buildQrCardPng(itemName || "FoundNest", qrCodeUrl);
+      const link = document.createElement("a");
+      link.href = png;
+      link.download = `${itemName || "foundnest-qr"}.png`;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to save QR code image.");
+    }
+  };
+
+  return (
+    <div className="bg-primary min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col items-center lg:justify-center pt-[30px] lg:pt-0 pb-[60px] lg:pb-0 px-6">
+      <div className="flex items-center mb-8 gap-3">
+        <span className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0">
+          <Icon name={isView ? "qr-code-outline" : "checkmark"} size={28} color="#8B0000" />
+        </span>
+        <p className="text-[18px] font-bold text-white min-w-0">{banner}</p>
+      </div>
+
+      <div className="rounded-[20px] overflow-hidden w-full max-w-[320px]">
+        <div className="bg-white rounded-[20px] pt-7 pb-3 px-6 flex flex-col items-center w-full">
+          <p className="text-[20px] font-bold text-[#1a1a1a] mb-5 text-center break-words max-w-full">{itemName}</p>
+
+          <div className="p-3 rounded-xl bg-white mb-1">
+            {qrCodeUrl ? <img src={qrCodeUrl} alt="QR Code" className="w-[200px] h-[200px]" /> : <div className="w-[200px] h-[200px]" />}
+          </div>
+
+          <div className="flex items-center -mt-2.5">
+            <img src={logo} alt="" className="w-[70px] h-[70px] object-contain" />
+            <span className="-ml-1.5 text-[16px] font-bold text-primary">FoundNest</span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={!qrCodeUrl}
+        className="flex items-center justify-center gap-2.5 mt-6 active:opacity-70 disabled:opacity-50"
+      >
+        <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
+          <Icon name="download-outline" size={18} color="#8B0000" />
+        </span>
+        <span className="text-[16px] font-medium text-white">Download Image For Printing</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={onBottom}
+        className="mt-7 w-full max-w-[320px] bg-[#FFF3E0] rounded-xl py-3.5 flex items-center justify-center text-[15px] font-medium text-primary active:opacity-70"
+      >
+        {bottomLabel}
+      </button>
+    </div>
+  );
+}
 
 export default function QRItem({ onBack }) {
   const user_id = localStorage.getItem("user_id");
+  const { setDirty, setBlocking } = useUnsavedChangesGuard();
 
   const [page, setPage] = useState("main");
+  const [categories, setCategories] = useState([]);
+  const [profile, setProfile] = useState(null);
+
+  // register
   const [form, setForm] = useState(emptyForm);
-  const [editForm, setEditForm] = useState(emptyForm);
-  const [registeredItems, setRegisteredItems] = useState([]);
+  const [formErrors, setFormErrors] = useState({});
+  const [scannedFile, setScannedFile] = useState(null);
+  const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+
+  // success / generated QR
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [generatedItemName, setGeneratedItemName] = useState("");
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [editTargetId, setEditTargetId] = useState(null);
+  const [successMode, setSuccessMode] = useState("register"); // "register" | "edit"
+
+  // list / detail
+  const [registeredItems, setRegisteredItems] = useState([]);
+  const [listError, setListError] = useState("");
   const [viewingItem, setViewingItem] = useState(null);
   const [viewQrCodeUrl, setViewQrCodeUrl] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [fromScan, setFromScan] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+
+  // edit
+  const [editForm, setEditForm] = useState(emptyForm);
+  const [editErrors, setEditErrors] = useState({});
+  const [editBase, setEditBase] = useState(null);
+  const [editTargetId, setEditTargetId] = useState(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showEditDiscard, setShowEditDiscard] = useState(false);
+
+  // scan
+  const [scanResult, setScanResult] = useState(null); // { status: "loading" | "not_found" | "not_owner", message }
   const [scannerError, setScannerError] = useState("");
   const [scanRetryCount, setScanRetryCount] = useState(0);
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
 
-  const isFormValid =
-    form.ownerName.trim() !== "" &&
-    form.studentNumber.trim() !== "" &&
-    form.courseSection.trim() !== "" &&
-    form.category !== "";
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const isEditFormValid =
-    editForm.ownerName.trim() !== "" &&
-    editForm.studentNumber.trim() !== "" &&
-    editForm.courseSection.trim() !== "" &&
-    editForm.category !== "";
+  // search + category filter of the registered items list
+  const [listSearch, setListSearch] = useState("");
+  const [listCategories, setListCategories] = useState([]);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const filteredItems = registeredItems.filter((item) => {
+    const q = listSearch.trim().toLowerCase();
+    const matchesSearch = !q || String(item.item_name ?? "").toLowerCase().includes(q);
+    const matchesCategory = listCategories.length === 0 || listCategories.includes(item.category_id);
+    return matchesSearch && matchesCategory;
+  });
+
+  const blobUrlRef = useRef(null);
+
+  /* --------------------------------- data --------------------------------- */
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/categories`);
+        const data = await res.json();
+        setCategories(res.ok && Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}`);
+        const data = await res.json();
+        if (res.ok) setProfile(data);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [user_id]);
+
+  // Owner details shown (read-only) on the register form come from the saved profile
+  const ownerName =
+    `${profile?.first_name || localStorage.getItem("first_name") || ""} ${profile?.last_name || localStorage.getItem("last_name") || ""}`.trim();
+  const studentNumber = profile?.student_number || localStorage.getItem("student_number") || "";
+  const courseSection = profile?.course_section || localStorage.getItem("course_section") || "";
+  const contactNumber = profile?.contact_number ?? "";
 
   const fetchUserItems = useCallback(async () => {
     setLoading(true);
+    setListError("");
     try {
       const res = await fetchWithAuth(`${API_URL}/api/qr-items/${user_id}`);
       const data = await res.json();
-      if (res.ok) {
-        const mapped = data.map((item) => ({
-          id: item.qr_code_id,
-          itemName: item.item_name,
-          description: item.description,
-          imagePreview: item.image_url,
-          qrData: item.qr_data,
-          category: item.category_name,
-          ownerName: "",
-          studentNumber: "",
-          courseSection: "",
-          contactNumber: "",
-        }));
-        setRegisteredItems(mapped);
-      }
+      if (!res.ok) throw new Error(data.message || "Failed to load your registered items.");
+      setRegisteredItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setListError(err.message || "Failed to load your registered items.");
     } finally {
       setLoading(false);
     }
@@ -170,120 +614,350 @@ export default function QRItem({ onBack }) {
     }
   }, [page, fetchUserItems]);
 
-  const handleImageUpload = (e, isEdit = false) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    if (isEdit) {
-      setEditForm({ ...editForm, image: file, imagePreview: preview });
-    } else {
-      setForm({ ...form, image: file, imagePreview: preview });
-      setAnalyzing(true);
-      setTimeout(() => setAnalyzing(false), 2000);
+  // Freshest copy of one item (includes owner details and qr_data)
+  const fetchItemDetail = async (qrCodeId) => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/detail/${qrCodeId}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return null;
     }
   };
 
+  /* ------------------------------ unsaved guard ---------------------------- */
+
+  const hasRegisterInput =
+    !!form.file ||
+    form.categoryId !== "" ||
+    form.itemName.trim() !== "" ||
+    form.description.trim() !== "" ||
+    form.contents.trim() !== "";
+
+  const hasEditChanges =
+    !!editBase &&
+    (!!editForm.file ||
+      imageRemoved ||
+      editForm.categoryId !== editBase.categoryId ||
+      editForm.itemName.trim() !== editBase.itemName.trim() ||
+      editForm.description.trim() !== editBase.description.trim() ||
+      editForm.contents.trim() !== editBase.contents.trim());
+
+  useEffect(() => {
+    setDirty((page === "register" && hasRegisterInput) || (page === "editItem" && hasEditChanges));
+  }, [page, hasRegisterInput, hasEditChanges, setDirty]);
+
+  useEffect(() => {
+    setBlocking(isAnalyzing);
+  }, [isAnalyzing, setBlocking]);
+
+  useEffect(
+    () => () => {
+      setDirty(false);
+      setBlocking(false);
+    },
+    [setDirty, setBlocking]
+  );
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!((page === "register" && hasRegisterInput) || (page === "editItem" && hasEditChanges))) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [page, hasRegisterInput, hasEditChanges]);
+
+  useEffect(
+    () => () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    },
+    []
+  );
+
+  /* -------------------------------- photo / AI ----------------------------- */
+
+  const previewFor = (file) => {
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    blobUrlRef.current = URL.createObjectURL(file);
+    return blobUrlRef.current;
+  };
+
+  const analyzeImage = async (file, setTarget, setTargetErrors) => {
+    try {
+      setIsAnalyzing(true);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetchWithAuth(`${API_URL}/api/gemini-item-listing/describe-item`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = new Error(data.message || "AI analysis failed");
+        error.status = res.status;
+        throw error;
+      }
+
+      const matched = matchCategoryFromAi(data.category, categories);
+      setTarget((prev) => ({
+        ...prev,
+        itemName: String(data.itemName ?? "").slice(0, LIMITS.itemName),
+        description: String(data.detailedDescription ?? "").slice(0, LIMITS.description),
+        contents: String(data.contents ?? "").slice(0, LIMITS.contents),
+        categoryId: matched ? String(matched.category_id) : prev.categoryId,
+      }));
+      setTargetErrors({});
+      setScannedFile(file);
+    } catch (err) {
+      console.error(err);
+      showToast(
+        err.status === 429
+          ? "You've reached the hourly limit for AI analysis. Please fill out the details manually or try again later."
+          : "Failed to auto-fill details. Please fill them out manually."
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  /* -------------------------------- register ------------------------------- */
+
+  const resetRegister = () => {
+    setForm(emptyForm);
+    setFormErrors({});
+    setScannedFile(null);
+  };
+
+  const handleRegisterPress = () => {
+    const errors = validateItemForm({
+      categoryId: form.categoryId,
+      itemName: form.itemName,
+      description: form.description,
+      hasPhoto: !!form.file,
+    });
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      showToast("Please fix the highlighted fields.");
+      return;
+    }
+    setFormErrors({});
+    setShowRegisterConfirm(true);
+  };
+
   const handleRegister = async () => {
-    if (!isFormValid) return;
+    setShowRegisterConfirm(false);
     setLoading(true);
     try {
-      const qrData = JSON.stringify({
-        ownerName: form.ownerName,
-        studentNumber: form.studentNumber,
-        courseSection: form.courseSection,
-        contactNumber: form.contactNumber,
-        itemName: form.itemName,
-        category: form.category,
-      });
-
-      const url = await QRCode.toDataURL(qrData, { width: 200, margin: 2 });
-      setQrCodeUrl(url);
-      setGeneratedItemName(form.itemName || "Item");
+      const formData = new FormData();
+      formData.append("user_id", String(user_id));
+      formData.append("item_name", form.itemName.trim());
+      formData.append("category_id", String(form.categoryId));
+      formData.append("description", form.description.trim());
+      if (form.contents.trim()) formData.append("contents", form.contents.trim());
+      formData.append("image", form.file);
 
       const res = await fetchWithAuth(`${API_URL}/api/qr-items/register`, {
         method: "POST",
-        body: JSON.stringify({
-          user_id,
-          item_name: form.itemName,
-          category_id: categories.indexOf(form.category) + 1,
-          description: form.courseSection,
-          qr_data: qrData,
-        }),
+        body: formData,
       });
+      const data = await res.json().catch(() => ({}));
 
-      const data = await res.json();
-      if (res.ok) {
-        setPage("qrSuccess");
-        setForm(emptyForm);
-      } else {
-        console.error(data.message);
+      if (!res.ok) {
+        showToast(data.message || "Failed to register item.");
+        return;
       }
+
+      // qr_data is generated by the server; it is only a lookup key
+      const qrData = data.qr_code?.qr_data;
+      setQrCodeUrl(qrData ? await QRCode.toDataURL(qrData, { width: 200, margin: 0 }) : "");
+      setGeneratedItemName(form.itemName.trim());
+      setSuccessMode("register");
+      resetRegister();
+      setDirty(false);
+      setPage("qrSuccess");
     } catch (err) {
       console.error(err);
+      showToast("Could not connect to server.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.href = qrCodeUrl;
-    link.download = `${generatedItemName}-QR.png`;
-    link.click();
+  /* ---------------------------- detail / view QR --------------------------- */
+
+  const openDetail = async (item, scanned = false) => {
+    setViewingItem(item);
+    setFromScan(scanned);
+    setPage("viewItemDetail");
+
+    if (item.qr_code_id) {
+      const fresh = await fetchItemDetail(item.qr_code_id);
+      if (fresh) setViewingItem(fresh);
+    }
   };
 
   const handleViewQr = async (item) => {
     try {
-      const url = await QRCode.toDataURL(item.qrData, { width: 200, margin: 2 });
+      const url = await QRCode.toDataURL(item.qr_data, { width: 200, margin: 0 });
       setViewQrCodeUrl(url);
       setPage("viewQr");
     } catch (err) {
       console.error(err);
+      showToast("Could not generate the QR code.");
     }
   };
 
-  const handleDownloadViewQr = () => {
-    const link = document.createElement("a");
-    link.href = viewQrCodeUrl;
-    link.download = `${viewingItem?.itemName || "item"}-QR.png`;
-    link.click();
-  };
+  /* --------------------------------- delete -------------------------------- */
 
   const handleDeleteConfirm = async () => {
+    const targetId = deleteTargetId;
+    setShowDeleteModal(false);
+    setDeleteTargetId(null);
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${deleteTargetId}`, {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${targetId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setRegisteredItems(registeredItems.filter((i) => i.id !== deleteTargetId));
+        setRegisteredItems((prev) => prev.filter((i) => i.qr_code_id !== targetId));
+        showToast("Item deleted.");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to delete item.");
       }
     } catch (err) {
       console.error(err);
+      showToast("Could not connect to server.");
     }
-    setShowDeleteModal(false);
-    setDeleteTargetId(null);
+  };
+
+  /* ---------------------------------- edit --------------------------------- */
+
+  const openEdit = async (item) => {
+    setLoading(true);
+    // The list row can be stale; edit the server's freshest copy
+    const fresh = (await fetchItemDetail(item.qr_code_id)) ?? item;
+    setLoading(false);
+
+    const values = {
+      categoryId: fresh.category_id ? String(fresh.category_id) : "",
+      itemName: fresh.item_name || "",
+      description: fresh.description || "",
+      contents: fresh.contents || "",
+    };
+    setEditBase(values);
+    setEditForm({ ...emptyForm, ...values, imagePreview: fresh.image_url || null });
+    setEditErrors({});
+    setImageRemoved(false);
+    setEditTargetId(fresh.qr_code_id);
+    setViewingItem(fresh);
+    setPage("editItem");
+  };
+
+  const editHasPhoto = !!editForm.file || (!!editForm.imagePreview && !imageRemoved);
+
+  const handleEditPress = () => {
+    if (!hasEditChanges) return;
+    const errors = validateItemForm({
+      categoryId: editForm.categoryId,
+      itemName: editForm.itemName,
+      description: editForm.description,
+      hasPhoto: editHasPhoto,
+    });
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors);
+      showToast("Please fix the highlighted fields.");
+      return;
+    }
+    setEditErrors({});
+    setShowSaveConfirm(true);
   };
 
   const handleEditSave = async () => {
+    setShowSaveConfirm(false);
+    setLoading(true);
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/qr-items/${editTargetId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          item_name: editForm.itemName,
-          description: editForm.courseSection,
-          category_id: categories.indexOf(editForm.category) + 1,
-        }),
-      });
-      if (res.ok) {
-        setRegisteredItems(
-          registeredItems.map((i) =>
-            i.id === editTargetId ? { ...i, ...editForm } : i
-          )
-        );
-        setPage("viewItems");
+      let res;
+      if (editForm.file) {
+        const formData = new FormData();
+        formData.append("item_name", editForm.itemName.trim());
+        formData.append("description", editForm.description.trim());
+        formData.append("category_id", String(editForm.categoryId));
+        formData.append("contents", editForm.contents.trim());
+        formData.append("image", editForm.file);
+        res = await fetchWithAuth(`${API_URL}/api/qr-items/${editTargetId}`, {
+          method: "PUT",
+          body: formData,
+        });
+      } else {
+        res = await fetchWithAuth(`${API_URL}/api/qr-items/${editTargetId}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            item_name: editForm.itemName.trim(),
+            description: editForm.description.trim(),
+            category_id: editForm.categoryId ? Number(editForm.categoryId) : null,
+            contents: editForm.contents.trim(),
+            remove_image: imageRemoved,
+          }),
+        });
       }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.message || "Failed to save changes.");
+        return;
+      }
+
+      const fresh = await fetchItemDetail(editTargetId);
+      setQrCodeUrl(fresh?.qr_data ? await QRCode.toDataURL(fresh.qr_data, { width: 200, margin: 0 }) : "");
+      setGeneratedItemName(editForm.itemName.trim());
+      setSuccessMode("edit");
+      setEditBase(null);
+      setDirty(false);
+      setPage("qrSuccess");
     } catch (err) {
       console.error(err);
+      showToast("Could not connect to server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* --------------------------------- scanner ------------------------------- */
+
+  // Looks the scanned code up on the server, which also checks ownership
+  const handleScanned = async (decodedText) => {
+    setScanResult({ status: "loading" });
+    setPage("scanResult");
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/qr-items/scan`, {
+        method: "POST",
+        body: JSON.stringify({ qr_data: decodedText }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setScanResult({ status: "not_found", message: data.message || "Something went wrong. Please try again." });
+        return;
+      }
+      if (!data.found) {
+        setScanResult({ status: "not_found", message: "This QR code is not registered in FoundNest." });
+        return;
+      }
+      if (!data.isOwner) {
+        setScanResult({ status: "not_owner" });
+        return;
+      }
+
+      setScanResult(null);
+      openDetail(data.item, true);
+    } catch (err) {
+      console.error(err);
+      setScanResult({ status: "not_found", message: "Could not connect to server. Please try again." });
     }
   };
 
@@ -304,12 +978,7 @@ export default function QRItem({ onBack }) {
         (decodedText) => {
           disposeScanner(html5Qrcode);
           html5QrRef.current = null;
-          try {
-            setScanResult(JSON.parse(decodedText));
-          } catch {
-            setScanResult({ raw: decodedText });
-          }
-          setPage("scanResult");
+          handleScanned(decodedText);
         },
         () => {}
       )
@@ -341,41 +1010,42 @@ export default function QRItem({ onBack }) {
       disposeScanner(html5Qrcode);
       html5QrRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, scanRetryCount]);
 
+  const screen = "narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen";
+
   // =====================
-  // MAIN PAGE
+  // MAIN PAGE (QrItemMenuScreen)
   // =====================
   if (page === "main") {
+    const MENU = [
+      { key: "register", label: "Register an Item", icon: "qrcode", page: "register" },
+      { key: "view", label: "View Registered Items", icon: "format-list-bulleted", page: "viewItems" },
+      { key: "scan", label: "Scan An Item", icon: "crop-free", page: "scan" },
+    ];
+
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader title="QR Item" onBackPress={() => onBack()} />
-        <div className="px-5 py-5">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-            <button
-              onClick={() => setPage("register")}
-              className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
-            >
-              <RegisterIcon />
-              <p className="flex-1 text-sm text-left text-[#4B2D23]">Register an Item</p>
-              <ChevronRight size={16} color="#4B2D23" />
-            </button>
-            <button
-              onClick={() => setPage("viewItems")}
-              className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
-            >
-              <ViewItemsIcon />
-              <p className="flex-1 text-sm text-left text-[#4B2D23]">View Registered Items</p>
-              <ChevronRight size={16} color="#4B2D23" />
-            </button>
-            <button
-              onClick={() => setPage("scan")}
-              className="flex items-center gap-4 px-4 py-4 w-full"
-            >
-              <ScanIcon />
-              <p className="flex-1 text-sm text-left text-[#4B2D23]">Scan An Item</p>
-              <ChevronRight size={16} color="#4B2D23" />
-            </button>
+      <div className={screen}>
+        <StackHeader title="QR Item" onBack={onBack} />
+        <div className="px-4 pt-6">
+          <div className="bg-white rounded-2xl py-1 px-1" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
+            {MENU.map((item, index) => (
+              <div key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => setPage(item.page)}
+                  className="w-full flex items-center py-[18px] px-3.5 text-left active:opacity-60"
+                >
+                  <span className="w-7 mr-3.5 flex justify-center">
+                    <Icon family="mci" name={item.icon} size={22} color="#1a1a1a" />
+                  </span>
+                  <span className="flex-1 text-[15px] text-[#1a1a1a]">{item.label}</span>
+                  <Icon name="chevron-forward" size={20} color="rgba(0,0,0,0.65)" />
+                </button>
+                {index < MENU.length - 1 && <div className="h-px bg-black/[0.06] mx-3" />}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -387,227 +1057,102 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "register") {
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader
+      <div className={screen}>
+        <StackHeader
           title="Register An Item"
-          onBackPress={() => {
-            if (form.ownerName || form.studentNumber || form.courseSection || form.itemName) {
-              setShowDiscardModal(true);
-            } else {
-              setPage("main");
-            }
+          onBack={() => {
+            if (isAnalyzing) showToast("Please wait until scanning finishes.");
+            else if (hasRegisterInput) setShowDiscardModal(true);
+            else setPage("main");
           }}
         />
-        <div className="px-5 py-5 flex flex-col gap-4">
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
-            <input
-              type="text"
-              placeholder="Enter your full name"
-              value={form.ownerName}
-              onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
+        <div className="px-4 pt-5 pb-10 flex flex-col">
+          <OwnerField label="Owner Name" value={ownerName} />
+          <OwnerField label="Student Number" value={studentNumber} />
+          <OwnerField label="Course and Section" value={courseSection} />
+          <OwnerField label="Contact Number" value={contactNumber} />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number*</p>
-            <input
-              type="text"
-              placeholder="e.g. 2023100464"
-              value={form.studentNumber}
-              onChange={(e) => setForm({ ...form, studentNumber: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
+          <SectionHeading>Item Description</SectionHeading>
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section*</p>
-            <input
-              type="text"
-              placeholder="e.g. BSIT 3G-G1"
-              value={form.courseSection}
-              onChange={(e) => setForm({ ...form, courseSection: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
-            <input
-              type="text"
-              placeholder="e.g. 09695394881"
-              value={form.contactNumber}
-              onChange={(e) => setForm({ ...form, contactNumber: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Description</p>
-            <div className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 border border-dashed border-gray-300 relative">
-              {analyzing && (
-                <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center z-10">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 border-4 border-[#990000] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-xs text-[#990000] font-medium">Analyzing Image</p>
-                  </div>
-                </div>
-              )}
-              {form.imagePreview ? (
-                <img src={form.imagePreview} alt="Item" className="w-full h-32 object-cover rounded-lg" />
-              ) : (
-                <>
-                  <label className="w-12 h-12 rounded-full bg-[#990000] flex items-center justify-center cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e)}
-                    />
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                  </label>
-                  <p className="text-xs text-gray-400">Upload Item Photo (Optional)</p>
-                  <p className="text-xs text-gray-400 text-center">*FoundNest AI will help auto-fill details based on your photo.</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
-            <input
-              type="text"
-              placeholder="e.g. Black Umbrella"
-              value={form.itemName}
-              onChange={(e) => setForm({ ...form, itemName: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Category*</p>
-            <div className="bg-white rounded-lg px-4 py-3">
-              <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full text-sm text-[#4B2D23] outline-none bg-transparent"
-              >
-                <option value="" disabled>Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleRegister}
-            disabled={!isFormValid || loading}
-            className="w-full py-3 rounded-lg text-sm font-semibold mt-2"
-            style={{
-              backgroundColor: isFormValid && !loading ? "#990000" : "rgba(153, 0, 0, 0.3)",
-              color: "white",
-              cursor: isFormValid && !loading ? "pointer" : "default",
+          <PhotoCard
+            image={form.imagePreview}
+            error={formErrors.image}
+            isAnalyzing={isAnalyzing}
+            canScan={!!form.file && !isAnalyzing && !loading && form.file !== scannedFile}
+            onPick={(file) => {
+              const imagePreview = previewFor(file);
+              setForm((prev) => ({ ...prev, file, imagePreview }));
+              setFormErrors((prev) => ({ ...prev, image: undefined }));
             }}
-          >
-            {loading ? "Registering..." : "Register Item"}
-          </button>
+            onRemove={() => setForm((prev) => ({ ...prev, file: null, imagePreview: null }))}
+            onScan={() => analyzeImage(form.file, setForm, setFormErrors)}
+          />
+
+          <ItemFields
+            form={form}
+            setForm={setForm}
+            errors={formErrors}
+            setErrors={setFormErrors}
+            categories={categories}
+            disabled={isAnalyzing}
+          />
+
+          <FormButtons
+            onCancel={() => {
+              if (hasRegisterInput) setShowDiscardModal(true);
+              else setPage("main");
+            }}
+            onSubmit={handleRegisterPress}
+            submitLabel="Register"
+            disabled={loading || isAnalyzing || !form.file || !form.categoryId || !form.itemName.trim() || !form.description.trim()}
+            busy={loading}
+          />
         </div>
 
+        {showRegisterConfirm && (
+          <AlertDialog
+            message="Are you sure you want to register this item?"
+            b1Label="Review"
+            b2Label="Register"
+            b1OnClick={() => setShowRegisterConfirm(false)}
+            b2OnClick={handleRegister}
+          />
+        )}
+
         {showDiscardModal && (
-          <div
-            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-center justify-center bg-black/50 px-8"
-            onClick={() => setShowDiscardModal(false)}
-          >
-            <div
-              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-6 py-6">
-                <p className="text-[#4B2D23] font-bold text-base text-center">
-                  Discard changes? Unsaved edits will be lost.
-                </p>
-              </div>
-              <div className="flex border-t border-gray-200">
-                <button
-                  onClick={() => setShowDiscardModal(false)}
-                  className="flex-1 py-4 text-sm font-semibold text-[#990000] border-r border-gray-200"
-                >
-                  Keep Editing
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDiscardModal(false);
-                    setForm(emptyForm);
-                    setPage("main");
-                  }}
-                  className="flex-1 py-4 text-sm font-semibold text-white"
-                  style={{ backgroundColor: "#990000" }}
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
-          </div>
+          <AlertDialog
+            message="Discard changes? Unsaved edits will be lost."
+            b1Label="Keep Editing"
+            b2Label="Discard"
+            b1OnClick={() => setShowDiscardModal(false)}
+            b2OnClick={() => {
+              setShowDiscardModal(false);
+              resetRegister();
+              setPage("main");
+            }}
+          />
         )}
       </div>
     );
   }
 
   // =====================
-  // QR SUCCESS
+  // QR SUCCESS (register + edit)
   // =====================
   if (page === "qrSuccess") {
+    const isEdit = successMode === "edit";
     return (
-      <div
-        className="flex flex-col min-h-screen mt-13 mb-16 items-center justify-center px-5"
-        style={{ backgroundColor: "#990000" }}
-      >
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#990000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <p className="text-white font-bold text-lg">Item Successfully Registered!</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3 w-full max-w-xs">
-          <p className="font-bold text-[#4B2D23] text-base">{generatedItemName}</p>
-          {qrCodeUrl && (
-            <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
-          )}
-          <p className="text-xs font-bold text-[#990000]">FoundNest</p>
-        </div>
-
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 mt-6 text-white text-sm font-medium"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Download Image For Printing
-        </button>
-
-        <button
-          onClick={() => {
-            setQrCodeUrl("");
-            setPage("register");
-          }}
-          className="mt-3 w-full max-w-xs py-3 rounded-lg text-sm font-semibold"
-          style={{ backgroundColor: "#FFF3E0", color: "#990000" }}
-        >
-          Register Another Item
-        </button>
-      </div>
+      <QrCardScreen
+        banner={isEdit ? "Item Edited Successfully!" : "Item Successfully Registered!"}
+        itemName={generatedItemName}
+        qrCodeUrl={qrCodeUrl}
+        bottomLabel={isEdit ? "Back to My Items" : "Register Another Item"}
+        onBottom={() => {
+          setQrCodeUrl("");
+          setPage(isEdit ? "viewItems" : "register");
+        }}
+      />
     );
   }
 
@@ -616,198 +1161,253 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "viewItems") {
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader title="Registered Items" onBackPress={() => setPage("main")} />
-        <div className="px-5 py-5">
-          {loading ? (
-            <div className="flex justify-center mt-20">
-              <div className="w-10 h-10 border-4 border-[#990000] border-t-transparent rounded-full animate-spin"></div>
+      <div className={"bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col"}>
+        <StackHeader title="Registered Items" onBack={() => setPage("main")} />
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center py-24">
+            <div className="w-9 h-9 border-[3px] border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : listError ? (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <p className="text-sm text-red-500 text-center">{listError}</p>
+            <button
+              type="button"
+              onClick={fetchUserItems}
+              className="border border-primary rounded-lg h-10 px-6 text-primary bg-white text-xs"
+            >
+              Try again
+            </button>
+          </div>
+        ) : registeredItems.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-[120px] pt-10">
+            <EmptyNest />
+            <p className="text-[20px] font-extrabold text-[#1a1a1a] mt-4 mb-2.5">Nothing here yet!</p>
+            <p className="text-[14px] text-black/65 text-center leading-[22px]">
+              You have no registered items currently.
+              <br />
+              Any new items you register will appear here.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Search */}
+            <div className="flex items-center bg-white m-[15px] lg:mx-10 lg:my-5 px-[15px] rounded-[25px] border border-[#ddd] h-[45px]">
+              <span className="mr-2.5 flex">
+                <Icon name="search-outline" size={20} color="#8B0000" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search Item"
+                value={listSearch}
+                onChange={(e) => setListSearch(e.target.value)}
+                className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-[#333] placeholder:text-[#999]"
+              />
+              {listSearch.length > 0 && (
+                <button type="button" onClick={() => setListSearch("")} aria-label="Clear search" className="flex">
+                  <Icon name="close-circle" size={18} color="#B0A09A" />
+                </button>
+              )}
             </div>
-          ) : registeredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center mt-20 gap-4">
-              <div className="w-40 h-40 rounded-full bg-[#f5e6d3] flex items-center justify-center">
-                <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
-                  <ellipse cx="50" cy="70" rx="40" ry="15" fill="#990000" opacity="0.2"/>
-                  <path d="M20 65 Q30 45 50 60 Q70 45 80 65" stroke="#990000" strokeWidth="3" fill="none" opacity="0.6"/>
-                  <path d="M15 70 Q25 50 50 65 Q75 50 85 70" stroke="#990000" strokeWidth="3" fill="none" opacity="0.4"/>
-                </svg>
-              </div>
-              <p className="font-bold text-[#4B2D23] text-base">Nothing here yet!</p>
-              <p className="text-xs text-gray-400 text-center px-8">
-                You have no registered items currently. Any new items you register will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {registeredItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
-                  <button
-                    onClick={() => {
-                      setViewingItem(item);
-                      setPage("viewItemDetail");
-                    }}
-                    className="block w-full text-left cursor-pointer"
+
+            {/* Filter */}
+            <div className="bg-white py-2.5 mx-2.5 lg:mx-10 mb-2.5 lg:mb-6 rounded-[15px] lg:border lg:border-black/[0.06]">
+              <div className="flex justify-between px-2.5">
+                <button
+                  type="button"
+                  onClick={() => setCategoryMenuOpen((o) => !o)}
+                  className={`flex-1 min-w-0 mx-1 flex items-center justify-center bg-white px-2 py-2 rounded-[15px] border active:opacity-70 ${
+                    categoryMenuOpen || listCategories.length > 0 ? "border-[#A31D1D]" : "border-[#ddd]"
+                  }`}
+                >
+                  <span
+                    className={`text-[12px] truncate mr-[5px] ${
+                      categoryMenuOpen || listCategories.length > 0 ? "text-[#A31D1D] font-bold" : "text-[#333]"
+                    }`}
                   >
-                    {item.imagePreview ? (
-                      <img src={item.imagePreview} alt={item.itemName} className="w-full h-28 object-cover" />
-                    ) : (
-                      <div className="w-full h-28 bg-gray-200 flex items-center justify-center">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                      </div>
-                    )}
-                    <div className="px-3 py-2">
-                      <p className="text-xs font-semibold text-[#4B2D23] truncate">
-                        {item.itemName || "Unnamed Item"}
-                      </p>
-                    </div>
+                    {listCategories.length === 0
+                      ? "All Categories"
+                      : listCategories.length === 1
+                        ? categories.find((c) => c.category_id === listCategories[0])?.category_name ?? "1 Selected"
+                        : `${listCategories.length} Selected`}
+                  </span>
+                  <Icon name={categoryMenuOpen ? "chevron-up" : "chevron-down"} size={14} color="#8B0000" />
+                </button>
+                {(listCategories.length > 0 || listSearch) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setListCategories([]);
+                      setListSearch("");
+                    }}
+                    className="shrink-0 flex items-center justify-center gap-[3px] mx-1 px-2 py-2 rounded-[15px] border border-[#ddd] active:opacity-70"
+                  >
+                    <Icon name="close" size={14} color="#8B0000" />
+                    <span className="text-[12px] font-semibold text-primary">Clear</span>
                   </button>
-                  <div className="flex border-t border-gray-100">
-                    <button
-                      onClick={() => {
-                        setEditForm({ ...item });
-                        setEditTargetId(item.id);
-                        setPage("editItem");
-                      }}
-                      className="flex-1 py-2 flex items-center justify-center border-r border-gray-100"
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDeleteTargetId(item.id);
-                        setShowDeleteModal(true);
-                      }}
-                      className="flex-1 py-2 flex items-center justify-center bg-[#990000]"
-                    >
-                      <DeleteIcon />
-                    </button>
+                )}
+              </div>
+
+              {categoryMenuOpen && (
+                <div className="bg-white mt-3 mx-2.5 rounded-xl p-[15px] border border-[#eee]">
+                  <div className="flex flex-wrap justify-start">
+                    {[{ category_id: "all", category_name: "All Categories" }, ...categories].map((cat) => {
+                      const isAll = cat.category_id === "all";
+                      const active = isAll ? listCategories.length === 0 : listCategories.includes(cat.category_id);
+                      return (
+                        <button
+                          key={cat.category_id}
+                          type="button"
+                          onClick={() => {
+                            if (isAll) {
+                              setListCategories([]);
+                              setCategoryMenuOpen(false);
+                            } else {
+                              setListCategories((prev) =>
+                                prev.includes(cat.category_id) ? prev.filter((id) => id !== cat.category_id) : [...prev, cat.category_id]
+                              );
+                            }
+                          }}
+                          className={`self-start mx-[5px] my-[5px] py-2.5 px-3.5 rounded-lg bg-white border flex items-center justify-center active:opacity-70 ${
+                            active ? "border-[#A31D1D]" : "border-[#eee]"
+                          }`}
+                        >
+                          <span className={`text-[13px] ${active ? "text-[#A31D1D] font-bold" : "text-[#333] font-semibold"}`}>
+                            {cat.category_name}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
+
+            {filteredItems.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-20">
+                <Icon name="search-outline" size={48} color="#C5AFA7" />
+                <p className="text-[20px] font-extrabold text-[#1a1a1a] mt-4 mb-2.5">No items found</p>
+                <p className="text-[14px] text-black/65 text-center leading-[22px]">Try adjusting your search or filter.</p>
+              </div>
+            ) : (
+          <div className="grid grid-cols-2 gap-x-[4%] sm:grid-cols-3 sm:gap-x-[2%] lg:grid-cols-4 lg:gap-x-5 xl:grid-cols-5 p-3 lg:px-10 lg:pt-0 lg:pb-10 pb-10">
+            {filteredItems.map((item) => (
+              <div
+                key={item.qr_code_id}
+                className="bg-white rounded-xl overflow-hidden mb-3 flex flex-col"
+                style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.07)" }}
+              >
+                <button type="button" onClick={() => openDetail(item)} className="block w-full text-left active:opacity-80">
+                  {item.image_url ? (
+                    <SafeImage src={item.image_url} alt={item.item_name} className="w-full h-[140px] object-cover" />
+                  ) : (
+                    <div className="w-full h-[140px] bg-[#EDE0D4] flex items-center justify-center">
+                      <Icon family="mci" name="image-off-outline" size={36} color="#B0A09A" />
+                    </div>
+                  )}
+                  <p className="text-[14px] font-semibold text-[#1a1a1a] px-2.5 py-2 bg-white truncate">{item.item_name}</p>
+                </button>
+
+                <div className="flex border-t border-black/[0.07]">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(item)}
+                    aria-label={`Edit ${item.item_name}`}
+                    className="flex-1 h-[41px] flex items-center justify-center bg-white active:opacity-70"
+                  >
+                    <Icon family="mci" name="pencil-outline" size={20} color="#8B0000" />
+                  </button>
+                  <div className="w-px bg-black/[0.07]" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteTargetId(item.qr_code_id);
+                      setShowDeleteModal(true);
+                    }}
+                    aria-label={`Delete ${item.item_name}`}
+                    className="flex-1 h-[41px] flex items-center justify-center bg-primary active:opacity-80"
+                  >
+                    <Icon family="mci" name="trash-can-outline" size={20} color="#FFFFFF" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+            )}
+          </>
+        )}
 
         {showDeleteModal && (
-          <div
-            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-end justify-center bg-black/50"
-            onClick={() => setShowDeleteModal(false)}
-          >
-            <div
-              className="bg-white rounded-t-2xl overflow-hidden w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-6 py-6">
-                <p className="text-[#4B2D23] font-bold text-base">Delete registered item?</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  This will remove your registered item from the system.
-                </p>
-              </div>
-              <div className="flex border-t border-gray-200">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 py-4 text-sm font-semibold text-[#4B2D23] border-r border-gray-200"
-                >
-                  No, keep it
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="flex-1 py-4 text-sm font-semibold text-white"
-                  style={{ backgroundColor: "#990000" }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
+          <AlertDialog
+            message="This will remove your registered item from the system."
+            b1Label="No, keep it"
+            b2Label="Delete"
+            b1OnClick={() => {
+              setShowDeleteModal(false);
+              setDeleteTargetId(null);
+            }}
+            b2OnClick={handleDeleteConfirm}
+          />
         )}
       </div>
     );
   }
 
   // =====================
-  // VIEW ITEM DETAIL (read-only)
+  // VIEW ITEM DETAIL (read-only, QrItemViewScreen)
   // =====================
   if (page === "viewItemDetail" && viewingItem) {
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader
-          title="Item Details"
-          onBackPress={() => {
+      <div className={screen}>
+        <StackHeader
+          title={viewingItem.item_name}
+          onBack={() => {
             setViewingItem(null);
-            setPage("viewItems");
+            setPage(fromScan ? "scan" : "viewItems");
           }}
         />
-        <div className="px-5 py-5 flex flex-col gap-4">
-          <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-            {viewingItem.imagePreview ? (
-              <img src={viewingItem.imagePreview} alt={viewingItem.itemName} className="w-full h-48 object-cover" />
-            ) : (
-              <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-              </div>
-            )}
-          </div>
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.ownerName || "N/A"}</p>
-            </div>
-          </div>
+        <div className="px-4 pt-5 pb-10 flex flex-col">
+          <ValueField label="Owner Name" value={viewingItem.owner_name} />
+          <ValueField label="Student Number" value={viewingItem.student_number} />
+          <ValueField label="Course and Section" value={viewingItem.course_section} />
+          <ValueField label="Contact Number" value={viewingItem.contact_number} />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.studentNumber || "N/A"}</p>
-            </div>
-          </div>
+          <SectionHeading>Item Description</SectionHeading>
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.courseSection || "N/A"}</p>
-            </div>
-          </div>
+          <PhotoCard image={viewingItem.image_url} viewOnly />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.contactNumber || "N/A"}</p>
-            </div>
-          </div>
+          <ValueField label="Category" value={viewingItem.category_name} />
+          <ValueField label="Item Name" value={viewingItem.item_name} />
+          <ValueField label="Detailed Description" value={viewingItem.description} multiline />
+          <ValueField label="Contents (if applicable)" value={viewingItem.contents} />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.itemName || "N/A"}</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Category</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{viewingItem.category || "N/A"}</p>
-            </div>
-          </div>
+          <div className="h-px bg-black/10 mb-6" />
 
           <button
+            type="button"
             onClick={() => handleViewQr(viewingItem)}
-            disabled={!viewingItem.qrData}
-            className="w-full flex items-center justify-center gap-3 rounded-lg px-4 py-3 mt-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            style={{ backgroundColor: "#990000" }}
+            disabled={!viewingItem.qr_data}
+            className="w-full h-[52px] rounded-xl bg-primary flex items-center justify-center active:opacity-80 disabled:opacity-50"
           >
-            <QrCode size={20} color="white" />
-            <p className="text-sm font-semibold text-white">View QR</p>
+            <span className="mr-2 flex">
+              <Icon name="qr-code-outline" size={20} color="#FFFFFF" />
+            </span>
+            <span className="text-[15px] font-bold text-white">View QR</span>
           </button>
+
+          {fromScan && (
+            <button
+              type="button"
+              onClick={() => {
+                setViewingItem(null);
+                setPage("scan");
+              }}
+              className="w-full h-[52px] rounded-xl bg-transparent border-[1.5px] border-[#A31D1D] mt-3 flex items-center justify-center active:opacity-80"
+            >
+              <span className="text-[15px] font-bold text-[#A31D1D]">Scan Another Item</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -818,41 +1418,17 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "viewQr") {
     return (
-      <div
-        className="flex flex-col min-h-screen mt-13 mb-16 items-center justify-center px-5"
-        style={{ backgroundColor: "#990000" }}
-      >
-        <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3 w-full max-w-xs">
-          <p className="font-bold text-[#4B2D23] text-base">{viewingItem?.itemName || "Item"}</p>
-          {viewQrCodeUrl && (
-            <img src={viewQrCodeUrl} alt="QR Code" className="w-48 h-48" />
-          )}
-          <p className="text-xs font-bold text-[#990000]">FoundNest</p>
-        </div>
-
-        <button
-          onClick={handleDownloadViewQr}
-          className="flex items-center gap-2 mt-6 text-white text-sm font-medium cursor-pointer"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Download Image For Printing
-        </button>
-
-        <button
-          onClick={() => {
-            setViewQrCodeUrl("");
-            setPage("viewItemDetail");
-          }}
-          className="mt-3 w-full max-w-xs py-3 rounded-lg text-sm font-semibold cursor-pointer"
-          style={{ backgroundColor: "#FFF3E0", color: "#990000" }}
-        >
-          Back
-        </button>
-      </div>
+      <QrCardScreen
+        isView
+        banner="Your Item QR Code"
+        itemName={viewingItem?.item_name || "Item"}
+        qrCodeUrl={viewQrCodeUrl}
+        bottomLabel="Close"
+        onBottom={() => {
+          setViewQrCodeUrl("");
+          setPage("viewItemDetail");
+        }}
+      />
     );
   }
 
@@ -860,117 +1436,83 @@ export default function QRItem({ onBack }) {
   // EDIT ITEM
   // =====================
   if (page === "editItem") {
+    const leaveEdit = () => {
+      if (isAnalyzing) showToast("Please wait until scanning finishes.");
+      else if (hasEditChanges) setShowEditDiscard(true);
+      else setPage("viewItems");
+    };
+
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader title="Edit Registered Item" onBackPress={() => setPage("viewItems")} />
-        <div className="px-5 py-5 flex flex-col gap-4">
+      <div className={screen}>
+        <StackHeader title="Edit Registered Item" onBack={leaveEdit} />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
-            <input
-              type="text"
-              placeholder="Enter your full name"
-              value={editForm.ownerName}
-              onChange={(e) => setEditForm({ ...editForm, ownerName: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
+        <div className="px-4 pt-5 pb-10 flex flex-col">
+          <OwnerField label="Owner Name" value={viewingItem?.owner_name} />
+          <OwnerField label="Student Number" value={viewingItem?.student_number} />
+          <OwnerField label="Course and Section" value={viewingItem?.course_section} />
+          <OwnerField label="Contact Number" value={viewingItem?.contact_number} />
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number*</p>
-            <input
-              type="text"
-              placeholder="e.g. 2023100464"
-              value={editForm.studentNumber}
-              onChange={(e) => setEditForm({ ...editForm, studentNumber: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
+          <SectionHeading>Item Description</SectionHeading>
 
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section*</p>
-            <input
-              type="text"
-              placeholder="e.g. BSIT 3G-G1"
-              value={editForm.courseSection}
-              onChange={(e) => setEditForm({ ...editForm, courseSection: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
-            <input
-              type="text"
-              placeholder="e.g. 09695394881"
-              value={editForm.contactNumber}
-              onChange={(e) => setEditForm({ ...editForm, contactNumber: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Description</p>
-            <div className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 border border-dashed border-gray-300">
-              {editForm.imagePreview ? (
-                <img src={editForm.imagePreview} alt="Item" className="w-full h-32 object-cover rounded-lg" />
-              ) : (
-                <label className="w-12 h-12 rounded-full bg-[#990000] flex items-center justify-center cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, true)}
-                  />
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                </label>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Item Name</p>
-            <input
-              type="text"
-              placeholder="e.g. Black Umbrella"
-              value={editForm.itemName}
-              onChange={(e) => setEditForm({ ...editForm, itemName: e.target.value })}
-              className="w-full bg-white rounded-lg px-4 py-3 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Category*</p>
-            <div className="bg-white rounded-lg px-4 py-3">
-              <select
-                value={editForm.category}
-                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                className="w-full text-sm text-[#4B2D23] outline-none bg-transparent"
-              >
-                <option value="" disabled>Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleEditSave}
-            disabled={!isEditFormValid}
-            className="w-full py-3 rounded-lg text-sm font-semibold mt-2"
-            style={{
-              backgroundColor: isEditFormValid ? "#990000" : "rgba(153, 0, 0, 0.3)",
-              color: "white",
-              cursor: isEditFormValid ? "pointer" : "default",
+          <PhotoCard
+            image={editHasPhoto ? editForm.imagePreview : null}
+            error={editErrors.image}
+            isAnalyzing={isAnalyzing}
+            canScan={!!editForm.file && !isAnalyzing && editForm.file !== scannedFile}
+            onPick={(file) => {
+              const imagePreview = previewFor(file);
+              setEditForm((prev) => ({ ...prev, file, imagePreview }));
+              setImageRemoved(false);
+              setEditErrors((prev) => ({ ...prev, image: undefined }));
             }}
-          >
-            Save Changes
-          </button>
+            onRemove={() => {
+              setEditForm((prev) => ({ ...prev, file: null, imagePreview: null }));
+              setImageRemoved(true);
+            }}
+            onScan={() => analyzeImage(editForm.file, setEditForm, setEditErrors)}
+          />
+
+          <ItemFields
+            form={editForm}
+            setForm={setEditForm}
+            errors={editErrors}
+            setErrors={setEditErrors}
+            categories={categories}
+            disabled={isAnalyzing}
+          />
+
+          <FormButtons
+            onCancel={leaveEdit}
+            onSubmit={handleEditPress}
+            submitLabel="Save Changes"
+            disabled={!hasEditChanges || loading || isAnalyzing}
+            busy={loading}
+          />
         </div>
+
+        {showSaveConfirm && (
+          <AlertDialog
+            message="Are you sure you want to save these changes?"
+            b1Label="Review"
+            b2Label="Save"
+            b1OnClick={() => setShowSaveConfirm(false)}
+            b2OnClick={handleEditSave}
+          />
+        )}
+
+        {showEditDiscard && (
+          <AlertDialog
+            message="Discard changes? Unsaved edits will be lost."
+            b1Label="Keep Editing"
+            b2Label="Discard"
+            b1OnClick={() => setShowEditDiscard(false)}
+            b2OnClick={() => {
+              setShowEditDiscard(false);
+              setEditBase(null);
+              setPage("viewItems");
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -980,142 +1522,102 @@ export default function QRItem({ onBack }) {
   // =====================
   if (page === "scan") {
     return (
-      <div className="flex flex-col h-screen pt-13 pb-16 bg-black overflow-hidden">
-        <BackHeader
-          title="Scan An Item"
-          onBackPress={() => setPage("main")}
-        />
-        <div className="flex-1 relative overflow-hidden">
-          {!scannerError ? (
-            <>
-              <div id="qr-reader" ref={scannerRef} className="w-full h-full [&_video]:w-full! [&_video]:h-full! [&_video]:object-cover!" />
+      <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col">
+        <StackHeader title="Scan An Item" onBack={() => setPage("main")} />
 
-              {/* Viewfinder */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-64 h-64 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"/>
-                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"/>
-                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"/>
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"/>
-                </div>
-              </div>
+        {!scannerError ? (
+          <div className="relative flex-1">
+            <div
+              id="qr-reader"
+              ref={scannerRef}
+              className="absolute inset-0 w-full h-full [&_video]:w-full! [&_video]:h-full! [&_video]:object-cover!"
+            />
 
-              {/* Helper text + status, overlaid on the camera feed */}
-              <div
-                className="absolute bottom-0 left-0 right-0 px-6 pt-16 pb-8 flex flex-col items-center gap-2 pointer-events-none"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" />
-                  <p className="text-sm font-semibold text-white">Scanning...</p>
-                </div>
-                <p className="text-xs text-center text-white/70">
-                  Point the camera at the item's QR tag. Item details will appear once detected.
-                </p>
+            {/* Dimmed overlay with the viewfinder */}
+            <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center pointer-events-none">
+              <div className="relative w-[240px] h-[240px]">
+                <span className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 border-white rounded-tl" />
+                <span className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 border-white rounded-tr" />
+                <span className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 border-white rounded-bl" />
+                <span className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 border-white rounded-br" />
               </div>
-            </>
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-              <div className="w-16 h-16 rounded-full border-4 border-red-400 flex items-center justify-center">
-                <XIcon size={28} className="text-red-400" />
-              </div>
-              <div>
-                <p className="font-bold text-lg text-white">Camera Error</p>
-                <p className="text-sm text-white/70 mt-1">{scannerError}</p>
-              </div>
-              <button
-                onClick={() => setScanRetryCount((c) => c + 1)}
-                className="px-5 py-2 rounded-full text-sm font-semibold cursor-pointer"
-                style={{ backgroundColor: "#990000", color: "white" }}
-              >
-                Try Again
-              </button>
+              <p className="mt-7 text-[14px] text-white/75 text-center px-8">Point your camera at a FoundNest QR code</p>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex-1 bg-[#FFF1E0] flex flex-col items-center justify-center px-8 gap-3">
+            <Icon name="camera-outline" size={56} color="#8B0000" />
+            <p className="text-[20px] font-extrabold text-[#1a1a1a] text-center">Camera Access Required</p>
+            <p className="text-[14px] text-black/65 text-center leading-[22px] mb-2">{scannerError}</p>
+            <button
+              type="button"
+              onClick={() => setScanRetryCount((c) => c + 1)}
+              className="w-full h-[52px] rounded-xl bg-primary text-[15px] font-bold text-white active:opacity-80"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
   // =====================
-  // SCAN RESULT
+  // SCAN RESULT (checking / not found / not yours)
   // =====================
   if (page === "scanResult") {
-    const isRecognized = !!scanResult && !scanResult.raw;
     const handleScanAgain = () => {
       setScanResult(null);
       setPage("scan");
     };
+    const status = scanResult?.status;
+
+    if (status === "loading" || !scanResult) {
+      return (
+        <div className="desk-nopad bg-black min-h-[calc(100vh-70px)] lg:min-h-screen flex flex-col">
+          <StackHeader title="Scan An Item" onBack={() => setPage("main")} />
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            <div className="w-9 h-9 border-[3px] border-white border-t-transparent rounded-full animate-spin" />
+            <p className="text-[16px] font-medium text-white">Checking item…</p>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-        <BackHeader
-          title={isRecognized ? scanResult?.itemName || "Scanned Item" : "Scan Result"}
-          onBackPress={handleScanAgain}
-        />
-        <div className="px-5 py-5 flex flex-col gap-4">
-          {isRecognized ? (
-            <>
-              {/* Success feedback */}
-              <div className="flex flex-col items-center gap-2 pb-2">
-                <div className="w-16 h-16 rounded-full border-4 border-green-400 flex items-center justify-center">
-                  <Check size={28} className="text-green-400" />
-                </div>
-                <p className="font-bold text-base text-[#4B2D23]">QR Code Detected!</p>
-                <p className="text-xs text-gray-500 text-center">
-                  The following details were read from the item's QR tag.
-                </p>
-              </div>
+      <div className={`${screen} flex flex-col`}>
+        <StackHeader title="Scan An Item" onBack={() => setPage("main")} />
 
-              <div>
-                <p className="text-xs text-[#4B2D23] font-medium mb-1">Owner Name*</p>
-                <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-                  <p className="text-sm text-[#4B2D23]">{scanResult.ownerName || "—"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#4B2D23] font-medium mb-1">Student Number*</p>
-                <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-                  <p className="text-sm text-[#4B2D23]">{scanResult.studentNumber || "—"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#4B2D23] font-medium mb-1">Course and Section*</p>
-                <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-                  <p className="text-sm text-[#4B2D23]">{scanResult.courseSection || "—"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#4B2D23] font-medium mb-1">Contact Number</p>
-                <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-                  <p className="text-sm text-[#4B2D23]">{scanResult.contactNumber || "—"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#4B2D23] font-medium mb-1">Category*</p>
-                <div className="bg-white rounded-lg px-4 py-3 opacity-60">
-                  <p className="text-sm text-[#4B2D23]">{scanResult.category || "—"}</p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-2 py-10">
-              <div className="w-16 h-16 rounded-full border-4 border-red-400 flex items-center justify-center">
-                <XIcon size={28} className="text-red-400" />
-              </div>
-              <p className="font-bold text-base text-[#4B2D23]">QR Code Not Recognized</p>
-              <p className="text-xs text-gray-500 text-center px-6">
-                This QR code doesn't match a registered item.
-              </p>
-            </div>
-          )}
+        <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8 gap-3">
+          <span
+            className={`w-[72px] h-[72px] rounded-full flex items-center justify-center mb-2 ${
+              status === "not_owner" ? "bg-[#5C5C5C]" : "bg-primary"
+            }`}
+          >
+            <Icon name={status === "not_owner" ? "lock-closed" : "close"} size={36} color="#FFFFFF" />
+          </span>
+          <p className="text-[20px] font-extrabold text-[#1a1a1a] text-center">
+            {status === "not_owner" ? "Item Not Yours" : "QR Code Not Found"}
+          </p>
+          <p className="text-[14px] text-black/65 text-center leading-[22px] mb-2">
+            {status === "not_owner"
+              ? "This item is registered under a different account. Details are private for security reasons."
+              : scanResult.message || "This QR code is not registered in FoundNest."}
+          </p>
 
           <button
+            type="button"
             onClick={handleScanAgain}
-            className="w-full py-3 rounded-full text-sm font-semibold mt-2 cursor-pointer"
-            style={{ backgroundColor: "#990000", color: "white" }}
+            className="w-full h-[52px] rounded-xl bg-primary text-[15px] font-bold text-white active:opacity-80"
           >
-            Scan Again
+            Scan Another Item
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage("main")}
+            className="w-full h-[52px] rounded-xl border border-[#D48B8B] bg-white text-[15px] font-semibold text-[#1a1a1a] active:opacity-80"
+          >
+            Back to QR Item
           </button>
         </div>
       </div>

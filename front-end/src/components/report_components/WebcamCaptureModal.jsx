@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "../../user-native/Icon";
 
 export default function WebcamCaptureModal({ onCapture, onClose }) {
   const videoRef = useRef(null);
@@ -65,42 +66,42 @@ export default function WebcamCaptureModal({ onCapture, onClose }) {
     );
   };
 
+  // Fullscreen black camera view with a round close button and a shutter, like WebCameraModal in the native app
   return (
-    <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/70 flex items-center justify-center z-[6000] px-4">
-      <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <p className="font-semibold text-base">Take Photo</p>
-          <button type="button" onClick={onClose} className="text-gray-400">
-            <i className="fa-solid fa-xmark" />
-          </button>
-        </div>
-
-        <div className="relative bg-black aspect-[3/4] flex items-center justify-center">
-          {error ? (
-            <p className="text-white text-sm text-center px-6">{error}</p>
-          ) : (
-            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-          )}
-        </div>
-
-        <div className="flex items-center gap-2.5 px-4 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-primary border border-primary"
-          >
+    <div className="fixed inset-0 z-[6000] bg-black flex items-center justify-center">
+      {error ? (
+        <div className="flex flex-col items-center justify-center px-8 gap-4">
+          <p className="text-white text-[16px] text-center">{error}</p>
+          <button type="button" onClick={onClose} className="p-2 text-white/70 text-sm">
             Cancel
           </button>
+        </div>
+      ) : (
+        <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+      )}
+
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close camera"
+        className="absolute top-10 left-5 w-11 h-11 rounded-full bg-black/50 flex items-center justify-center"
+      >
+        <Icon name="close" size={26} color="#FFFFFF" />
+      </button>
+
+      {!error && (
+        <div className="absolute bottom-10 inset-x-0 flex justify-center">
           <button
             type="button"
             onClick={handleCapture}
-            disabled={!isReady || !!error}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white bg-primary disabled:opacity-50"
+            disabled={!isReady}
+            aria-label="Take photo"
+            className="w-[72px] h-[72px] rounded-full bg-white border-4 border-white/40 flex items-center justify-center disabled:opacity-50"
           >
-            Capture
+            <span className="w-14 h-14 rounded-full bg-white border-2 border-black" />
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

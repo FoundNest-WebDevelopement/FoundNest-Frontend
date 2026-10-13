@@ -1,13 +1,5 @@
-import hotToast from "react-hot-toast";
-import Toast from "../components/Toast";
-
-export function showMobileOnlyToast() {
-    if (window.matchMedia("(min-width: 769px)").matches) {
-        hotToast.custom(() => (
-            <Toast
-                message="Optimized for mobile and tablet. FoundNest uses a tablet-width layout — a full desktop view isn't available."
-                
-            />
-        ));
-    }
-}
+// The Standard User interface now has a proper desktop layout, so the old
+// "Optimized for mobile and tablet" notice is no longer shown. The function is kept
+// (as a no-op) because the login and role-selection flows still call it right before
+// navigating to /home.
+export function showMobileOnlyToast() {}

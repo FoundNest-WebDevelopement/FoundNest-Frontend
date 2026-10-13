@@ -1,37 +1,44 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import AppHeader from "../user-native/AppHeader";
+import Icon from "../user-native/Icon";
+import AlertDialog from "../components/AlertDialog";
+import useSheetDrag from "../user-native/useSheetDrag";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Same tiles and campus centre as the native app (features/map/mapStyle.js)
+const GOOGLE_HYBRID_TILE_URL = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}";
+const BULSU_CENTER = [14.8582, 120.8142];
+const MARKER_COLOR = "#D32F2F";
+// The map can't be panned or zoomed out beyond the BulSU main campus (+ a small margin)
+const CAMPUS_BOUNDS = [
+  [14.8535, 120.8085], // south-west
+  [14.863, 120.82], // north-east
+];
+
+const escapeHtml = (text) =>
+  String(text ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// OfficeMarkerPin of the native app as a Leaflet DivIcon, anchored at the bottom centre
 const createMarkerIcon = (label) =>
   new L.DivIcon({
     className: "",
     html: `
-    <div style="position:absolute; transform:translate(-50%, -100%); display:flex; flex-direction:column; align-items:center;">
-      <div style="background:#990000; color:white; font-size:10px; font-weight:600; padding:3px 8px; border-radius:20px; white-space:nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-        ${label}
+    <div style="position:absolute; transform:translate(-50%, -100%); display:flex; flex-direction:column; align-items:center; cursor:pointer; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">
+      <div style="padding:5px 8px; border-radius:8px; border:1.5px solid #FFFFFF; background-color:${MARKER_COLOR}; color:#FFFFFF; font-size:11px; font-weight:900; white-space:nowrap; text-shadow:0 1px 1px rgba(0,0,0,0.3);">
+        ${escapeHtml(label)}
       </div>
-      <div style="width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:10px solid #990000; margin-top:-1px;"></div>
+      <div style="width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid ${MARKER_COLOR}; margin-top:-1.5px;"></div>
     </div>
   `,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
-
-const bulsuIcon = new L.DivIcon({
-  className: "",
-  html: `
-    <div style="position:absolute; transform:translate(-50%, -50%); background:white; color:#990000; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1.5px solid #990000;">
-      Bulacan State University Main Campus
-    </div>
-  `,
-  iconSize: [0, 0],
-  iconAnchor: [0, 0],
-});
 
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
@@ -40,38 +47,120 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
+// Keeps the view inside CAMPUS_BOUNDS: the minimum zoom is the smallest one at which the
+// current map size still fits inside the bounds, so wide desktop maps can't show outside it.
+function CampusLimit() {
+  const map = useMap();
+
+  useEffect(() => {
+    const apply = () => map.setMinZoom(map.getBoundsZoom(CAMPUS_BOUNDS, true));
+    apply();
+    map.on("resize", apply);
+    return () => map.off("resize", apply);
+  }, [map]);
+
+  return null;
+}
+
 function FlyToOffice({ office }) {
   const map = useMap();
 
   useEffect(() => {
     if (office) {
-      map.flyTo([office.lat, office.lng], 19, { duration: 1 });
+      map.flyTo([office.lat, office.lng], 19, { duration: 1.5 });
     }
   }, [office, map]);
 
   return null;
 }
 
+function OfficeBanner({ office }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUri = typeof office.image_url === "string" ? office.image_url.trim() : "";
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [office.office_id, imageUri]);
+
+  return (
+    <div className="relative w-full h-[180px] overflow-hidden bg-black/[0.08]">
+      {imageUri && !imageFailed ? (
+        <>
+          <img
+            src={imageUri}
+            alt={office.office_name}
+            onError={() => setImageFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 flex flex-col justify-end bg-black/45 p-3 z-[2]">
+            <p className="text-white font-bold text-[16px]">{office.floor}</p>
+            <p className="text-white font-medium text-sm mt-1">Hours: {office.operating_hours}</p>
+          </div>
+        </>
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ backgroundColor: office.color || "#8B0000" }}
+        >
+          <p className="text-[22px] font-extrabold text-white">No Image Available</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const formatReviewDate = (dateString) => {
+  if (!dateString) return "Recently";
+  return new Date(dateString).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+};
+
 export default function Map() {
   const user_id = localStorage.getItem("user_id");
   const [searchParams, setSearchParams] = useSearchParams();
   const focusOfficeId = searchParams.get("officeId");
 
+  // From lg up the office details open as a side panel (like Google Maps) instead of a bottom sheet
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   const [offices, setOffices] = useState([]);
   const [selectedOffice, setSelectedOffice] = useState(null);
   const [flyToOffice, setFlyToOffice] = useState(null);
   const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [myReview, setMyReview] = useState(null);
-  const [toast, setToast] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [officeSearch, setOfficeSearch] = useState("");
-  const [selectedLabel, setSelectedLabel] = useState("Search for a Drop-off location...");
+  const [initialRating, setInitialRating] = useState(0);
+  const [initialText, setInitialText] = useState("");
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  const [showDeleteReviewModal, setShowDeleteReviewModal] = useState(false);
-  const [deletingReview, setDeletingReview] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [sheetShown, setSheetShown] = useState(false);
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+
+  // search bar state (useOfficeSearch of the native app)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredOffices, setFilteredOffices] = useState([]);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
   // Fetch offices from backend
   useEffect(() => {
@@ -84,8 +173,8 @@ export default function Map() {
             .filter((office) => office.status !== false)
             .map((office) => ({
               ...office,
-              lat: office.latitude ? Number(office.latitude) : 14.8574,
-              lng: office.longitude ? Number(office.longitude) : 120.8146,
+              lat: office.latitude ? Number(office.latitude) : BULSU_CENTER[0],
+              lng: office.longitude ? Number(office.longitude) : BULSU_CENTER[1],
             }));
           setOffices(mapped);
         }
@@ -103,7 +192,8 @@ export default function Map() {
       const res = await fetch(`${API_URL}/api/offices/${officeId}/reviews`);
       const data = await res.json();
       if (res.ok) {
-        setReviews(data);
+        const list = Array.isArray(data) ? data : data.reviews || [];
+        setReviews(list.filter((r) => !r.is_archived));
       }
     } catch (err) {
       console.error(err);
@@ -121,10 +211,14 @@ export default function Map() {
         setMyReview(data);
         setRating(data.rating);
         setReviewText(data.review_text || "");
+        setInitialRating(data.rating || 0);
+        setInitialText(data.review_text || "");
       } else {
         setMyReview(null);
         setRating(0);
         setReviewText("");
+        setInitialRating(0);
+        setInitialText("");
       }
     } catch (err) {
       console.error(err);
@@ -132,8 +226,10 @@ export default function Map() {
     }
   }, [user_id]);
 
-  const handleMarkerClick = (office) => {
+  const openOffice = (office) => {
     setSelectedOffice(office);
+    setSheetShown(false);
+    requestAnimationFrame(() => setSheetShown(true));
     fetchMyReview(office.office_id);
     fetchReviews(office.office_id);
   };
@@ -146,8 +242,7 @@ export default function Map() {
 
     const office = offices.find((o) => String(o.office_id) === String(focusOfficeId));
     if (office) {
-      handleMarkerClick(office);
-      setSelectedLabel(office.office_name);
+      openOffice(office);
       setFlyToOffice(office);
     }
 
@@ -156,432 +251,431 @@ export default function Map() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offices, focusOfficeId]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setSelectedOffice(null);
     setReviews([]);
     setMyReview(null);
+    setRating(0);
+    setReviewText("");
+  }, []);
+
+  const closeSheet = () => {
+    setSheetShown(false);
+    setTimeout(handleClose, 200);
   };
 
-const handlePostReview = async () => {
-    if (rating === 0) return;
+  const { dragY, dragging, handlers } = useSheetDrag(closeSheet);
 
+  // Reads the server's message from a failed response so the user sees why
+  const failureMessage = async (res, fallback) => {
+    const data = await res.json().catch(() => ({}));
+    return data.message || fallback;
+  };
+
+  const isEditing = !!myReview;
+  const isChanged = rating !== initialRating || reviewText.trim() !== initialText.trim();
+  const canSubmit = isEditing ? isChanged && rating > 0 : rating > 0;
+
+  const handlePostReview = async () => {
+    if (!online) {
+      setAlertMessage("You are currently offline. Cannot post review.");
+      return;
+    }
+    // A star rating is enough; the comment is optional (same as the mobile app)
+    if (!canSubmit) return;
+
+    setIsSubmitting(true);
     try {
       if (myReview) {
         const res = await fetchWithAuth(`${API_URL}/api/reviews/${myReview.review_id}`, {
           method: "PUT",
-          body: JSON.stringify({ rating, review_text: reviewText }),
+          body: JSON.stringify({ rating, review_text: reviewText.trim() }),
         });
         if (res.ok) {
-          setToast("Review updated. Thank you for your feedback!");
-          setTimeout(() => setToast(null), 3000);
+          setAlertMessage("Your review has been updated!");
           fetchMyReview(selectedOffice.office_id);
           fetchReviews(selectedOffice.office_id);
+        } else {
+          setAlertMessage(await failureMessage(res, "Failed to submit review."));
         }
       } else {
-        if (reviewText.trim() === "") return;
         const res = await fetchWithAuth(`${API_URL}/api/offices/${selectedOffice.office_id}/reviews`, {
           method: "POST",
-          body: JSON.stringify({ user_id, rating, review_text: reviewText }),
+          body: JSON.stringify({ user_id, rating, review_text: reviewText.trim() }),
         });
         if (res.ok) {
-          setRating(0);
-          setReviewText("");
-          setToast("Review posted. Thank you for your feedback!");
-          setTimeout(() => setToast(null), 3000);
+          setAlertMessage("Your review has been posted!");
           fetchMyReview(selectedOffice.office_id);
           fetchReviews(selectedOffice.office_id);
+        } else {
+          setAlertMessage(await failureMessage(res, "Failed to submit review."));
         }
       }
     } catch (err) {
       console.error(err);
+      setAlertMessage("Could not connect to the server. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-};
-
-  const hasReviewChanges = myReview
-    ? rating !== myReview.rating || reviewText !== (myReview.review_text || "")
-    : true;
+  };
 
   const handleDeleteReview = async () => {
+    setConfirmDelete(false);
     if (!myReview) return;
-    setDeletingReview(true);
+    if (!online) {
+      setAlertMessage("You are currently offline. Cannot delete review.");
+      return;
+    }
+    setIsDeleting(true);
     try {
       const res = await fetchWithAuth(`${API_URL}/api/reviews/${myReview.review_id}`, {
         method: "DELETE",
         body: JSON.stringify({ user_id }),
       });
       if (res.ok) {
-        setToast("Review deleted.");
-        setTimeout(() => setToast(null), 3000);
+        setAlertMessage("Your review has been deleted.");
         setMyReview(null);
         setRating(0);
         setReviewText("");
+        setInitialRating(0);
+        setInitialText("");
         fetchReviews(selectedOffice.office_id);
+      } else {
+        setAlertMessage(await failureMessage(res, "Failed to delete review."));
       }
     } catch (err) {
       console.error(err);
+      setAlertMessage("Could not connect to the server. Please try again.");
     } finally {
-      setDeletingReview(false);
-      setShowDeleteReviewModal(false);
+      setIsDeleting(false);
     }
   };
 
-  const getAverageRating = () => {
-    if (reviews.length === 0) return "0.0";
-    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
-    return (sum / reviews.length).toFixed(1);
-  };
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews).toFixed(1) : "0.0";
+  const barWidth = (star) => (totalReviews === 0 ? "0%" : `${(reviews.filter((r) => r.rating === star).length / totalReviews) * 100}%`);
 
-  const getRatingBarWidth = (star) => {
-    if (reviews.length === 0) return "0%";
-    const count = reviews.filter((r) => r.rating === star).length;
-    return `${(count / reviews.length) * 100}%`;
-  };
+  /* ------------------------------ search bar ------------------------------ */
 
-  const getUserLabel = (review) => {
-    if (review.first_name && review.last_name) {
-      return `${review.first_name} ${review.last_name}`;
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    if (text) {
+      setFilteredOffices(offices.filter((o) => o.office_name.toLowerCase().includes(text.toLowerCase())));
+      setDropdownVisible(true);
+    } else {
+      setFilteredOffices([]);
+      setDropdownVisible(false);
     }
-    return review.email?.split("@")[0] || "User";
   };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const toggleDropdown = () => {
+    if (dropdownVisible) {
+      setDropdownVisible(false);
+      return;
+    }
+    setFilteredOffices(
+      searchQuery.trim() === ""
+        ? offices
+        : offices.filter((o) => o.office_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    setDropdownVisible(true);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setFilteredOffices([]);
+    setDropdownVisible(false);
+  };
+
+  const selectFromDropdown = (office) => {
+    setFlyToOffice({ ...office });
+    setSearchQuery(office.office_name);
+    setDropdownVisible(false);
+    openOffice(office);
   };
 
   return (
-    <div className="relative w-full" style={{ height: "calc(100vh - 3.5rem)" }}>
+    <div>
+      <AppHeader title="Map" />
 
-      {/* Custom Dropdown */}
-      <div className="absolute top-17 left-0 right-0 z-[1000] px-3">
-        <div className="relative">
-          <button
-            onClick={() => {
-              setDropdownOpen(!dropdownOpen);
-              setOfficeSearch("");
-            }}
-            className="w-full px-4 py-2 rounded-lg bg-white shadow-md text-sm text-gray-600 border border-gray-200 outline-none flex justify-between items-center"
+      <div data-fullbleed className="relative w-full h-[calc(100dvh-57px-70px)] lg:h-[calc(100dvh-57px)]">
+        {/* Search overlay */}
+        <div className={`absolute top-10 inset-x-5 z-[1000] lg:top-6 lg:right-auto lg:w-[440px] ${selectedOffice ? "lg:left-[452px]" : "lg:left-6"}`}>
+          <div
+            className="flex items-center bg-white rounded-lg pl-3"
+            style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.15)" }}
           >
-            <span className="truncate">{selectedLabel}</span>
-            <span className="ml-2 text-gray-400">▾</span>
-          </button>
+            <input
+              type="text"
+              placeholder="Search for a Drop-off location..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => {
+                if (searchQuery) setDropdownVisible(true);
+              }}
+              className="flex-1 min-w-0 py-3 text-[15px] text-black bg-transparent outline-none placeholder:text-[#888]"
+            />
 
-          {dropdownOpen && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-[1001] overflow-hidden">
-              <div className="p-2 border-b border-gray-100">
-                <input
-                  type="text"
-                  autoFocus
-                  value={officeSearch}
-                  onChange={(e) => setOfficeSearch(e.target.value)}
-                  placeholder="Search centers..."
-                  className="w-full px-3 py-2 rounded-md bg-gray-50 border border-gray-200 text-sm text-gray-700 outline-none focus:border-[#990000]"
-                />
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                {offices
-                  .filter((office) =>
-                    office.office_name
-                      .toLowerCase()
-                      .includes(officeSearch.trim().toLowerCase())
-                  )
-                  .map((office) => (
-                    <button
-                      key={office.office_id}
-                      onClick={() => {
-                        handleMarkerClick(office);
-                        setSelectedLabel(office.office_name);
-                        setDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-100 last:border-none"
-                    >
-                      {office.office_name}
-                    </button>
-                  ))}
-                {offices.filter((office) =>
-                  office.office_name
-                    .toLowerCase()
-                    .includes(officeSearch.trim().toLowerCase())
-                ).length === 0 && (
-                  <p className="px-4 py-3 text-sm text-gray-400 text-center">
-                    No centers found.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+            {searchQuery.length > 0 && (
+              <button type="button" onClick={clearSearch} aria-label="Clear search" className="p-2.5 flex items-center justify-center">
+                <Icon name="close-circle" size={20} color="#888" />
+              </button>
+            )}
 
-      {/* Map */}
-      <MapContainer
-        center={[14.8574, 120.8146]}
-        zoom={17}
-        minZoom={16}
-        maxZoom={19}
-        className="h-full w-full z-0"
-        zoomControl={false}
-      >
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles © Esri"
-          maxZoom={19}
-        />
-        <MapClickHandler onMapClick={handleClose} />
-        <FlyToOffice office={flyToOffice} />
-
-        {/* BulSU Label */}
-        <Marker
-          position={[14.8574, 120.8146]}
-          icon={bulsuIcon}
-          interactive={false}
-        />
-
-        {/* Office Markers */}
-        {offices.map((office) => (
-          <Marker
-            key={office.office_id}
-            position={[office.lat, office.lng]}
-            icon={createMarkerIcon(office.office_name)}
-            eventHandlers={{
-              click: () => {
-                handleMarkerClick(office);
-                setSelectedLabel(office.office_name);
-              },
-            }}
-          />
-        ))}
-      </MapContainer>
-
-      {/* Bottom Sheet */}
-      {selectedOffice && (
-        <div className="absolute bottom-0 left-0 right-0 z-[500] bg-white rounded-t-2xl shadow-lg max-h-[75vh] overflow-y-auto pb-4">
-
-          {/* Office Name + Close */}
-          <div className="flex justify-between items-center px-4 pt-4 pb-2">
-            <p className="font-semibold text-sm text-[#990000]">
-              {selectedOffice.office_name} FoundNest Office
-            </p>
-            <button onClick={handleClose}>
-              <span className="text-gray-500 text-lg font-bold">✕</span>
+            <button type="button" onClick={toggleDropdown} aria-label="Toggle list" className="p-2.5 flex items-center justify-center">
+              <Icon name={dropdownVisible ? "chevron-up" : "chevron-down"} size={22} color="#888" />
             </button>
           </div>
 
-          {/* Image with overlaid text */}
-          <div className="relative w-full h-44">
-            {selectedOffice.image_url ? (
-              <img
-                src={selectedOffice.image_url}
-                alt={selectedOffice.office_name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                <p className="text-gray-500 text-sm">No image available</p>
-              </div>
-            )}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/30 px-4 py-2">
-              <p className="text-white text-xs font-medium">{selectedOffice.floor || "—"}</p>
-              <p className="text-white text-xs">
-                Operating Hours: {selectedOffice.operating_hours || "—"}
-              </p>
-            </div>
-          </div>
-
-          {/* Rating Section */}
-          <div className="px-4 pt-4 flex gap-4 items-start">
-            <div className="flex flex-col items-start">
-              <p className="text-4xl font-bold text-[#4B2D23]">
-                {getAverageRating()}
-              </p>
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={`text-lg ${
-                      star <= Math.round(getAverageRating())
-                        ? "text-[#FFD700]"
-                        : "text-gray-300"
-                    }`}
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400">({reviews.length})</p>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-1.5 pt-2">
-              {[5, 4, 3, 2, 1].map((star) => (
-                <div key={star} className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-2 rounded-full"
-                      style={{
-                        width: getRatingBarWidth(star),
-                        backgroundColor: star === 5 ? "#FFD700" : "#D9D9D9",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rate and Review */}
-          <div className="px-4 pt-4">
-            <p className="font-semibold text-sm mb-3">
-              {myReview ? "Edit Your Review" : "Rate and Review"}
-            </p>
-
-            <div className="flex gap-2 mb-3 justify-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  className={`text-3xl cursor-pointer ${
-                    star <= (hoverRating || rating)
-                      ? "text-[#FFD700]"
-                      : "text-gray-300"
-                  }`}
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
+          {dropdownVisible && filteredOffices.length > 0 && (
+            <div
+              className="bg-white rounded-lg mt-2 max-h-[220px] overflow-y-auto"
+              style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.15)" }}
+            >
+              {filteredOffices.map((office) => (
+                <button
+                  key={office.office_id}
+                  type="button"
+                  onClick={() => selectFromDropdown(office)}
+                  className="block w-full text-left p-[15px] text-[14px] text-[#333]"
                 >
-                  ★
-                </span>
+                  {office.office_name}
+                </button>
               ))}
             </div>
+          )}
+        </div>
 
-            <textarea
-              placeholder="Tell others about your experience."
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-3 text-xs text-gray-600 outline-none resize-none h-24"
+        {/* Map */}
+        <MapContainer
+          center={BULSU_CENTER}
+          zoom={17}
+          minZoom={15}
+          maxZoom={20}
+          maxBounds={CAMPUS_BOUNDS}
+          maxBoundsViscosity={1.0}
+          className="h-full w-full z-0"
+          zoomControl={false}
+        >
+          <TileLayer url={GOOGLE_HYBRID_TILE_URL} maxZoom={20} />
+          <CampusLimit />
+          <MapClickHandler onMapClick={() => setDropdownVisible(false)} />
+          <FlyToOffice office={flyToOffice} />
+
+          {/* Office Markers */}
+          {offices.map((office) => (
+            <Marker
+              key={office.office_id}
+              position={[office.lat, office.lng]}
+              icon={createMarkerIcon(office.office_name)}
+              eventHandlers={{
+                click: () => openOffice(office),
+              }}
             />
+          ))}
+        </MapContainer>
+      </div>
 
-            {myReview && !hasReviewChanges ? (
-              <button
-                onClick={() => setShowDeleteReviewModal(true)}
-                className="w-full py-3 rounded-full text-sm font-semibold mt-2 border-2"
-                style={{ borderColor: "#990000", color: "#990000", cursor: "pointer" }}
-              >
-                Delete Review
-              </button>
-            ) : (
-              <button
-                onClick={handlePostReview}
-                disabled={rating === 0}
-                className="w-full py-3 rounded-full text-sm font-semibold mt-2"
-                style={{
-                  backgroundColor: rating > 0 ? "#990000" : "rgba(75, 45, 35, 0.3)",
-                  color: "white",
-                  cursor: rating > 0 ? "pointer" : "default",
-                }}
-              >
-                {myReview ? "Update Review" : "Post"}
-              </button>
-            )}
-          </div>
+      {/* Office details sheet (OfficeModal of the native app) */}
+      {selectedOffice && (
+        <div className="fixed inset-0 z-[4500] lg:pointer-events-none">
+          <div
+            onClick={closeSheet}
+            className="absolute inset-0 bg-black/40 transition-opacity duration-200 lg:hidden"
+            style={{ opacity: sheetShown ? 1 : 0 }}
+          />
 
-          {/* Reviews List */}
-          <div className="px-4 pt-4 pb-8">
-            {loadingReviews ? (
-              <div className="flex justify-center py-4">
-                <div className="w-8 h-8 border-4 border-[#990000] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : reviews.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">
-                No reviews yet. Be the first to review!
-              </p>
-            ) : (
-              reviews.map((review) => (
-                <div key={review.review_id} className="flex gap-3 mb-4">
-                  <div className="w-9 h-9 rounded-full bg-[#990000] flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-bold">
-                      {getUserLabel(review).slice(0, 2).toUpperCase()}
-                    </span>
+          <div className="absolute inset-x-0 bottom-0 max-w-3xl mx-auto lg:inset-x-auto lg:left-[256px] lg:top-[73px] lg:bottom-4 lg:w-[420px] lg:max-w-none lg:mx-0 lg:pointer-events-auto">
+            <div
+              className="bg-white rounded-t-[24px] lg:rounded-2xl lg:shadow-[0_2px_14px_rgba(0,0,0,0.3)] overflow-hidden h-[85vh] lg:h-full flex flex-col"
+              style={{
+                transform: isDesktop
+                  ? sheetShown
+                    ? "translateX(0)"
+                    : "translateX(calc(-100% - 280px))"
+                  : sheetShown
+                    ? `translateY(${dragY}px)`
+                    : "translateY(100%)",
+                transition: dragging ? "none" : "transform 260ms ease-out",
+              }}
+            >
+              <div {...(isDesktop ? {} : handlers)} className="w-full bg-white shrink-0 touch-none cursor-grab lg:cursor-default lg:touch-auto">
+                <div className="w-10 h-1 bg-[#DDDDDD] rounded-sm mx-auto mt-2.5 lg:hidden" />
+                <div className="flex items-center px-4 py-3 gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[16px] font-bold text-primary line-clamp-2">{selectedOffice.office_name}</p>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs font-semibold">{getUserLabel(review)}</p>
-                      <p className="text-xs text-gray-400">{formatTime(review.created_at)}</p>
+                  <button
+                    type="button"
+                    onClick={closeSheet}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    aria-label="Close"
+                    className="p-1"
+                  >
+                    <span className="text-[18px] text-primary font-bold">✕</span>
+                  </button>
+                </div>
+              </div>
+
+              <div ref={scrollRef} className="flex-1 overflow-y-auto pb-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <OfficeBanner office={selectedOffice} />
+
+                <div className="p-4 flex flex-col">
+                  <p className="text-[14px] leading-5 text-[#1a1a1a]">{selectedOffice.description}</p>
+
+                  <div className="h-px bg-black/[0.08] my-5" />
+
+                  <div className="flex items-center">
+                    <div className="flex flex-col items-center mr-5">
+                      <p className="text-[48px] font-bold">{averageRating}</p>
+                      <p className="text-[12px]">⭐⭐⭐⭐⭐</p>
+                      <p className="text-[12px] text-[#666]">({totalReviews})</p>
                     </div>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span
-                          key={star}
-                          className={`text-xs ${
-                            star <= review.rating
-                              ? "text-[#FFD700]"
-                              : "text-gray-300"
-                          }`}
-                        >
-                          ★
-                        </span>
+                    <div className="flex-1 h-[60px] flex flex-col justify-between">
+                      {[5, 4, 3, 2, 1].map((star) => (
+                        <div key={star} className="h-1.5 bg-[#EEEEEE] rounded-[3px] overflow-hidden">
+                          <div className="h-full bg-[#FFD700]" style={{ width: barWidth(star) }} />
+                        </div>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{review.review_text}</p>
-
-                    {review.response_text && (
-                      <div className="mt-2 ml-1 pl-3 border-l-2 border-[#990000] bg-[#FFF3E0] rounded-r-lg py-2 pr-2">
-                        <p className="text-xs font-semibold text-[#990000]">
-                          Reply from {selectedOffice.office_name}
-                          {review.responded_by_name?.trim() ? ` · ${review.responded_by_name}` : ""}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-0.5">{review.response_text}</p>
-                      </div>
-                    )}
                   </div>
+
+                  <div className="h-px bg-black/[0.08] my-5" />
+
+                  {/* Rate and review */}
+                  <div style={{ pointerEvents: online ? "auto" : "none" }}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <p className={`text-[16px] font-bold ${online ? "" : "text-[#888888]"}`}>
+                        {isEditing ? "Edit Your Review" : "Rate and Review"}
+                      </p>
+
+                      {isEditing &&
+                        (isDeleting ? (
+                          <div className="p-1">
+                            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(true)}
+                            disabled={isSubmitting || loadingReviews || !online}
+                            aria-label="Delete your review"
+                            className="p-1"
+                          >
+                            <Icon name="trash-outline" size={22} color={online ? "#8B0000" : "#A0A0A0"} />
+                          </button>
+                        ))}
+                    </div>
+
+                    <div className={`flex justify-around mb-4 px-5 ${online ? "" : "opacity-50"}`}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          disabled={loadingReviews || !online}
+                          aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                        >
+                          <span
+                            className="text-[32px] leading-[38px]"
+                            style={{ color: rating >= star ? "#FFD700" : online ? "#CCCCCC" : "#D0D0D0" }}
+                          >
+                            ★
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      placeholder="Tell others about your experience at this office."
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      disabled={loadingReviews || !online}
+                      className={`w-full h-[100px] border rounded-lg p-3 text-[14px] resize-none outline-none block ${
+                        loadingReviews || !online
+                          ? "bg-[#EFEFEF] border-[#E0E0E0] text-[#888888] placeholder:text-[#A0A0A0]"
+                          : "bg-[#FAFAFA] border-[#DDDDDD] placeholder:text-[#999]"
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handlePostReview}
+                      disabled={isSubmitting || isDeleting || loadingReviews || !online || !canSubmit}
+                      className={`w-full p-3 rounded-lg flex items-center justify-center mt-3 ${
+                        !online || !canSubmit
+                          ? "bg-[#D6D6D6] opacity-70"
+                          : "bg-primary"
+                      }`}
+                    >
+                      {isSubmitting ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span className={`text-[14px] font-bold ${!canSubmit ? "text-[#7A7A7A]" : "text-white"}`}>
+                          {isEditing ? "Update Review" : "Post Review"}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-black/[0.08] my-5" />
+
+                  <p className="text-[16px] font-bold mb-2.5">Reviews</p>
+
+                  {loadingReviews ? (
+                    <div className="flex justify-center mt-5">
+                      <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    reviews.map((review) => {
+                      const reviewerName = review.first_name
+                        ? `${review.first_name} ${review.last_name}`
+                        : review.email || "Anonymous";
+
+                      return (
+                        <div key={review.review_id} className="mt-2.5">
+                          <div className="flex items-center mb-2">
+                            <div className="w-9 h-9 rounded-full bg-[#A0A0FF] mr-2.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-[14px]">{reviewerName}</p>
+                              <p className="text-[10px]">{"⭐".repeat(review.rating || 0)}</p>
+                            </div>
+                            <p className="text-[10px] text-[#888]">{formatReviewDate(review.created_at)}</p>
+                          </div>
+                          <p className="text-[14px] text-[#333] leading-5">{review.review_text || "No comment provided."}</p>
+
+                          {review.response_text ? (
+                            <div className="mt-2 ml-4 p-2.5 rounded-lg bg-[#F2F2F2]">
+                              <p className="text-[12px] font-bold text-primary mb-1">Response from {selectedOffice.office_name}</p>
+                              <p className="text-[13px] text-[#333] leading-[18px]">{review.response_text}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-center text-[#888] mt-5 italic">No reviews yet. Be the first to review!</p>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Review Confirmation */}
-      {showDeleteReviewModal && (
-        <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-center justify-center bg-black/50 px-8">
-          <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
-            <div className="px-6 py-6">
-              <p className="text-[#4B2D23] font-bold text-base text-center">
-                Delete your review? This cannot be undone.
-              </p>
-            </div>
-            <div className="flex border-t border-gray-200">
-              <button
-                onClick={() => setShowDeleteReviewModal(false)}
-                disabled={deletingReview}
-                className="flex-1 py-4 text-sm font-semibold text-[#4B2D23] border-r border-gray-200 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteReview}
-                disabled={deletingReview}
-                className="flex-1 py-4 text-sm font-semibold text-white disabled:opacity-50"
-                style={{ backgroundColor: "#990000" }}
-              >
-                {deletingReview ? "Deleting..." : "Delete"}
-              </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-     {/* Toast */}
-{toast && (
-    <div className="fixed bottom-20 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg ">
-      <span className="text-white text-sm">ℹ️</span>
-      <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-        {toast}
-      </p>
-    </div>
-)}
+      {confirmDelete && (
+        <AlertDialog
+          message="Delete your review? This cannot be undone."
+          b1Label="Cancel"
+          b2Label="Delete"
+          b1OnClick={() => setConfirmDelete(false)}
+          b2OnClick={handleDeleteReview}
+        />
+      )}
+
+      {alertMessage && (
+        <AlertDialog message={alertMessage} b1Label="OK" b1OnClick={() => setAlertMessage(null)} />
+      )}
     </div>
   );
 }

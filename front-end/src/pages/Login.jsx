@@ -68,10 +68,21 @@ function Login() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("notice") === "office_inactive") {
+    const notice = searchParams.get("notice");
+    if (!notice) return;
+
+    if (notice === "office_inactive") {
       toast.error("Your center was deactivated. You've been logged out.");
-      setSearchParams({}, { replace: true });
+    } else if (notice === "password_reset") {
+      toast.success("Password reset successfully!");
+    } else if (notice === "password_changed") {
+      toast.success("Password changed successfully!");
+    } else if (notice === "account_locked") {
+      toast.error("Your account has been locked by an admin.");
+    } else {
+      return;
     }
+    setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const isLoginValid = email.trim() !== "" && password.trim() !== "";

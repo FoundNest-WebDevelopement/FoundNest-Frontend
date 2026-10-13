@@ -2,6 +2,15 @@ const API_URL = import.meta.env.VITE_API_URL;
 import { shouldRefreshToken } from "./tokenExpirationChecker";
 
 
+// Clears the session (keeping the "remember me" e-mail) and lands on /login
+// with a ?notice= the login page turns into a toast.
+function forceLogout(notice) {
+  const rememberedEmail = localStorage.getItem("remembered_email");
+  localStorage.clear();
+  if (rememberedEmail) localStorage.setItem("remembered_email", rememberedEmail);
+  window.location.href = `/login?notice=${notice}`;
+}
+
 async function refreshAccessToken() {
   const refreshToken = localStorage.getItem("refreshToken");
 
@@ -16,6 +25,17 @@ async function refreshAccessToken() {
   });
 
   if (!response.ok) {
+    // A locked Standard User account is told why instead of a silent logout
+    const lockedUser =
+      response.status === 403 &&
+      localStorage.getItem("role") === "user" &&
+      (await response.clone().json().catch(() => null))?.code === "ACCOUNT_LOCKED";
+
+    if (lockedUser) {
+      forceLogout("account_locked");
+      return null;
+    }
+
     localStorage.clear();
     window.location.href = "/login";
     return null;
@@ -55,6 +75,11 @@ export async function fetchWithAuth(url, options = {}) {
 
   if (response.status === 403) {
     const body = await response.clone().json().catch(() => null);
+    // Standard Users only: Admin / Super Admin sessions keep their existing behaviour
+    if (body?.code === "ACCOUNT_LOCKED" && localStorage.getItem("role") === "user") {
+      forceLogout("account_locked");
+      return response;
+    }
     if (body?.code === "OFFICE_INACTIVE") {
       const rememberedEmail = localStorage.getItem("remembered_email");
       localStorage.clear();
