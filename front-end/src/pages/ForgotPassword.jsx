@@ -381,9 +381,11 @@ function ForgotPassword() {
               <h1 style={{ fontSize: "26px", fontWeight: 600, color: "#161616", marginBottom: "8px" }}>
                 Set New Password
               </h1>
-              <p className="text-sm text-[#777] mb-4">
-                Password must contain an uppercase letter, a special character, and a number.
-              </p>
+              {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+                <p className="text-sm text-[#777] mb-4">
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character.
+                </p>
+              )}
               <div className="relative mb-3">
                 <input
                   type={showNewPassword ? "text" : "password"}
@@ -406,9 +408,11 @@ function ForgotPassword() {
                 </button>
               </div>
 
-              <div className="bg-[#FFF3E0] rounded-md px-4 py-3 mb-3">
-                <PasswordChecklist password={newPassword} variant="light" neutralWhenEmpty />
-              </div>
+              {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+                <div className="bg-[#FFF3E0] rounded-md px-4 py-3 mb-3">
+                  <PasswordChecklist password={newPassword} variant="light" />
+                </div>
+              )}
 
               <div className="relative mb-2">
                 <input
@@ -611,10 +615,11 @@ function ForgotPassword() {
             <h1 className="text-white text-2xl font-semibold text-center">
               Set New Password
             </h1>
-            <p className="text-white text-xs text-center opacity-90">
-              Password must contain an uppercase letter, a special character,
-              and a number.
-            </p>
+            {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+              <p className="text-white text-xs text-center opacity-90">
+                Password must contain at least 8 characters, an uppercase letter, a number, and a special character.
+              </p>
+            )}
             <div className="relative">
               <input
                 type={showNewPassword ? "text" : "password"}
@@ -636,7 +641,9 @@ function ForgotPassword() {
               </button>
             </div>
 
-            <PasswordChecklist password={newPassword} neutralWhenEmpty />
+            {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+              <PasswordChecklist password={newPassword} />
+            )}
 
             <div className="relative">
               <input

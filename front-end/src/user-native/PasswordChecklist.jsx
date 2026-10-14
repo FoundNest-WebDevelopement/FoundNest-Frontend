@@ -3,6 +3,8 @@ import { PASSWORD_RULES } from "../utils/passwordRules";
 
 // Live password rules under the "New Password" field (PasswordChecklist of the native app, light variant)
 export default function PasswordChecklist({ password }) {
+  if (!password || PASSWORD_RULES.every((rule) => rule.test(password))) return null;
+
   return (
     <div className="mt-2 flex flex-col gap-1 pl-1">
       {PASSWORD_RULES.map((rule) => {

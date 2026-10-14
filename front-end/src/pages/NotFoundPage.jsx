@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import image from "../assets/404page.png";
 
 // Sends a logged-in user back to their OWN dashboard instead of the public
@@ -14,6 +14,7 @@ function getHomePath() {
 
 export default function NotFoundPage() {
     const homePath = getHomePath();
+    const navigate = useNavigate();
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-primary px-6 flex items-center justify-center">
@@ -47,7 +48,7 @@ export default function NotFoundPage() {
                     />
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl font-bold text-white xs:mt-20 lg:mt-10">
+                <h1 className="mt-8 sm:mt-10 text-3xl sm:text-4xl font-bold text-white">
                     Oops! Page not found
                 </h1>
 
@@ -56,8 +57,9 @@ export default function NotFoundPage() {
                     been moved to another location.
                 </p>
 
-                <Link
-                    to={homePath}
+                <button
+                    type="button"
+                    onClick={() => window.history.length > 1 ? navigate(-1) : navigate(homePath)}
                     className="
                         inline-flex items-center justify-center
                         mt-7 px-7 py-3
@@ -71,8 +73,8 @@ export default function NotFoundPage() {
                         active:translate-y-0
                     "
                 >
-                    Back to Home
-                </Link>
+                    Return to Previous Page
+                </button>
             </div>
         </div>
     );

@@ -29,6 +29,8 @@ const COLORS = {
 // `neutralWhenEmpty`: show the rules as plain hints (no warning icons) until something is typed
 export default function PasswordChecklist({ password, variant = "dark", neutralWhenEmpty = false }) {
   const colors = COLORS[variant] || COLORS.dark;
+  const allRulesPassed = PASSWORD_RULES.every((rule) => rule.test(password));
+  if (!password || allRulesPassed) return null;
   const pristine = neutralWhenEmpty && password.length === 0;
   return (
     <div className="flex flex-col gap-1.5">
