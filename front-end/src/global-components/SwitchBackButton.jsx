@@ -80,15 +80,28 @@ export default function SwitchBackButton() {
 
     const label = "Switch to Admin";
     const disabledMessage = `Admin access disabled: ${officeName} is currently inactive.`;
+    const showInactiveNotice = () => {
+        toast.error(disabledMessage, { toastId: "admin-access-inactive-office" });
+    };
 
     return (
         <>
             <button
-                onClick={() => setOpenConfirm(true)}
-                disabled={isLoading || officeInactive}
+                onClick={() => {
+                    if (officeInactive) {
+                        showInactiveNotice();
+                        return;
+                    }
+                    setOpenConfirm(true);
+                }}
+                onMouseEnter={officeInactive ? showInactiveNotice : undefined}
+                onFocus={officeInactive ? showInactiveNotice : undefined}
+                disabled={isLoading}
+                aria-disabled={officeInactive}
                 title={officeInactive ? disabledMessage : undefined}
                 className="flex items-center gap-2 bg-[#FBEFE9] text-primary text-xs font-medium px-3 py-1.5 rounded-full
                     transition-transform duration-100 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={officeInactive ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
             >
                 {isLoading ? "Switching..." : label}
             </button>

@@ -33,6 +33,9 @@ const ACTIVITY_FILTERS = [
     { label: "Report Restored", value: "REPORT_RESTORED" },
     { label: "Report Reopened", value: "REPORT_REOPENED" },
     { label: "Transaction Reverted", value: "TRANSACTION_REVERTED" },
+    { label: "Feedback Response Added", value: "FEEDBACK_RESPONDED" },
+    { label: "Feedback Response Edited", value: "FEEDBACK_RESPONSE_EDITED" },
+    { label: "Feedback Response Deleted", value: "FEEDBACK_RESPONSE_DELETED" },
 ];
 
 const ACTIVITY_LABELS = ACTIVITY_FILTERS.reduce((acc, filter) => {
@@ -52,6 +55,9 @@ const ACTIVITY_COLORS = {
     REPORT_RESTORED: "bg-[#E6F1FB] text-[#2980B9]",
     REPORT_REOPENED: "bg-[#E6F1FB] text-[#2980B9]",
     TRANSACTION_REVERTED: "bg-[#F9ECEC] text-[#C0392B]",
+    FEEDBACK_RESPONDED: "bg-[#E3F2E3] text-green-700",
+    FEEDBACK_RESPONSE_EDITED: "bg-[#EDE7F6] text-[#6A1B9A]",
+    FEEDBACK_RESPONSE_DELETED: "bg-[#F9ECEC] text-[#C0392B]",
 };
 
 export default function SuperAdminSystemReportDetail() {
@@ -223,13 +229,26 @@ export default function SuperAdminSystemReportDetail() {
         }
     };
 
-    const formatRecordId = (log) =>
-        log.record_type === "report" ? formatReportId(log.record_id) : formatItemId(log.record_id);
+    const formatRecordId = (log) => {
+        if (log.record_type === "report") return formatReportId(log.record_id);
+        if (log.record_type === "feedback") return `FB-${String(log.record_id).padStart(5, "0")}`;
+        return formatItemId(log.record_id);
+    };
 
     const handleViewLog = async (log) => {
         setViewingLog(log);
         setViewDetail(null);
         setIsLoadingDetail(true);
+        if (log.record_type === "feedback") {
+            setViewDetail({
+                item_name: "Feedback",
+                status: ACTIVITY_LABELS[log.activity_key],
+                description: log.description,
+                office_name: office.office_name,
+            });
+            setIsLoadingDetail(false);
+            return;
+        }
         try {
             const endpoint = log.record_type === "report"
                 ? `${API_URL}/api/lost-reports/${log.record_id}`
@@ -471,7 +490,7 @@ export default function SuperAdminSystemReportDetail() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleViewLog(log)}
-                                                title="View item details"
+                                                title={log.record_type === "feedback" ? "View feedback action details" : "View item details"}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary hover:bg-[#F5E6D8] transition-colors cursor-pointer"
                                             >
                                                 <Eye size={16} />
