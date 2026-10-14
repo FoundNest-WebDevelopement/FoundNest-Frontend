@@ -313,7 +313,7 @@ export default function ClaimFoundReportTab({
                                 </p>
 
                                 <p className="text-[#6B5C42]">Description: <span className="text-black">{selectedReport.description}</span></p>
-                                <p className="text-[#6B5C42]">Description: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
+                                <p className="text-[#6B5C42]">Time and Date: <span className="text-black">{formatDateTime(selectedReport.lost_date)}</span></p>
                             </div>
                             <p className="text-xs text-gray-600 text-justify">
                                 Linking this report will connect this case to the found item and update the status to ‘Resolved’. Please verify that the details match.

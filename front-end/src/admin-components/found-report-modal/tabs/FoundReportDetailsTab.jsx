@@ -430,7 +430,7 @@ export default function FoundReportDetailsTab({
                             <QrCode size="20" />
                             <p>{isPrintingQR ? "Preparing..." : "Download QR Code"}</p>
                         </button>
-                        {!selectedItem.qr_code_id && (
+                        {!isUnauthorizedAdmin && !selectedItem.qr_code_id && (
                             <p className="text-[#6B5C42] text-[10px] text-center mt-1">
                                 This item was not pre-registered with a QR code by its owner.
                             </p>
@@ -439,10 +439,11 @@ export default function FoundReportDetailsTab({
                 </>
             )}
 
-            {isUnauthorizedAdmin &&
-
-                <span className="text-primary italic text-[10px]  mt-1">Item is not in your offce</span>
-            }
+            {isUnauthorizedAdmin && (
+                <p className="w-full text-primary italic text-[10px] text-center mt-1">
+                    This item is not in your office. No actions available.
+                </p>
+            )}
             {/* Bottom Padding */}
             <div className="h-5"></div>
 
