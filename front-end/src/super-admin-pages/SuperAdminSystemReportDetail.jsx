@@ -33,9 +33,10 @@ const ACTIVITY_FILTERS = [
     { label: "Report Restored", value: "REPORT_RESTORED" },
     { label: "Report Reopened", value: "REPORT_REOPENED" },
     { label: "Transaction Reverted", value: "TRANSACTION_REVERTED" },
-    { label: "Feedback Response Added", value: "FEEDBACK_RESPONDED" },
-    { label: "Feedback Response Edited", value: "FEEDBACK_RESPONSE_EDITED" },
-    { label: "Feedback Response Deleted", value: "FEEDBACK_RESPONSE_DELETED" },
+    // Same wording as the Action Logs page (RESPOND_FEEDBACK / EDIT_FEEDBACK_RESPONSE / DELETE_FEEDBACK_RESPONSE)
+    { label: "Feedback Responded", value: "FEEDBACK_RESPONDED" },
+    { label: "Edited Feedback Response", value: "FEEDBACK_RESPONSE_EDITED" },
+    { label: "Deleted Feedback Response", value: "FEEDBACK_RESPONSE_DELETED" },
 ];
 
 const ACTIVITY_LABELS = ACTIVITY_FILTERS.reduce((acc, filter) => {
