@@ -79,6 +79,8 @@ function Login() {
       toast.success("Password changed successfully!");
     } else if (notice === "account_locked") {
       toast.error("Your account has been locked by an admin.");
+    } else if (notice === "role_changed") {
+      toast.error("Your role has changed. Please log in again.");
     } else {
       return;
     }

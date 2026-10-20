@@ -36,6 +36,11 @@ async function refreshAccessToken() {
       return null;
     }
 
+    if ((await response.clone().json().catch(() => null))?.code === "ROLE_CHANGED") {
+      forceLogout("role_changed");
+      return null;
+    }
+
     localStorage.clear();
     window.location.href = "/login";
     return null;
@@ -78,6 +83,11 @@ export async function fetchWithAuth(url, options = {}) {
     // Standard Users only: Admin / Super Admin sessions keep their existing behaviour
     if (body?.code === "ACCOUNT_LOCKED" && localStorage.getItem("role") === "user") {
       forceLogout("account_locked");
+      return response;
+    }
+    // Any role, e.g. a Super Admin whose privileges were transferred from another device
+    if (body?.code === "ROLE_CHANGED") {
+      forceLogout("role_changed");
       return response;
     }
     if (body?.code === "OFFICE_INACTIVE") {
