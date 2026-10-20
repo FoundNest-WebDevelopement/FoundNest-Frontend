@@ -422,7 +422,7 @@ export default function Feedbacks() {
                     </div>
                     <button
                         onClick={() => setIsExportModalOpen(true)}
-                        className="flex items-center gap-2 border border-primary text-primary bg-white rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/5 transition cursor-pointer whitespace-nowrap"
+                        className="flex items-center gap-2 border border-primary text-black bg-white rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/5 transition cursor-pointer whitespace-nowrap"
                     >
                         <Download size={16} />
                         Export Feedback
