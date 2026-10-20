@@ -69,7 +69,7 @@ export default function NotificationBar() {
         </button>
       </div>
 
-      <div className="navbar-end mx-2 flex items-center gap-2">
+      <div className="navbar-end mx-2 flex items-center gap-7">
         <ActingSuperAdminSwitcher />
         <SwitchBackButton />
 

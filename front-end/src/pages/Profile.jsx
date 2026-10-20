@@ -1,124 +1,96 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Camera, X, Upload } from "lucide-react";
+import toast from "react-hot-toast";
 import QRItem from "./QRItem";
 import ChangePassword from "./ChangePassword";
-import AdminConfirmDialog from "../admin-components/AdminConfirmDialog";
+import AlertDialog from "../components/AlertDialog";
+import Toast from "../user-native/Toast";
+import PhotoSheet from "../components/report_components/PhotoSheet";
+import WebcamCaptureModal from "../components/report_components/WebcamCaptureModal";
+import AppHeader from "../user-native/AppHeader";
+import StackHeader from "../user-native/StackHeader";
+import Icon from "../user-native/Icon";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { isMobileDevice } from "../utils/isMobileDevice";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import SafeImage from "../user-native/SafeImage";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const EditIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#990000"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-const AccountDetailsIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#4B2D23"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
+const showToast = (message, type = "success") =>
+  toast.custom(() => <Toast message={message} solid type={type} />, { duration: 2000 });
 
-const ReportHistoryIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#4B2D23"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M3 3v5h5" />
-    <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-  </svg>
-);
+// The contact number can be stored as +639XXXXXXXXX (web) or 09XXXXXXXXX (mobile).
+// The form shows it the way the native app does (09XXXXXXXXX) and saves +63XXXXXXXXXX.
+const toLocalNumber = (value) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (digits.startsWith("63") && digits.length === 12) return `0${digits.slice(2)}`;
+  if (digits.startsWith("9") && digits.length === 10) return `0${digits}`;
+  return digits;
+};
 
-const ChangePasswordIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#4B2D23"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
+const SETTINGS_ITEMS = [
+  { key: "account", label: "Account Details", icon: "person-outline" },
+  { key: "history", label: "Report History", icon: "time-outline" },
+  { key: "password", label: "Change Password", icon: "lock-closed-outline" },
+  { key: "qr", label: "QR an Item", icon: "qr-code-outline" },
+];
 
-const QRIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#4B2D23"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-    <rect x="14" y="14" width="3" height="3" />
-    <line x1="21" y1="14" x2="21" y2="14" />
-    <line x1="21" y1="21" x2="21" y2="21" />
-    <line x1="17" y1="21" x2="21" y2="21" />
-  </svg>
-);
+function SettingsRow({ icon, label, onClick, isLogout = false, disabled = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full flex items-center py-[15px] px-3 text-left active:opacity-60 ${disabled ? "opacity-50" : ""}`}
+    >
+      <span className="mr-3.5 w-6 flex justify-center">
+        <Icon name={icon} size={22} color={isLogout ? "#C0392B" : "#1a1a1a"} />
+      </span>
+      <span className={`flex-1 text-[15px] ${isLogout ? "text-[#C0392B] font-semibold" : "text-[#1a1a1a]"}`}>{label}</span>
+      {!isLogout && <Icon name="chevron-forward" size={20} color="#8B0000" />}
+    </button>
+  );
+}
 
-const LogoutIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#990000"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
+function Avatar({ url, size, iconSize, name }) {
+  return url ? (
+    <SafeImage src={url} alt={name} className="rounded-full object-cover" style={{ width: size, height: size }} iconSize={Math.round(size / 3)} />
+  ) : (
+    <span
+      className="rounded-full bg-[#E0E0E0] flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <Icon name="person" size={iconSize} color={size > 80 ? "#A8A8A8" : "#AAAAAA"} />
+    </span>
+  );
+}
+
+function ReadOnlyBox({ label, value }) {
+  return (
+    <div className="mb-[18px]">
+      <p className="text-[15px] font-bold text-[#1a1a1a] mb-2">{label}</p>
+      <div className="flex items-center bg-white rounded-xl px-3.5 h-14 border border-[#D6D6D6]">
+        <p className="flex-1 min-w-0 text-[16px] text-[#1a1a1a] truncate">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Profile() {
   const navigate = useNavigate();
   const [page, setPage] = useState("main");
   const [contactNumber, setContactNumber] = useState("");
+  const [originalContact, setOriginalContact] = useState("");
   const [editingContact, setEditingContact] = useState(false);
   const [contactError, setContactError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [confirmSave, setConfirmSave] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [originalContact, setOriginalContact] = useState("");
+  const [discardMode, setDiscardMode] = useState("leave"); // "leave" = back arrow, "cancel" = Cancel button
   const user_id = localStorage.getItem("user_id");
 
   const isActingAsUser =
@@ -134,17 +106,19 @@ export default function Profile() {
     email: "",
   });
 
-  const [profileImageUrl, setProfileImageUrl] = useState(
-    localStorage.getItem("profile_image_url") || null
-  );
+  const [profileImageUrl, setProfileImageUrl] = useState(localStorage.getItem("profile_image_url") || null);
 
-  // Edit profile picture modal
-  const [openEditPicture, setOpenEditPicture] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  // profile picture
+  const [showPhotoSheet, setShowPhotoSheet] = useState(false);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [confirmRemovePhoto, setConfirmRemovePhoto] = useState(false);
   const [uploadingPicture, setUploadingPicture] = useState(false);
-  const [pictureError, setPictureError] = useState("");
-  const fileInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  // logout
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const firstName = localStorage.getItem("first_name") || "";
@@ -154,602 +128,473 @@ export default function Profile() {
     const facultyId = localStorage.getItem("faculty_id") || "";
 
     setUser({
-      name: `${firstName} ${lastName}`.trim() || "User",
+      name: `${firstName} ${lastName}`.trim() || email || "—",
       studentId: studentNumber,
-      facultyId: facultyId,
+      facultyId,
       firstName,
       lastName,
       email,
     });
   }, []);
 
+  // Load the saved profile (names, ID, e-mail, contact number, photo) from the
+  // server so this page never shows stale or empty values; localStorage is
+  // only the instant first paint.
   useEffect(() => {
-    const fetchProfileImage = async () => {
+    const fetchProfile = async () => {
       try {
         const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}`);
         const data = await res.json();
-        if (res.ok && data.profile_image_url) {
-          setProfileImageUrl(data.profile_image_url);
+        if (!res.ok) return;
+
+        const firstName = data.first_name ?? "";
+        const lastName = data.last_name ?? "";
+        setUser((prev) => ({
+          name: `${firstName} ${lastName}`.trim() || data.email || prev.name,
+          studentId: data.student_number ?? prev.studentId,
+          facultyId: data.faculty_id ?? prev.facultyId,
+          firstName: firstName || prev.firstName,
+          lastName: lastName || prev.lastName,
+          email: data.email ?? prev.email,
+        }));
+        const local = toLocalNumber(data.contact_number);
+        setContactNumber(local);
+        setOriginalContact(local);
+
+        setProfileImageUrl(data.profile_image_url || null);
+        if (data.profile_image_url) {
           localStorage.setItem("profile_image_url", data.profile_image_url);
+        } else {
+          localStorage.removeItem("profile_image_url");
         }
       } catch (err) {
         console.error(err);
       }
     };
-    if (user_id) fetchProfileImage();
+    if (user_id) fetchProfile();
   }, [user_id]);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setPictureError("");
-  };
+  /* ----------------------------- profile picture ----------------------------- */
 
-  const handleUploadPicture = async () => {
-    if (!selectedFile) return;
+  const uploadProfileImage = async (file) => {
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("File size exceeds 10MB limit", "info");
+      return;
+    }
+    if (!VALID_IMAGE_TYPES.includes(file.type)) {
+      showToast("Invalid file type", "info");
+      return;
+    }
+
     setUploadingPicture(true);
-    setPictureError("");
     try {
       const formData = new FormData();
-      formData.append("profile_image", selectedFile);
+      formData.append("profile_image", file);
       const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}/picture`, {
         method: "PUT",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Upload failed.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.message || "Failed to update profile picture.", "info");
+        return;
+      }
       setProfileImageUrl(data.profile_image_url);
       localStorage.setItem("profile_image_url", data.profile_image_url);
-      handleClosePictureModal();
+      showToast("Profile picture updated.");
     } catch (err) {
-      setPictureError(err.message || "Something went wrong. Please try again.");
+      console.error(err);
+      showToast("Could not connect to server.", "info");
     } finally {
       setUploadingPicture(false);
     }
   };
 
-  const handleRemovePicture = async () => {
+  const removeProfileImage = async () => {
+    setConfirmRemovePhoto(false);
     setUploadingPicture(true);
-    setPictureError("");
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}/picture`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Remove failed.");
+      const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}/picture`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.message || "Failed to remove profile picture.", "info");
+        return;
+      }
       setProfileImageUrl(null);
       localStorage.removeItem("profile_image_url");
-      handleClosePictureModal();
+      showToast("Profile picture removed.");
     } catch (err) {
-      setPictureError(err.message || "Something went wrong. Please try again.");
+      console.error(err);
+      showToast("Could not connect to server.", "info");
     } finally {
       setUploadingPicture(false);
     }
   };
 
-  const handleClosePictureModal = () => {
-    setOpenEditPicture(false);
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setPictureError("");
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) uploadProfileImage(file);
   };
 
-  const validateContact = (value) => {
-    const phoneRegex = /^9\d{9}$/;
-    return phoneRegex.test(value);
-  };
+  /* ------------------------------ contact number ------------------------------ */
 
-  const isContactValid = validateContact(contactNumber);
+  // Same rule as the native app: 09 followed by 9 digits
+  const validateContact = (value) => /^09\d{9}$/.test(value.trim());
+  const hasChanges = contactNumber !== originalContact;
 
-  const handleEditContact = () => {
-    setOriginalContact(contactNumber);
-    setEditingContact(true);
-  };
+  // An unsaved contact-number edit also guards the side navigation / tab bar (not just the back arrow)
+  const { setDirty } = useUnsavedChangesGuard();
+  useEffect(() => {
+    if (page !== "accountDetails") return;
+    setDirty(hasChanges);
+    return () => setDirty(false);
+  }, [page, hasChanges, setDirty]);
 
-  const handleSaveChanges = async () => {
+  const handleSavePress = () => {
     if (!validateContact(contactNumber)) {
       setContactError("Please enter a valid contact number.");
       return;
     }
-    try {
-      const user_id = localStorage.getItem("user_id");
-      const token = localStorage.getItem("token");
+    setContactError("");
+    setConfirmSave(true);
+  };
 
-      const res = await fetch(`${API_URL}/api/profile/${user_id}`, {
+  const executeSave = async () => {
+    setConfirmSave(false);
+    setIsSaving(true);
+    try {
+      // The web stores numbers in +63 format
+      const res = await fetchWithAuth(`${API_URL}/api/profile/${user_id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ contact_number: `+63${contactNumber}` }),
+        body: JSON.stringify({ contact_number: `+63${contactNumber.trim().slice(1)}` }),
       });
 
       if (res.ok) {
         setContactError("");
+        setOriginalContact(contactNumber);
         setEditingContact(false);
-        setShowSuccessToast(true);
-        setTimeout(() => setShowSuccessToast(false), 3000);
+        showToast("Changes saved successfully.");
       } else {
-        const data = await res.json();
-        setContactError(data.message || "Failed to update contact number.");
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to save changes.", "info");
       }
     } catch (err) {
-      setContactError("Something went wrong. Please try again.");
+      console.error(err);
+      showToast("Could not connect to server.", "info");
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const resetContact = () => {
+    setContactNumber(originalContact);
+    setContactError("");
+    setEditingContact(false);
   };
 
   const handleBackFromDetails = () => {
-    if (editingContact && contactNumber !== originalContact) {
+    if (hasChanges) {
+      setDiscardMode("leave");
       setShowDiscardModal(true);
     } else {
+      resetContact();
       setPage("main");
-      setEditingContact(false);
-      setContactError("");
     }
   };
 
-  const handleDiscard = () => {
-    setContactNumber(originalContact);
-    setEditingContact(false);
-    setContactError("");
-    setShowDiscardModal(false);
-    setPage("main");
+  const handleCancel = () => {
+    if (!hasChanges) {
+      setEditingContact(false);
+      return;
+    }
+    setDiscardMode("cancel");
+    setShowDiscardModal(true);
   };
 
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  /* --------------------------------- logout ---------------------------------- */
 
   const handleLogout = async () => {
-  try {
-    setIsLoggingOut(true);
-    const refreshToken = localStorage.getItem("refreshToken");
+    setShowLogoutModal(false);
+    try {
+      setIsLoggingOut(true);
+      const refreshToken = localStorage.getItem("refreshToken");
 
-    await fetchWithAuth(`${API_URL}/api/auth/logout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    });
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setIsLoggingOut(false);
-    const rememberedEmail = localStorage.getItem("remembered_email");
-    localStorage.clear();
-    if (rememberedEmail) {
-      localStorage.setItem("remembered_email", rememberedEmail);
+      await fetchWithAuth(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoggingOut(false);
+      const rememberedEmail = localStorage.getItem("remembered_email");
+      localStorage.clear();
+      if (rememberedEmail) {
+        localStorage.setItem("remembered_email", rememberedEmail);
+      }
+      navigate("/login");
     }
-    navigate("/");
-  }
-};
+  };
 
-  // =====================
-  // MAIN PROFILE PAGE
-  // =====================
+  const handleSetting = (key) => {
+    if (key === "account") setPage("accountDetails");
+    else if (key === "history") navigate(`/profile/report-history/${user_id}`);
+    else if (key === "password") setPage("changePassword");
+    else if (key === "qr") setPage("qrItem");
+  };
+
+  /* ================================ MAIN PAGE ================================ */
   if (page === "main") {
     return (
-      <div
-        className="flex flex-col min-h-screen mt-13 mb-16"
-        style={{ backgroundColor: "#FFF3E0" }}
-      >
-        {/* Header */}
-        <div className="bg-[#990000] px-5 py-4 rounded-b-xl">
-          <p className="text-white font-bold text-lg">Profile</p>
-        </div>
+      <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+        <AppHeader title="Profile" redDesktop />
 
-        <div className="px-5 py-5 flex flex-col gap-5">
-          {/* User Card */}
-          <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-4 shadow-sm">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {profileImageUrl ? (
-                <img src={profileImageUrl} alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                <AccountDetailsIcon />
-              )}
+        <div className="px-4 pt-5 lg:px-6 lg:pt-8 lg:pb-10">
+          {/* User card */}
+          <div
+            className="bg-white rounded-2xl p-4 flex items-center mb-7"
+            style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}
+          >
+            <div className="mr-4">
+              <Avatar url={profileImageUrl} size={70} iconSize={40} name={user.name} />
             </div>
-            <div className="flex-1">
-              <p className="font-bold text-[#4B2D23] text-base">{user.name}</p>
-              <div className="w-full h-[1.5px] bg-gray-200 my-1"></div>
-              {user.studentId ? (
-                <p className="text-xs text-gray-500">
-                  Student ID: {user.studentId}
-                </p>
-              ) : user.facultyId ? (
-                <p className="text-xs text-gray-500">
-                  Faculty ID: {user.facultyId}
-                </p>
-              ) : null}
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[18px] font-bold text-[#1a1a1a] mb-2 break-words">{user.name}</p>
+              <div className="h-px bg-black/[0.12] mb-2" />
+              <p className="text-[14px] text-black/65">
+                {user.studentId || !user.facultyId ? `Student ID: ${user.studentId || "—"}` : `Faculty ID: ${user.facultyId}`}
+              </p>
             </div>
           </div>
 
-          {/* Account Settings */}
-          <div>
-            <p className="font-bold text-[#4B2D23] text-base mb-3">
-              Account Settings
-            </p>
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-              {/* Account Details */}
-              <button
-                onClick={() => setPage("accountDetails")}
-                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
-              >
-                <AccountDetailsIcon />
-                <p className="flex-1 text-sm text-left text-[#4B2D23]">
-                  Account Details
-                </p>
-                <ChevronRight size={16} color="#4B2D23" />
-              </button>
+          <div className="min-w-0">
+          <p className="text-[20px] font-extrabold text-[#1a1a1a] mb-3.5 pl-1">Account Settings</p>
 
-              {/* Report History */}
-              <button
-                onClick={() => navigate(`/profile/report-history/${user_id}`)}
-                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
-              >
-                <ReportHistoryIcon />
-                <p className="flex-1 text-sm text-left text-[#4B2D23]">
-                  Report History
-                </p>
-                <ChevronRight size={16} color="#4B2D23" />
-              </button>
+          <div className="bg-white rounded-2xl py-1 px-1" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
+            {SETTINGS_ITEMS.map((item, index) => (
+              <div key={item.key}>
+                <SettingsRow
+                  icon={item.icon}
+                  label={item.label}
+                  disabled={item.key === "password" && isActingAsUser}
+                  onClick={() => handleSetting(item.key)}
+                />
+                {index < SETTINGS_ITEMS.length - 1 && <div className="h-px bg-black/[0.06] mx-3" />}
+              </div>
+            ))}
 
-              {/* Change Password */}
-              <button
-                onClick={() => setPage("changePassword")}
-                disabled={isActingAsUser}
-                title={isActingAsUser ? "Disabled while acting as End User" : undefined}
-                className={`flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100 ${
-                  isActingAsUser ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                <ChangePasswordIcon />
-                <p className="flex-1 text-sm text-left text-[#4B2D23]">
-                  Change Password
-                </p>
-                <ChevronRight size={16} color="#4B2D23" />
-              </button>
-
-              {/* QR an Item */}
-              <button
-                onClick={() => setPage("qrItem")}
-                className="flex items-center gap-4 px-4 py-4 w-full border-b border-gray-100"
-              >
-                <QRIcon />
-                <p className="flex-1 text-sm text-left text-[#4B2D23]">
-                  QR an Item
-                </p>
-                <ChevronRight size={16} color="#4B2D23" />
-              </button>
-
-              {/* Log out */}
-              <button
-                onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-4 px-4 py-4 w-full"
-              >
-                <LogoutIcon />
-                <p className="flex-1 text-sm text-left text-[#990000] font-semibold">
-                  Log out
-                </p>
-              </button>
+            {/* desktop: Log out lives at the bottom of the side navigation */}
+            <div className="lg:hidden">
+              <div className="h-px bg-black/[0.06] mx-3" />
+              <SettingsRow icon="log-out-outline" label="Log out" isLogout onClick={() => setShowLogoutModal(true)} />
             </div>
+          </div>
           </div>
         </div>
 
-        {/* Logout Confirmation Modal */}
         {showLogoutModal && (
-          <AdminConfirmDialog
-            title="Logout"
-            description="Are you sure you want to log out?"
-            cancelText="Cancel"
-            confirmText={isLoggingOut ? "Logging out..." : "Logout"}
-            disabled={isLoggingOut}
-            onClose={() => setShowLogoutModal(false)}
-            onConfirm={handleLogout}
+          <AlertDialog
+            message="Are you sure you want to sign out of your account?"
+            b1Label="Cancel"
+            b2Label={isLoggingOut ? "Logging out..." : "Log out"}
+            b1OnClick={() => setShowLogoutModal(false)}
+            b2OnClick={handleLogout}
           />
         )}
       </div>
     );
   }
 
-  // =====================
-  // ACCOUNT DETAILS PAGE
-  // =====================
+  /* ============================ ACCOUNT DETAILS ============================ */
   if (page === "accountDetails") {
     return (
-      <div
-        className="flex flex-col min-h-screen mt-13 mb-16"
-        style={{ backgroundColor: "#FFF3E0" }}
-      >
-        {/* Header */}
-        <div className="bg-[#990000] px-5 py-4 rounded-b-xl flex items-center gap-3">
-          <button onClick={handleBackFromDetails}>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 12H5" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-          </button>
-          <p className="text-white font-bold text-lg">Account Details</p>
-        </div>
+      <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+        <StackHeader title="Account Details" onBack={handleBackFromDetails} />
 
-        <div className="px-5 py-5 flex flex-col gap-4">
+        <div className="pb-10">
           {/* Avatar */}
-          <div className="flex justify-center mb-2">
-            <div className="relative w-20 h-20">
-              <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {profileImageUrl ? (
-                  <img src={profileImageUrl} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <AccountDetailsIcon />
-                )}
-              </div>
-              <button
-                onClick={() => setOpenEditPicture(true)}
-                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#990000] flex items-center justify-center border-2 border-[#FFF3E0] cursor-pointer"
-              >
-                <Camera size={13} color="white" />
-              </button>
-            </div>
-          </div>
+          <div className="flex flex-col items-center py-5">
+            <div className="relative">
+              <Avatar url={profileImageUrl} size={100} iconSize={46} name={user.name} />
 
-          {/* Student Number or Faculty ID */}
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">
-              {user.studentId ? "Student Number" : "Faculty ID"}
-            </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">
-                {user.studentId || user.facultyId || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          {/* First Name */}
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">
-              First Name
-            </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{user.firstName || "N/A"}</p>
-            </div>
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">Last Name</p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{user.lastName || "N/A"}</p>
-            </div>
-          </div>
-
-          {/* Contact Number */}
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">
-              Contact Number
-            </p>
-            <div
-              className="bg-white rounded-lg px-4 py-3 flex items-center gap-2 min-h-11.5"
-              style={{
-                border: contactError
-                  ? "1.5px solid #990000"
-                  : editingContact
-                    ? "1.5px solid #990000"
-                    : "1.5px solid transparent",
-              }}
-            >
-              {editingContact && (
-                <span className="text-sm text-[#4B2D23] font-medium">+63</span>
-              )}
-              <input
-                type="text"
-                value={contactNumber}
-                onChange={(e) => {
-                  setContactNumber(e.target.value);
-                  setContactError("");
-                }}
-                disabled={!editingContact}
-                placeholder="9XXXXXXXXX"
-                maxLength={10}
-                className="flex-1 text-sm text-[#4B2D23] outline-none bg-transparent"
-              />
-              <button onClick={handleEditContact}>
-                <EditIcon />
-              </button>
-            </div>
-            {contactError && (
-              <p className="text-[#990000] text-xs mt-1">{contactError}</p>
-            )}
-          </div>
-
-          {/* Email Address */}
-          <div>
-            <p className="text-xs text-[#4B2D23] font-medium mb-1">
-              Email Address
-            </p>
-            <div className="bg-white rounded-lg px-4 py-3 opacity-60 min-h-11.5 flex items-center">
-              <p className="text-sm text-[#4B2D23]">{user.email || "N/A"}</p>
-            </div>
-          </div>
-
-          {/* Save Changes Button */}
-          <button
-            onClick={handleSaveChanges}
-            disabled={!editingContact || !isContactValid}
-            className="w-full py-3 rounded-lg text-sm font-semibold mt-2"
-            style={{
-              backgroundColor:
-                editingContact && isContactValid
-                  ? "#990000"
-                  : "rgba(153, 0, 0, 0.3)",
-              color: "white",
-              cursor: editingContact && isContactValid ? "pointer" : "default",
-            }}
-          >
-            Save Changes
-          </button>
-        </div>
-
-        {/* Discard Modal */}
-        {showDiscardModal && (
-          <div
-            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-center justify-center bg-black/50 px-8"
-            onClick={() => setShowDiscardModal(false)}
-          >
-            <div
-              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-6 py-6">
-                <p className="text-[#4B2D23] font-bold text-base text-center">
-                  Discard changes? Unsaved edits will be lost.
-                </p>
-              </div>
-              <div className="flex border-t border-gray-200">
-                <button
-                  onClick={() => setShowDiscardModal(false)}
-                  className="flex-1 py-4 text-sm font-semibold text-[#990000] border-r border-gray-200"
-                >
-                  Keep Editing
-                </button>
-                <button
-                  onClick={handleDiscard}
-                  className="flex-1 py-4 text-sm font-semibold text-white"
-                  style={{ backgroundColor: "#990000" }}
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Success Toast */}
-        {showSuccessToast && (
-          <div className="fixed bottom-20 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
-            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#990000"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-              Changes saved successfully.
-            </p>
-          </div>
-        )}
-
-        {/* Edit Profile Picture Modal */}
-        {openEditPicture && (
-          <div
-            className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 z-[5000] flex items-center justify-center bg-black/50 px-8"
-            onClick={() => !uploadingPicture && handleClosePictureModal()}
-          >
-            <div
-              className="bg-white rounded-2xl overflow-hidden w-full max-w-sm p-6 flex flex-col gap-5"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-[#4B2D23] text-base">
-                  Edit Profile Picture
-                </p>
-                <button onClick={handleClosePictureModal} className="text-gray-400 cursor-pointer">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
-                  {previewUrl || profileImageUrl ? (
-                    <img
-                      src={previewUrl || profileImageUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <AccountDetailsIcon />
-                  )}
+              {uploadingPicture && (
+                <div className="absolute inset-0 rounded-full bg-black/35 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 text-sm text-[#990000] font-medium border border-[#990000] rounded-md px-4 py-1.5 cursor-pointer"
-                >
-                  <Upload size={15} />
-                  Choose Photo
-                </button>
-
-                {selectedFile && (
-                  <p className="text-xs text-gray-400 text-center truncate max-w-[200px]">
-                    {selectedFile.name}
-                  </p>
-                )}
-              </div>
-
-              {pictureError && (
-                <p className="text-xs text-[#990000] text-center">{pictureError}</p>
               )}
 
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={handleUploadPicture}
-                  disabled={uploadingPicture || !selectedFile}
-                  className="w-full flex items-center justify-center gap-2 bg-[#990000] text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <Upload size={15} />
-                  {uploadingPicture ? "Uploading..." : "Save Photo"}
-                </button>
+              <button
+                type="button"
+                onClick={() => setShowPhotoSheet(true)}
+                disabled={uploadingPicture}
+                aria-label="Change profile picture"
+                className="absolute -bottom-0.5 -right-0.5 w-[30px] h-[30px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center active:opacity-70"
+              >
+                <Icon name="create-outline" size={16} color="#8B0000" />
+              </button>
+            </div>
+          </div>
 
-                {profileImageUrl && (
+          {/* Fields */}
+          <div className="bg-white mx-4 rounded-3xl px-[18px] py-5 flex flex-col">
+            <ReadOnlyBox label={user.studentId || !user.facultyId ? "Student Number" : "Faculty ID"} value={user.studentId || user.facultyId} />
+            <ReadOnlyBox label="First Name" value={user.firstName} />
+            <ReadOnlyBox label="Last Name" value={user.lastName} />
+
+            {/* Contact number */}
+            <div className="mb-[18px]">
+              <p className="text-[15px] font-bold text-[#1a1a1a] mb-2">Contact Number</p>
+              <div
+                className={`flex items-center bg-white rounded-xl px-3.5 h-14 border ${
+                  contactError
+                    ? "border-[1.5px] border-[#C0392B]"
+                    : editingContact
+                      ? "border-[1.5px] border-primary"
+                      : "border-[#D6D6D6]"
+                }`}
+              >
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  value={contactNumber}
+                  onChange={(e) => {
+                    setContactNumber(e.target.value.replace(/\D/g, "").slice(0, 11));
+                    if (contactError) setContactError("");
+                  }}
+                  disabled={!editingContact}
+                  placeholder="e.g. 09171234567"
+                  className="flex-1 min-w-0 text-[16px] text-[#1a1a1a] bg-transparent outline-none p-0 placeholder:text-[#B0B0B0]"
+                />
+                {!editingContact && (
                   <button
-                    onClick={handleRemovePicture}
-                    disabled={uploadingPicture}
-                    className="text-xs text-[#990000] text-center disabled:opacity-50 cursor-pointer"
+                    type="button"
+                    onClick={() => {
+                      setContactError("");
+                      setEditingContact(true);
+                    }}
+                    aria-label="Edit contact number"
+                    className="flex"
                   >
-                    Remove current photo
+                    <Icon name="create-outline" size={20} color="#8B0000" />
                   </button>
                 )}
               </div>
+              {contactError ? <p className="text-[13px] text-[#C0392B] mt-1.5 ml-1">{contactError}</p> : null}
+            </div>
+
+            <ReadOnlyBox label="Email Address" value={user.email} />
+
+            {/* Buttons */}
+            <div className="mt-3 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleSavePress}
+                disabled={!hasChanges || isSaving}
+                className={`bg-[#990000] rounded-xl h-[52px] flex items-center justify-center text-[16px] font-bold text-white active:opacity-80 ${
+                  !hasChanges ? "opacity-45" : ""
+                }`}
+              >
+                {isSaving ? (
+                  <span className="inline-block w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={!editingContact}
+                className={`rounded-xl h-[52px] border border-primary flex items-center justify-center text-[16px] font-semibold active:opacity-80 ${
+                  editingContact ? "text-primary" : "text-primary/30 opacity-45"
+                }`}
+              >
+                Cancel
+              </button>
             </div>
           </div>
+        </div>
+
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
+        <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+        {showPhotoSheet && (
+          <PhotoSheet
+            title="Change Profile Picture"
+            hasPhoto={!!profileImageUrl}
+            onClose={() => setShowPhotoSheet(false)}
+            onTake={() => {
+              setShowPhotoSheet(false);
+              if (isMobileDevice()) cameraInputRef.current?.click();
+              else setShowWebcam(true);
+            }}
+            onChoose={() => {
+              setShowPhotoSheet(false);
+              galleryInputRef.current?.click();
+            }}
+            onRemove={() => {
+              setShowPhotoSheet(false);
+              setConfirmRemovePhoto(true);
+            }}
+          />
+        )}
+
+        {showWebcam && (
+          <WebcamCaptureModal
+            onClose={() => setShowWebcam(false)}
+            onCapture={(file) => {
+              setShowWebcam(false);
+              uploadProfileImage(file);
+            }}
+          />
+        )}
+
+        {confirmRemovePhoto && (
+          <AlertDialog
+            message="Are you sure you want to remove your profile picture?"
+            b1Label="Cancel"
+            b2Label="Remove"
+            b1OnClick={() => setConfirmRemovePhoto(false)}
+            b2OnClick={removeProfileImage}
+          />
+        )}
+
+        {confirmSave && (
+          <AlertDialog
+            message="Save changes to your contact number?"
+            b1Label="Cancel"
+            b2Label="Save"
+            b1OnClick={() => setConfirmSave(false)}
+            b2OnClick={executeSave}
+          />
+        )}
+
+        {showDiscardModal && (
+          <AlertDialog
+            message="Discard changes? Unsaved edits will be lost."
+            b1Label="Keep Editing"
+            b2Label="Discard"
+            b1OnClick={() => setShowDiscardModal(false)}
+            b2OnClick={() => {
+              setShowDiscardModal(false);
+              resetContact();
+              if (discardMode === "leave") setPage("main");
+            }}
+          />
         )}
       </div>
     );
   }
 
-  // =====================
-  // QR ITEM PAGE
-  // =====================
+  /* ================================== QR ITEM ================================= */
   if (page === "qrItem") {
     return <QRItem onBack={() => setPage("main")} />;
   }
 
-  // =====================
-  // CHANGE PASSWORD PAGE
-  // =====================
+  /* ============================== CHANGE PASSWORD ============================== */
   if (page === "changePassword") {
     return <ChangePassword onBack={() => setPage("main")} />;
   }

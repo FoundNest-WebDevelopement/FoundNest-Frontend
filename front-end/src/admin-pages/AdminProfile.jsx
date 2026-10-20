@@ -520,9 +520,11 @@ export default function AdminProfile() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg px-3 py-2.5">
-                  <PasswordChecklist password={newPassword} variant="light" />
-                </div>
+                {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+                  <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+                    <PasswordChecklist password={newPassword} variant="light" />
+                  </div>
+                )}
 
                 {/* Confirm New Password */}
                 <div className="flex flex-col gap-1">

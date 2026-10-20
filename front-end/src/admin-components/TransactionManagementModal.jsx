@@ -318,7 +318,7 @@ export default function TransactionManagementModal(
 
 
                                     <hr className="border-(--color-tertiary) my-5 opacity-30" />
-                                    <p className="text-[#6B5C42]">This transaction has been reverted and no further action available</p>
+                                    <p className="text-[#6B5C42]">This transaction has been reverted and no further actions available.</p>
 
                                 </div>
                             }

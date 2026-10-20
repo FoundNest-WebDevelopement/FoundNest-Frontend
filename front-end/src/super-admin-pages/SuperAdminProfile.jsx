@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Pencil } from "lucide-react";
+import { LockKeyhole, Pencil } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import formatDate from "../utils/formatDate";
 import EditProfilePictureModal from "../super-admin-components/EditProfilePictureModal";
 import TransferPrivilegesModal from "../super-admin-components/TransferPrivilegesModal";
 import WebLoading from "../global-components/WebLoading";
+import SuperAdminChangePasswordModal from "../super-admin-components/SuperAdminChangePasswordModal";
 
 function formatUserId(id) {
     return `USR-${String(id).padStart(5, "0")}`;
@@ -20,6 +21,7 @@ export default function SuperAdminProfile() {
 
     const [openEditPicture, setOpenEditPicture] = useState(false);
     const [openTransferPrivileges, setOpenTransferPrivileges] = useState(false);
+    const [openChangePassword, setOpenChangePassword] = useState(false);
 
     const fetchProfile = async () => {
         try {
@@ -95,6 +97,15 @@ if (isLoading || !profile) {
                                 transition-transform duration-100 active:scale-95"
                         >
                             Transfer Privileges
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setOpenChangePassword(true)}
+                            className="w-full h-10 bg-white border border-[#E5E1D8] rounded-lg text-[#6B5C42] text-sm font-medium flex items-center justify-center gap-2
+                                transition-transform duration-100 active:scale-95"
+                        >
+                            <LockKeyhole size={14} />
+                            Change Password
                         </button>
                     </div>
 
@@ -192,6 +203,12 @@ if (isLoading || !profile) {
             {openTransferPrivileges && (
                 <TransferPrivilegesModal
                     onClose={() => setOpenTransferPrivileges(false)}
+                />
+            )}
+            {openChangePassword && (
+                <SuperAdminChangePasswordModal
+                    userId={userId}
+                    onClose={() => setOpenChangePassword(false)}
                 />
             )}
         </div>

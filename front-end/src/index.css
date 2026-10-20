@@ -42,3 +42,66 @@ button:disabled,
   display: none !important;
 }
 
+/* ---------------------------------------------------------------------------
+   Standard User UI (mirrors the React Native app).
+   Everything below is scoped to .native-ui, which only UserLayout renders, so
+   Admin / Super Admin pages are unaffected.
+--------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Ionicons";
+  src: url("./assets/native/Ionicons.ttf") format("truetype");
+  font-display: block;
+}
+@font-face {
+  font-family: "Material Icons";
+  src: url("./assets/native/MaterialIcons.ttf") format("truetype");
+  font-display: block;
+}
+@font-face {
+  font-family: "Material Community Icons";
+  src: url("./assets/native/MaterialCommunityIcons.ttf") format("truetype");
+  font-display: block;
+}
+@font-face {
+  font-family: "Feather";
+  src: url("./assets/native/Feather.ttf") format("truetype");
+  font-display: block;
+}
+
+.native-ui {
+  /* React Native renders the platform's system font (Roboto / SF); no custom font is bundled */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* React Native Text defaults to line-height: normal (Tailwind's base is 1.5) */
+  line-height: normal;
+  /* AppColors.background in the native app */
+  --color-primary: #8B0000;
+}
+
+
+/* Desktop (lg+) adaptation of the Standard User shell. Mobile / tablet are untouched.
+   Every page background fills the area right of the side navigation; only the CONTENT is held
+   to a readable width (1100px, or 760px for pages marked .narrow-body) and centred, by padding
+   the page root. Sticky headers, red title bars and the map cancel that padding. --desk-pad is
+   in viewport units (the side nav is 240px wide) so children can use it too. */
+@media (min-width: 1024px) {
+  .native-ui .user-column {
+    background: #ffffff;
+    min-height: 100vh;
+  }
+  .native-ui .user-column > * {
+    --desk-pad: max(0px, calc((100vw - 240px - 1100px) / 2));
+    padding-inline: var(--desk-pad);
+  }
+  .native-ui .user-column > .narrow-body {
+    --desk-pad: max(0px, calc((100vw - 240px - 760px) / 2));
+  }
+  .native-ui .user-column > .desk-nopad {
+    --desk-pad: 0px;
+  }
+  .native-ui .user-column > * > :is(.sticky, .bg-primary, [data-fullbleed]) {
+    margin-inline: calc(-1 * var(--desk-pad));
+  }
+  .native-ui .user-column > * > [data-fullbleed] {
+    width: calc(100% + 2 * var(--desk-pad));
+  }
+}

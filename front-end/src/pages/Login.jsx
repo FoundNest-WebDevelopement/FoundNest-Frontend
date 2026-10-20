@@ -1,8 +1,8 @@
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import rafiki from "../assets/rafiki.png";
-import logowhite from "../assets/logowhite.png";
+import nestLogo from "../assets/nest-logo.png";
 import bsulogo from "../assets/bsulogo.png";
-import bsu from "../assets/bsu.jpg";
+import loginBg from "../assets/login-bg.jpg";
 import { useState, useEffect } from "react";
 import RoleSelectionModal from "../super-admin-components/RoleSelectionModal";
 import AdminRoleSelectionModal from "../admin-components/AdminRoleSelectionModal";
@@ -68,13 +68,31 @@ function Login() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("notice") === "office_inactive") {
+    const notice = searchParams.get("notice");
+    if (!notice) return;
+
+    if (notice === "office_inactive") {
       toast.error("Your center was deactivated. You've been logged out.");
-      setSearchParams({}, { replace: true });
+    } else if (notice === "password_reset") {
+      toast.success("Password reset successfully!");
+    } else if (notice === "password_changed") {
+      toast.success("Password changed successfully!");
+    } else if (notice === "account_locked") {
+      toast.error("Your account has been locked by an admin.");
+    } else if (notice === "privileges_transferred") {
+      toast.success("Super Admin privileges transferred successfully. Please log in again.");
+    } else if (notice === "role_changed") {
+      toast.error("Your role has changed. Please log in again.");
+    } else {
+      return;
     }
+    setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const isLoginValid = email.trim() !== "" && password.trim() !== "";
+  // Keep the form locked (and the button on "Logging in...") while an Admin /
+  // Super Admin is still choosing a role, not just during the login request.
+  const isBusy = loading || showRoleSelection || showAdminRoleSelection;
 
   const handleLogin = async () => {
   
@@ -176,7 +194,7 @@ const DesktopLogin = (
       style={{
         position: "absolute",
         inset: 0,
-        backgroundImage: `url(${bsu})`,
+        backgroundImage: `url(${loginBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -259,7 +277,7 @@ const DesktopLogin = (
             type="email"
             placeholder="Email"
             value={email}
-            disabled={loading}
+            disabled={isBusy}
             onChange={(e) => {
               setEmail(e.target.value);
               setError("");
@@ -279,7 +297,7 @@ const DesktopLogin = (
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              disabled={loading}
+              disabled={isBusy}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setError("");
@@ -296,9 +314,9 @@ const DesktopLogin = (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              disabled={loading}
+              disabled={isBusy}
               className="absolute right-4 top-1/2 -translate-y-1/2 disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ cursor: loading ? "default" : "pointer" }}
+              style={{ cursor: isBusy ? "default" : "pointer" }}
             >
               {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
@@ -306,17 +324,17 @@ const DesktopLogin = (
 
           {/* Remember Me + Forgot Password */}
           <div className="flex items-center justify-between mb-6">
-            <label className={`flex items-center gap-2 text-sm text-[#1A1208] ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+            <label className={`flex items-center gap-2 text-sm text-[#1A1208] ${isBusy ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
               <input
                 type="checkbox"
                 checked={rememberMe}
-                disabled={loading}
+                disabled={isBusy}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 style={{
                   width: "14px",
                   height: "14px",
                   accentColor: "#990000",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  cursor: isBusy ? "not-allowed" : "pointer",
                 }}
               />
               Remember me
@@ -325,9 +343,9 @@ const DesktopLogin = (
             <button
               type="button"
               onClick={() => navigate("/forgot-password")}
-              disabled={loading}
+              disabled={isBusy}
               className="text-[#990000] text-sm font-medium hover:underline disabled:opacity-50 disabled:hover:no-underline"
-              style={{ cursor: loading ? "default" : "pointer" }}
+              style={{ cursor: isBusy ? "default" : "pointer" }}
             >
               Forgot password?
             </button>
@@ -336,19 +354,19 @@ const DesktopLogin = (
           {/* Login Button */}
           <button
             type="submit"
-            disabled={loading || !isLoginValid}
+            disabled={isBusy || !isLoginValid}
             className="w-full text-sm font-semibold transition-all active:scale-95"
             style={{
               height: "48px",
-              backgroundColor: isLoginValid
+              backgroundColor: isLoginValid && !isBusy
                 ? "#990000"
                 : "rgba(153,0,0,.30)",
               color: "white",
-              cursor: isLoginValid ? "pointer" : "default",
+              cursor: isBusy ? "not-allowed" : isLoginValid ? "pointer" : "default",
               boxShadow: "0 4px 10px rgba(0,0,0,.18)",
             }}
           >
-            {loading ? "Logging in..." : "Log In"}
+            {isBusy ? "Logging in..." : "Log In"}
           </button>
 
           {/* Error */}
@@ -378,9 +396,10 @@ const DesktopLogin = (
 
         <div className="flex flex-col items-center">
           <img
-            src={logowhite}
+            src={nestLogo}
             alt="FoundNest"
-            className="w-52 h-52 object-contain"
+            // the artwork is maroon; brightness-0 + invert turns it white on the red panel (alpha is kept)
+            className="w-52 h-52 object-contain brightness-0 invert"
           />
 
           <p className="text-white text-[25px] font-bold mt-2">
@@ -403,7 +422,7 @@ const DesktopLogin = (
 
   // ── MOBILE LAYOUT (original) ─────────────────────────────────────────────
   const MobileLogin = (
-    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
+    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden bg-white">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <img src={rafiki} alt="Login Illustration" className="w-4/5 h-4/5 object-contain object-center" />
       </div>
@@ -422,7 +441,7 @@ const DesktopLogin = (
           type="email"
           placeholder="Email"
           value={email}
-          disabled={loading}
+          disabled={isBusy}
           onChange={(e) => { setEmail(e.target.value); setError(""); }}
           className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
         />
@@ -432,38 +451,38 @@ const DesktopLogin = (
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
-            disabled={loading}
+            disabled={isBusy}
             onChange={(e) => { setPassword(e.target.value); setError(""); }}
             className="w-full px-4 py-3 rounded-md text-sm bg-white text-black outline-none border-2 border-transparent focus:border-[#FDC502] transition-all disabled:bg-gray-200 disabled:cursor-not-allowed"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            disabled={loading}
+            disabled={isBusy}
             className="absolute right-3 top-3 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ cursor: loading ? "default" : "pointer" }}
+            style={{ cursor: isBusy ? "default" : "pointer" }}
           >
             {showPassword ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         </div>
 
         <div className="flex items-center justify-between mt-1">
-          <label className={`flex items-center gap-2 text-white text-xs ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+          <label className={`flex items-center gap-2 text-white text-xs ${isBusy ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             <input
               type="checkbox"
               checked={rememberMe}
-              disabled={loading}
+              disabled={isBusy}
               onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ width: "14px", height: "14px", borderRadius: "3px", border: "2px solid white", backgroundColor: "white", accentColor: "#990000", cursor: loading ? "not-allowed" : "pointer" }}
+              style={{ width: "14px", height: "14px", borderRadius: "3px", border: "2px solid white", backgroundColor: "white", accentColor: "#990000", cursor: isBusy ? "not-allowed" : "pointer" }}
             />
             Remember me
           </label>
           <button
             type="button"
             onClick={() => navigate("/forgot-password")}
-            disabled={loading}
+            disabled={isBusy}
             className="text-[#F9E055] text-xs disabled:opacity-50"
-            style={{ cursor: loading ? "default" : "pointer" }}
+            style={{ cursor: isBusy ? "default" : "pointer" }}
           >
             Forgot password?
           </button>
@@ -471,10 +490,10 @@ const DesktopLogin = (
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isBusy}
           style={{
-            backgroundColor: isLoginValid ? "#FFEFEF" : "rgba(255, 243, 224, 0.7)",
-            color: isLoginValid ? "#990000" : "rgba(75, 45, 35, 0.7)",
+            backgroundColor: isLoginValid && !isBusy ? "#FFEFEF" : "rgba(255, 243, 224, 0.7)",
+            color: isLoginValid && !isBusy ? "#990000" : "rgba(75, 45, 35, 0.7)",
             border: "none",
             borderRadius: "6px",
             width: "100%",
@@ -485,7 +504,7 @@ const DesktopLogin = (
             marginTop: "8px",
           }}
         >
-          {loading ? "Logging in..." : "Log In"}
+          {isBusy ? "Logging in..." : "Log In"}
         </button>
 
         {error && (

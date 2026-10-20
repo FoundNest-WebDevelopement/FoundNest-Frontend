@@ -1,37 +1,45 @@
-import { useState } from "react";
-import PasswordChecklist from "../components/PasswordChecklist";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AlertDialog from "../components/AlertDialog";
+import PasswordChecklist from "../user-native/PasswordChecklist";
+import StackHeader from "../user-native/StackHeader";
+import Icon from "../user-native/Icon";
 import { isPasswordStrong } from "../utils/passwordRules";
 import { changePassword } from "../utils/authApi";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
-const EyeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
-    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
-
-const BackHeader = ({ title, onBackPress }) => (
-  <div className="bg-[#990000] px-5 py-4 rounded-b-xl flex items-center gap-3">
-    <button onClick={onBackPress} style={{ cursor: "pointer" }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 12H5" />
-        <polyline points="12 19 5 12 12 5" />
-      </svg>
-    </button>
-    <p className="text-white font-bold text-lg">{title}</p>
-  </div>
-);
+function PasswordField({ label, value, onChange, show, onToggle, error, children }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[15px] font-bold text-[#1a1a1a]">{label}</p>
+      <div
+        className={`flex items-center bg-white rounded-xl px-3.5 h-14 border ${
+          error ? "border-[1.5px] border-[#C0392B]" : "border-[#D6D6D6]"
+        }`}
+      >
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={onChange}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={label}
+          className="flex-1 min-w-0 text-[16px] text-[#1a1a1a] bg-transparent outline-none p-0"
+        />
+        <button type="button" onClick={onToggle} aria-label={show ? "Hide password" : "Show password"} className="flex">
+          <Icon name={show ? "eye-outline" : "eye-off-outline"} size={20} color="#B0B0B0" />
+        </button>
+      </div>
+      {error ? <p className="text-[13px] text-[#C0392B] mt-0.5 ml-1">{error}</p> : null}
+      {children}
+    </div>
+  );
+}
 
 export default function ChangePassword({ onBack }) {
   const user_id = localStorage.getItem("user_id");
+  const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -40,144 +48,170 @@ export default function ChangePassword({ onBack }) {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [currentError, setCurrentError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
+  // "leave" = back arrow (also navigates away), "cancel" = Cancel button (only clears the form)
+  const [discardMode, setDiscardMode] = useState("leave");
 
-  const isFormValid =
-    currentPassword !== "" &&
-    isPasswordStrong(newPassword) &&
-    confirmPassword !== "" &&
-    newPassword === confirmPassword;
+  const hasChanges = currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0;
+
+  // Typed passwords also guard the side navigation / tab bar (not just the back arrow)
+  const { setDirty } = useUnsavedChangesGuard();
+  useEffect(() => {
+    setDirty(hasChanges);
+    return () => setDirty(false);
+  }, [hasChanges, setDirty]);
+  const isFormFilled =
+    currentPassword.trim().length > 0 && newPassword.trim().length > 0 && confirmPassword.trim().length > 0;
+  const isNewPasswordValid = isPasswordStrong(newPassword);
+  const isConfirmMismatched = confirmPassword.length > 0 && confirmPassword !== newPassword;
+  const isFormValid = isFormFilled && isNewPasswordValid && !isConfirmMismatched;
+
+  const confirmError = isConfirmMismatched ? "Passwords do not match." : "";
 
   const handleSubmit = async () => {
     if (!isFormValid || loading) return;
+    setShowConfirmDialog(false);
     setError("");
+    setCurrentError("");
     setLoading(true);
     try {
       await changePassword(user_id, currentPassword, newPassword);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 3000);
+
+      // The server ends every session on a password change, so sign out
+      // locally and send the user to log in again (same as the mobile app).
+      const rememberedEmail = localStorage.getItem("remembered_email");
+      localStorage.clear();
+      if (rememberedEmail) localStorage.setItem("remembered_email", rememberedEmail);
+      navigate("/login?notice=password_changed", { replace: true });
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
+      if (err.status === 401) {
+        setCurrentError(err.message || "Current password is incorrect.");
+      } else {
+        setError(err.message || "Something went wrong. Please try again.");
+      }
       setLoading(false);
     }
   };
 
+  const reset = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setCurrentError("");
+    setError("");
+  };
+
+  const requestLeave = () => {
+    if (!hasChanges) return onBack();
+    setDiscardMode("leave");
+    setShowDiscard(true);
+  };
+
   return (
-    <div className="flex flex-col min-h-screen mt-13 mb-16" style={{ backgroundColor: "#FFF3E0" }}>
-      <BackHeader title="Change Password" onBackPress={onBack} />
+    <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+      <StackHeader title="Change Password" onBack={requestLeave} />
 
-      <div className="px-5 py-5 flex flex-col gap-4">
-        <div>
-          <p className="text-xs text-[#4B2D23] font-medium mb-1">Current Password</p>
-          <div className="relative">
-            <input
-              type={showCurrent ? "text" : "password"}
-              placeholder="Enter current password"
-              value={currentPassword}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                setError("");
-              }}
-              className="w-full bg-white rounded-lg px-4 py-3 pr-11 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
+      <div className="pb-10">
+        <div className="bg-white mx-4 mt-5 rounded-3xl px-[18px] pt-5 pb-5 flex flex-col gap-[18px]">
+          <PasswordField
+            label="Current Password"
+            value={currentPassword}
+            onChange={(e) => {
+              setCurrentPassword(e.target.value);
+              setError("");
+              setCurrentError("");
+            }}
+            show={showCurrent}
+            onToggle={() => setShowCurrent((v) => !v)}
+            error={currentError}
+          />
+
+          <PasswordField
+            label="New Password"
+            value={newPassword}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setError("");
+            }}
+            show={showNew}
+            onToggle={() => setShowNew((v) => !v)}
+          >
+            {newPassword.length > 0 && <PasswordChecklist password={newPassword} />}
+          </PasswordField>
+
+          <PasswordField
+            label="Confirm New Password"
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              setError("");
+            }}
+            show={showConfirm}
+            onToggle={() => setShowConfirm((v) => !v)}
+            error={confirmError}
+          />
+
+          {error && <p className="text-[13px] text-[#C0392B] ml-1">{error}</p>}
+
+          <div className="mt-1 flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => setShowCurrent(!showCurrent)}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ cursor: "pointer" }}
+              onClick={() => setShowConfirmDialog(true)}
+              disabled={!isFormValid || loading}
+              className={`bg-primary rounded-xl h-[52px] flex items-center justify-center text-[16px] font-bold text-white active:opacity-80 ${
+                !isFormValid ? "opacity-45" : ""
+              }`}
             >
-              {showCurrent ? <EyeOffIcon /> : <EyeIcon />}
+              {loading ? (
+                <span className="inline-block w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                "Change Password"
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasChanges) return;
+                setDiscardMode("cancel");
+                setShowDiscard(true);
+              }}
+              disabled={!hasChanges}
+              className={`rounded-xl h-[52px] border border-primary flex items-center justify-center text-[16px] font-semibold active:opacity-80 ${
+                hasChanges ? "text-primary" : "text-primary/30 opacity-45"
+              }`}
+            >
+              Cancel
             </button>
           </div>
         </div>
-
-        <div>
-          <p className="text-xs text-[#4B2D23] font-medium mb-1">New Password</p>
-          <div className="relative">
-            <input
-              type={showNew ? "text" : "password"}
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setError("");
-              }}
-              className="w-full bg-white rounded-lg px-4 py-3 pr-11 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNew(!showNew)}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ cursor: "pointer" }}
-            >
-              {showNew ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-[#990000] rounded-lg px-4 py-3">
-          <PasswordChecklist password={newPassword} />
-        </div>
-
-        <div>
-          <p className="text-xs text-[#4B2D23] font-medium mb-1">Confirm New Password</p>
-          <div className="relative">
-            <input
-              type={showConfirm ? "text" : "password"}
-              placeholder="Re-enter new password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setError("");
-              }}
-              className="w-full bg-white rounded-lg px-4 py-3 pr-11 text-sm text-[#4B2D23] outline-none border border-transparent focus:border-[#990000]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ cursor: "pointer" }}
-            >
-              {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-          {confirmPassword !== "" && confirmPassword !== newPassword && (
-            <p className="text-[#990000] text-xs mt-1">Passwords do not match.</p>
-          )}
-        </div>
-
-        {error && <p className="text-[#990000] text-xs text-center">{error}</p>}
-
-        <button
-          onClick={handleSubmit}
-          disabled={!isFormValid || loading}
-          className="w-full py-3 rounded-lg text-sm font-semibold mt-2"
-          style={{
-            backgroundColor: isFormValid && !loading ? "#990000" : "rgba(153, 0, 0, 0.3)",
-            color: "white",
-            cursor: isFormValid && !loading ? "pointer" : "default",
-          }}
-        >
-          {loading ? "Saving..." : "Save Changes"}
-        </button>
       </div>
 
-      {showSuccessToast && (
-        <div className="fixed bottom-20 left-4 right-4 z-[2000] bg-[#990000] rounded-full px-4 py-3 flex items-center gap-3 shadow-lg">
-          <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#990000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </div>
-          <p className="text-xs text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-            Password changed successfully.
-          </p>
-        </div>
+      {showConfirmDialog && (
+        <AlertDialog
+          message="Changing your password will log you out of this device. Are you sure you want to continue?"
+          b1Label="Cancel"
+          b2Label="Change Password"
+          b1OnClick={() => setShowConfirmDialog(false)}
+          b2OnClick={handleSubmit}
+        />
+      )}
+
+      {showDiscard && (
+        <AlertDialog
+          message="Discard changes? Unsaved edits will be lost."
+          b1Label="Keep Editing"
+          b2Label="Discard"
+          b1OnClick={() => setShowDiscard(false)}
+          b2OnClick={() => {
+            setShowDiscard(false);
+            reset();
+            if (discardMode === "leave") onBack();
+          }}
+        />
       )}
     </div>
   );

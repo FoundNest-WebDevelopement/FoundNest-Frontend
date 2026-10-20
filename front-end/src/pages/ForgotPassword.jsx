@@ -8,6 +8,14 @@ import PasswordChecklist from "../components/PasswordChecklist";
 import { isPasswordStrong } from "../utils/passwordRules";
 
 const RESEND_COOLDOWN_SECONDS = 60;
+const LOCKOUT_MESSAGE = "Too many incorrect attempts. Please request a new code.";
+const EXPIRED_SESSION_MESSAGE = "Reset session expired or invalid. Please start over.";
+
+const isValidEmailFormat = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+// 75 -> "1:15", 40 -> "40s"
+const formatSeconds = (total) =>
+  total >= 60 ? `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}` : `${total}s`;
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -34,9 +42,13 @@ function ForgotPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [errorMessage, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  // Too many wrong codes: inputs stay locked until a new code is requested
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  // Server rate limit on verifying: Next stays blocked for this many seconds
+  const [verifyBlockedSeconds, setVerifyBlockedSeconds] = useState(0);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -46,8 +58,21 @@ function ForgotPassword() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  useEffect(() => {
+    if (verifyBlockedSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setVerifyBlockedSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [verifyBlockedSeconds]);
+
+  const isVerifyBlocked = verifyBlockedSeconds > 0;
+  const error = isVerifyBlocked
+    ? `Too many verification attempts. Try again in ${formatSeconds(verifyBlockedSeconds)}.`
+    : errorMessage;
+
   const isStep1Valid = email.trim() !== "";
-  const isStep2Valid = code.join("").length === 6;
+  const isStep2Valid = code.join("").length === 6 && !isLockedOut && !isVerifyBlocked;
   const isStep3Valid =
     isPasswordStrong(newPassword) &&
     confirmPassword !== "" &&
@@ -93,15 +118,26 @@ function ForgotPassword() {
 
   const handleSendCode = async () => {
     if (!isStep1Valid || loading) return;
+    if (!isValidEmailFormat(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
       await forgotPassword(email.trim());
       setCode(["", "", "", "", "", ""]);
+      setIsLockedOut(false);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setStep(2);
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      if (err.status === 429 && err.code === "OTP_COOLDOWN") {
+        // A code was sent a moment ago: carry on to the code step and wait out the server's cooldown
+        setResendCooldown(err.retryAfter || RESEND_COOLDOWN_SECONDS);
+        setStep(2);
+      } else {
+        setError(err.message || "Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -114,8 +150,11 @@ function ForgotPassword() {
     try {
       await forgotPassword(email.trim());
       setCode(["", "", "", "", "", ""]);
+      setIsLockedOut(false);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
+      // Too early / too many requests: sync Resend with the server's remaining wait
+      if (err.status === 429) setResendCooldown(err.retryAfter || RESEND_COOLDOWN_SECONDS);
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -131,7 +170,12 @@ function ForgotPassword() {
       setResetToken(data.resetToken);
       setStep(3);
     } catch (err) {
-      setError(err.message || "Invalid or expired code.");
+      if (err.status === 429) {
+        setVerifyBlockedSeconds(err.retryAfter || 60);
+      } else {
+        if (err.message === LOCKOUT_MESSAGE) setIsLockedOut(true);
+        setError(err.message || "Invalid or expired code.");
+      }
     } finally {
       setLoading(false);
     }
@@ -143,9 +187,19 @@ function ForgotPassword() {
     setLoading(true);
     try {
       await resetPassword(resetToken, newPassword);
-      navigate("/login");
+      navigate("/login?notice=password_reset");
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      if (err.message === EXPIRED_SESSION_MESSAGE) {
+        // The reset token timed out: start over from the e-mail step
+        setResetToken("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setCode(["", "", "", "", "", ""]);
+        setStep(1);
+        setError("Your session expired. Please request a new code.");
+      } else {
+        setError(err.message || "Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -283,6 +337,7 @@ function ForgotPassword() {
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
+                    disabled={isLockedOut}
                     onChange={(e) => handleCodeChangeDesktop(e.target.value, index)}
                     className="text-center text-lg font-bold bg-white outline-none border border-[#d8d8d8] focus:border-[#990000] transition-all"
                     style={{ width: "48px", height: "56px" }}
@@ -326,9 +381,11 @@ function ForgotPassword() {
               <h1 style={{ fontSize: "26px", fontWeight: 600, color: "#161616", marginBottom: "8px" }}>
                 Set New Password
               </h1>
-              <p className="text-sm text-[#777] mb-4">
-                Password must contain an uppercase letter, a special character, and a number.
-              </p>
+              {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+                <p className="text-sm text-[#777] mb-4">
+                  Password must contain at least 8 characters, an uppercase letter, a number, and a special character.
+                </p>
+              )}
               <div className="relative mb-3">
                 <input
                   type={showNewPassword ? "text" : "password"}
@@ -351,9 +408,11 @@ function ForgotPassword() {
                 </button>
               </div>
 
-              <div className="bg-[#FFF3E0] rounded-md px-4 py-3 mb-3">
-                <PasswordChecklist password={newPassword} variant="light" />
-              </div>
+              {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+                <div className="bg-[#FFF3E0] rounded-md px-4 py-3 mb-3">
+                  <PasswordChecklist password={newPassword} variant="light" />
+                </div>
+              )}
 
               <div className="relative mb-2">
                 <input
@@ -433,7 +492,7 @@ function ForgotPassword() {
 
   // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
   const MobileForgotPassword = (
-    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden">
+    <div className="flex md:hidden flex-col h-screen w-screen overflow-hidden bg-white">
       <div className="flex-1 bg-white flex items-center justify-center overflow-hidden relative">
         <button
           onClick={() => navigate("/login")}
@@ -509,6 +568,7 @@ function ForgotPassword() {
                   inputMode="numeric"
                   maxLength={1}
                   value={digit}
+                  disabled={isLockedOut}
                   onChange={(e) => handleCodeChange(e.target.value, index)}
                   className="w-10 h-12 text-center text-lg font-bold bg-white rounded-md outline-none border-2 border-transparent focus:border-[#FDC502] transition-all"
                 />
@@ -555,10 +615,11 @@ function ForgotPassword() {
             <h1 className="text-white text-2xl font-semibold text-center">
               Set New Password
             </h1>
-            <p className="text-white text-xs text-center opacity-90">
-              Password must contain an uppercase letter, a special character,
-              and a number.
-            </p>
+            {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+              <p className="text-white text-xs text-center opacity-90">
+                Password must contain at least 8 characters, an uppercase letter, a number, and a special character.
+              </p>
+            )}
             <div className="relative">
               <input
                 type={showNewPassword ? "text" : "password"}
@@ -580,7 +641,9 @@ function ForgotPassword() {
               </button>
             </div>
 
-            <PasswordChecklist password={newPassword} />
+            {newPassword.length > 0 && !isPasswordStrong(newPassword) && (
+              <PasswordChecklist password={newPassword} />
+            )}
 
             <div className="relative">
               <input

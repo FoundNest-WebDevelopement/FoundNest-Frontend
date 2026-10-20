@@ -1,371 +1,254 @@
 import { useNavigate, useParams } from "react-router-dom";
-import PageLabelWithReturn from "../components/PageLabelWithReturn";
-import { useEffect, useRef, useState } from "react";
-import Loading from "../components/Loading";
+import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import HorizontalBreak from "../components/HorizontalBreak";
-import { Expand, X } from "lucide-react";
+import StackHeader from "../user-native/StackHeader";
+import Icon from "../user-native/Icon";
+import ImageViewer from "../user-native/ImageViewer";
+import HowToClaimSheet from "../user-native/HowToClaimSheet";
+import SafeImage from "../user-native/SafeImage";
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+const formatItemId = (id) => `SI-${String(id).padStart(5, "0")}`;
+const formatReportId = (id) => `RPT-${String(id).padStart(5, "0")}`;
+
+// "—"-safe date/time formatting (long date, 12-hour time) like the mobile app
+const formatDate = (value) => {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+};
+const formatTime = (value) => {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+};
+
+// Location values may be stored as a JSON array; show them as a readable list
+const parseValue = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const looksLikeJson =
+      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'));
+
+    if (looksLikeJson) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean).join(", ");
+        return parsed;
+      } catch {
+        return value;
+      }
+    }
+  }
+
+  return value;
+};
+
+const orNA = (val) => (!val || String(val).trim() === "" || val === "N/A" ? null : val);
+
+function CompareImage({ uri, label, alt, onOpen }) {
+  return (
+    <div className="flex-1 min-w-0 flex flex-col items-center gap-2">
+      <p className="text-[13px] font-semibold text-[#1a1a1a]">{label}</p>
+      <button
+        type="button"
+        disabled={!uri}
+        onClick={() => uri && onOpen(uri)}
+        className="relative w-full aspect-square rounded-xl overflow-hidden bg-[#EDE0D4] border border-black/20"
+      >
+        {uri ? (
+          <>
+            <SafeImage src={uri} alt={alt || label} className="w-full h-full object-cover" />
+            <span className="absolute bottom-2 right-2 bg-black/45 rounded-md p-1 flex">
+              <Icon name="expand-outline" size={18} color="#FFFFFF" />
+            </span>
+          </>
+        ) : (
+          <span className="w-full h-full flex items-center justify-center">
+            <Icon name="image-outline" size={32} color="#B0A09A" />
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function SectionDivider({ children }) {
+  return (
+    <div className="flex items-center my-4 gap-2.5">
+      <div className="flex-1 h-px bg-black/15" />
+      <p className="text-[15px] font-bold text-[#1a1a1a] text-center">{children}</p>
+      <div className="flex-1 h-px bg-black/15" />
+    </div>
+  );
+}
 
 export default function MatchDetails() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const userId = localStorage.getItem("user_id");
 
-    const API_URL = import.meta.env.VITE_API_URL;
+  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [howToClaim, setHowToClaim] = useState(false);
+  const [viewerUri, setViewerUri] = useState(null);
 
-    const navigate = useNavigate();
-    const { id } = useParams();
-    const { reportId } = useParams();
+  const fetchMatchDetails = async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth(`${API_URL}/api/match-records/${id}/match`);
+      const data = await response.json();
 
-    const userId = localStorage.getItem("user_id")
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch match");
+      }
 
-    const [match, setMatch] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [foundDate, setFoundDate] = useState("");
-    const [timeFound, setTimeFound] = useState("");
-    const [lostDate, setLostDate] = useState("");
-    const [timeLost, setTimeLost] = useState("");
-    const [howToClaim, setHowToClaim] = useState(false);
-    const [claimSteps, setClaimSteps] = useState([]);
-    const [isLoadingSteps, setIsLoadingSteps] = useState(false);
-    const [selectedPhoto, setSelectedPhoto] = useState(null);
-
-    const sheetRef = useRef(null);
-    const touchStartRef = useRef(0);
-    const isDraggingRef = useRef(false);
-    const dragYRef = useRef(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragY, setDragY] = useState(0);
-
-    const fetchMatchDetails = async () => {
-        try {
-            const response = await fetchWithAuth(
-                `${API_URL}/api/match-records/${id}/match`
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Failed to fetch match");
-            }
-
-            setMatch(data);
-            setFoundDate(data?.found_date.split("T")[0])
-            setTimeFound(data?.found_date.split("T")[1].split(".")[0])
-            setLostDate(data?.lost_date.split("T")[0])
-            setTimeLost(data?.lost_date.split("T")[1].split(".")[0])
-
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchClaimSteps = async () => {
-        try {
-            setIsLoadingSteps(true);
-            const response = await fetchWithAuth(`${API_URL}/api/policies`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to fetch claim process.");
-            }
-
-            const claimPolicy = data.find(
-                (policy) => policy.policy_name === "Item Claim Process"
-            );
-
-            if (claimPolicy) {
-                const parsedSteps = JSON.parse(claimPolicy.policy_value);
-                setClaimSteps(parsedSteps);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoadingSteps(false);
-        }
-    };
-
-
-    useEffect(() => {
-        if (id) {
-            window.scrollTo(0, 0);
-            fetchMatchDetails();
-            fetchClaimSteps();
-        }
-    }, [id]);
-
-
-
-
-    const formatItemId = (id) => {
-        return `SI-${String(id).padStart(5, "0")}`;
-    };
-    const formatReportId = (id) => {
-        return `RPT-${String(id).padStart(5, "0")}`;
-    };
-
-    const renderValue = (value) => {
-        if (value === null || value === undefined || value === "") {
-            return <span className="italic text-gray-400">Not specified</span>;
-        }
-        return <span>{value}</span>;
-    };
-
-    const parseValue = (value) => {
-        if (value === null || value === undefined || value === "") return null;
-
-        if (typeof value === "string") {
-
-            const trimmed = value.trim();
-            const looksLikeJson =
-                (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
-                (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-                (trimmed.startsWith('"') && trimmed.endsWith('"'));
-
-            if (looksLikeJson) {
-                try {
-                    const parsed = JSON.parse(trimmed);
-                    if (Array.isArray(parsed)) {
-                        return parsed.filter(Boolean).join(", ");
-                    }
-                    return parsed;
-                } catch {
-                    return value;
-                }
-            }
-        }
-
-        return value;
-    };
-
-    useEffect(() => {
-        if (howToClaim) {
-            document.documentElement.style.overflow = "hidden";
-            document.body.style.overflow = "hidden";
-        } else {
-            document.documentElement.style.overflow = "";
-            document.body.style.overflow = "";
-        }
-        return () => {
-            document.documentElement.style.overflow = "";
-            document.body.style.overflow = "";
-        };
-    }, [howToClaim]);
-
-
-
-
-    const handlePointerDown = (e) => {
-        touchStartRef.current = e.clientY;
-        isDraggingRef.current = true;
-        setIsDragging(true);
-        e.target.setPointerCapture(e.pointerId);
-    };
-
-    const handlePointerMove = (e) => {
-        if (!isDraggingRef.current) return;
-        const delta = e.clientY - touchStartRef.current;
-        if (delta > 0) {
-            dragYRef.current = delta;
-            setDragY(delta);
-        }
-    };
-
-    const handlePointerUp = (e) => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-
-        try {
-            e.target.releasePointerCapture(e.pointerId);
-        } catch (err) { } // Safety catch for mobile edge cases
-
-        if (dragYRef.current > 100) {
-            setHowToClaim(false);
-        }
-        dragYRef.current = 0;
-        setDragY(0);
-    };
-
-    const comparisonRows = [
-        { label: "ID", your: formatReportId(match?.lost_report_id), match: formatItemId(match?.userId) },
-        { label: "Category", your: match?.lost_category_name, match: match?.found_category_name },
-        { label: "Item Name", your: match?.lost_item_name, match: match?.found_item_name },
-        { label: "Description", your: match?.lost_description, match: match?.found_description },
-        { label: "Contents", your: match?.lost_contents, match: match?.found_contents },
-        { label: "Date Lost", your: lostDate, match: foundDate },
-        { label: "Time Lost/Found", your: timeLost, match: timeFound },
-        { label: "Lost/Found At", your: parseValue(match?.location_lost), match: parseValue(match?.location_found) },
-        { label: "Specific Location", your: match?.lost_specific_location, match: match?.found_specific_location },
-        { label: "Currently At", your: match?.lost_office_name, match: match?.office_name },
-    ];
-
-
-    if (loading) {
-        return (<>
-            <PageLabelWithReturn />
-            <div className="bg-(--color-secondary) min-h-screen p-4 flex flex-col gap-3 pb-25">
-
-                <Loading />
-            </div>
-
-        </>);
+      setMatch(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to fetch match");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
+    if (id) {
+      window.scrollTo(0, 0);
+      fetchMatchDetails();
+    }
+  }, [id]);
 
+  // The native match screen always returns to the report history
+  const handleBack = () => navigate(`/profile/report-history/${userId}`);
 
-
+  if (loading) {
     return (
-        <>
-            <PageLabelWithReturn label={`Potential Match ${formatItemId(match?.found_item_id)}`} onClick={() => { reportId ? navigate(`/notifications/${reportId}/verify`) : navigate(`/profile/report-history/${userId}`) }} />
-            <div className="bg-(--color-secondary) min-h-screen p-4 flex flex-col gap-3 pb-25">
-                <div className="flex w-full my-2 items-center gap-3">
-                    <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
-                    <p className="w-fit  text-lg font-medium shrink-0">Image Comparison</p>
-                    <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 w-full rounded-lg bg-white p-3">
-                    {[
-                        { label: "Your Image", url: match.lost_image_url, alt: match.lost_item_name },
-                        { label: "Potential Match", url: match.found_image_url, alt: match.found_item_name },
-                    ].map(({ label, url, alt }) => (
-                        <div key={label} className="flex flex-col items-center gap-2 min-w-0">
-                            <p className="font-medium text-sm">{label}</p>
-
-                            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-[#EDE0D4]">
-                                {url ? (
-                                    <>
-                                        <img
-                                            onClick={() => setSelectedPhoto(url)}
-                                            src={url}
-                                            alt={alt || label}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedPhoto(url)}
-                                            className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/70 text-white text-xs"
-                                            aria-label={`Enlarge ${label}`}
-                                        >
-                                            <Expand size={16} className="text-white" />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                                        <i className="fa-regular fa-image text-[#B0A09A] text-3xl" />
-                                        <span className="text-xs text-[#B0A09A]">No image</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex w-full my-2 items-center gap-3">
-                    <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
-                    <p className="w-fit text-lg font-medium shrink-0">Item Description Comparison</p>
-                    <hr className="border-(--color-tertiary) border rounded-full  opacity-30 flex-1" />
-                </div>
-
-
-
-
-                <table className="w-full text-sm border-collapse">
-                    <thead>
-                        <tr className="bg-amber-100">
-                            <th className="p-2 w-1/3"></th>
-                            <th className="p-2 font-semibold text-amber-900 text-left">Your Report</th>
-                            <th className="p-2 font-semibold text-amber-900 text-left">Potential Match</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {comparisonRows.map((row, idx) => (
-                            <tr
-                                key={row.label}
-                                className={idx % 2 === 0 ? "bg-white" : "bg-amber-50/60"}
-                            >
-                                <td className="p-2 font-medium text-gray-700 align-top border-t border-amber-100">
-                                    {row.label}
-                                </td>
-                                <td className="p-2 align-top border-t border-amber-100">
-                                    {renderValue(row.your)}
-                                </td>
-                                <td className="p-2 align-top border-t border-amber-100">
-                                    {renderValue(row.match)}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <HorizontalBreak />
-                <div className=" flex flex-col mt-4 pb-15  gap-2">
-                    <button className="border border-primary rounded-lg h-10 text-white bg-primary text-xs w-full "
-                        onClick={() => { setHowToClaim(true) }}
-                    >How to claim?</button>
-                    <button onClick={() => navigate(`/map?officeId=${match.office_id}`)} className="border border-primary rounded-lg h-10 text-primary bg-white text-xs w-full ">View Office Location</button>
-                </div>
-
-
-
-
-            </div>
-
-            {howToClaim && (
-                <div
-                    className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/20 flex items-end justify-center z-10"
-                    onClick={() => setHowToClaim(false)}
-                >
-                    <div
-                        ref={sheetRef}
-                        onClick={(e) => e.stopPropagation()}
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerCancel={handlePointerUp}
-
-                        className="bg-white w-full max-w-full p-4 rounded-t-4xl flex flex-col gap-2 pb-22"
-                        style={{
-                            transform: `translateY(${dragY}px)`,
-                            transition: isDragging ? "none" : "transform 0.25s ease-out",
-                            touchAction: "none",
-                        }}
-                    >
-                        <hr className="border-(--color-tertiary) border-3 rounded-full mx-22 my-2 opacity-30" />
-                        <div className="text-lg font-semibold w-full text-center mb-2">
-                            <p>How to Claim?</p>
-                        </div>
-                        <div className="text-xs w-full flex flex-col gap-2">
-                            {isLoadingSteps && <p className="text-center py-4">Loading steps...</p>}
-                            {!isLoadingSteps && claimSteps.map((step, index) => (
-                                <div key={index} className="flex flex-col gap-2">
-                                    <p className="font-semibold">Step {index + 1}: {step.title}</p>
-                                    <p>{step.description}</p>
-                                </div>
-                            ))}
-                            {!isLoadingSteps && claimSteps.length === 0 && (
-                                <p className="text-center py-4">No claim instructions available.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {selectedPhoto &&
-                <div className="fixed inset-y-0 left-1/2 w-full max-w-3xl -translate-x-1/2 bg-black/75 backdrop-blur-sm flex items-center justify-center z-4001">
-                    <div className="relative w-full h-full flex items-center ">
-                        <button
-                            className="absolute top-2 right-2 text-3xl text-white z-10 rounded-full bg-black/20 p-2"
-                            onClick={() => setSelectedPhoto(null)}
-                        >
-                            <X />
-                        </button>
-
-                        <div className="w-full h-full flex items-center justify-center">
-                            <img src={selectedPhoto} className="max-w-100 h-100" />
-
-                        </div>
-                    </div>
-                </div>
-
-            }
-
-        </>
+      <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+        <StackHeader title="Potential Match" onBack={handleBack} />
+        <div className="flex justify-center py-24">
+          <div className="w-9 h-9 border-[3px] border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
     );
+  }
+
+  if (error || !match) {
+    return (
+      <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+        <StackHeader title="Potential Match" onBack={handleBack} />
+        <div className="flex flex-col items-center gap-3 p-4">
+          <p className="text-sm text-red-500 text-center pt-10">{error || "We couldn't load this match."}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              fetchMatchDetails();
+            }}
+            className="border border-primary rounded-lg h-10 px-6 text-primary bg-white text-xs"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const foundId = match.found_item_id ?? match.found_report_id;
+  const officeDisplay = orNA(match.office_name)
+    ? `${match.office_name}${orNA(match.office_location) ? `\n${match.office_location}` : ""}`
+    : null;
+
+  const rows = [
+    { label: "ID", your: formatReportId(match.lost_report_id), theirs: foundId != null ? formatItemId(foundId) : null },
+    { label: "Category", your: match.lost_category_name, theirs: match.found_category_name },
+    { label: "Item Name", your: match.lost_item_name, theirs: match.found_item_name },
+    { label: "Description", your: match.lost_description, theirs: match.found_description },
+    { label: "Contents", your: match.lost_contents, theirs: match.found_contents },
+    { label: "Date Lost/Found", your: formatDate(match.lost_date), theirs: formatDate(match.found_date) },
+    { label: "Time Lost/Found", your: formatTime(match.lost_date), theirs: formatTime(match.found_date) },
+    { label: "Lost/Found At", your: parseValue(match.location_lost), theirs: parseValue(match.location_found) },
+    { label: "Specific Location", your: match.lost_specific_location, theirs: match.found_specific_location },
+    { label: "Currently At", your: match.lost_office_name, theirs: officeDisplay },
+  ];
+
+  const valueCell = (value, extra = "") => {
+    const shown = orNA(value);
+    return (
+      <div className={`flex-1 min-w-0 py-2.5 px-2 flex items-center justify-center border-r border-black/[0.06] ${extra}`}>
+        <p className={`text-[12px] text-center whitespace-pre-line break-words ${shown ? "text-[#1a1a1a]" : "text-black/65 italic"}`}>
+          {shown ?? "Not specified"}
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen">
+      <StackHeader title={`Potential Match (${foundId != null ? formatItemId(foundId) : "—"})`} onBack={handleBack} />
+
+      <div className="px-4 pt-1.5 pb-12 lg:pt-6 flex flex-col">
+        <SectionDivider>Image Comparison</SectionDivider>
+
+        <div className="bg-white rounded-2xl p-3 mb-2" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+          <div className="flex gap-3">
+            <CompareImage uri={match.lost_image_url} label="Your Image" alt={match.lost_item_name} onOpen={setViewerUri} />
+            <CompareImage uri={match.found_image_url} label="Potential Match" alt={match.found_item_name} onOpen={setViewerUri} />
+          </div>
+        </div>
+
+        <SectionDivider>Item Description Comparison</SectionDivider>
+
+        <div className="bg-white rounded-xl overflow-hidden border border-black/[0.08] mb-2">
+          <div className="flex border-b border-black/[0.08]">
+            <div className="w-[100px] shrink-0 py-2.5 px-2.5 border-r border-black/[0.06] bg-[#FAF6F2]" />
+            <div className="flex-1 min-w-0 py-2.5 px-2 border-r border-black/[0.06] bg-[#fcde7d] flex items-center justify-center">
+              <p className="text-[12px] font-bold text-[#1a1a1a] text-center">Your Report</p>
+            </div>
+            <div className="flex-1 min-w-0 py-2.5 px-2 bg-[#fcde7d] flex items-center justify-center">
+              <p className="text-[12px] font-bold text-[#1a1a1a] text-center">Potential Match</p>
+            </div>
+          </div>
+
+          {rows.map((row, idx) => (
+            <div key={row.label} className={`flex ${idx === rows.length - 1 ? "" : "border-b border-black/[0.06]"}`}>
+              <div className="w-[100px] shrink-0 py-2.5 px-2.5 flex items-center border-r border-black/[0.06] bg-[#FAF6F2]">
+                <p className="text-[12px] font-semibold text-[#1a1a1a]">{row.label}</p>
+              </div>
+              {valueCell(row.your)}
+              {valueCell(row.theirs, "border-r-0")}
+            </div>
+          ))}
+        </div>
+
+        <div className="h-px bg-black/10 my-5" />
+
+        <button
+          type="button"
+          onClick={() => setHowToClaim(true)}
+          className="bg-primary rounded-xl py-4 mb-3 text-[15px] font-bold text-white active:opacity-80"
+        >
+          How to Claim?
+        </button>
+
+        <button
+          type="button"
+          disabled={!match.office_id}
+          onClick={() => navigate(`/map?officeId=${match.office_id}`)}
+          className="rounded-xl py-[15px] border-2 border-primary text-[15px] font-bold text-primary active:opacity-80 disabled:opacity-50"
+        >
+          View Office Location
+        </button>
+      </div>
+
+      <HowToClaimSheet visible={howToClaim} onClose={() => setHowToClaim(false)} />
+      <ImageViewer uri={viewerUri} visible={!!viewerUri} onClose={() => setViewerUri(null)} />
+    </div>
+  );
 }

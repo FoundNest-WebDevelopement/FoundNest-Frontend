@@ -11,7 +11,7 @@ import WebLoading from "../global-components/WebLoading";
 import Button from "../global-components/Button";
 import ExportModal from "../global-components/ExportModal";
 
-// Active Role capsules shown at the top of the filter panel.
+// Accessed Role capsules shown at the top of the filter panel.
 // Values match the `user_level` column on action_logs
 // ('user' is displayed as "End User").
 const USER_LEVEL_FILTERS = [
@@ -45,6 +45,14 @@ const ACTION_TYPE_FILTERS = [
     { label: "Locked User Account", value: "LOCK_ACCOUNT" },
     { label: "Unlocked User Account", value: "UNLOCK_ACCOUNT" },
     { label: "Reset Password", value: "RESET_PASSWORD" },
+    { label: "Feedback Responded", value: "RESPOND_FEEDBACK" },
+    { label: "Edited Feedback Response", value: "EDIT_FEEDBACK_RESPONSE" },
+    { label: "Deleted Feedback Response", value: "DELETE_FEEDBACK_RESPONSE" },
+    { label: "Archived Feedback", value: "ARCHIVE_FEEDBACK" },
+    { label: "Restored Feedback", value: "RESTORE_FEEDBACK" },
+    { label: "Registered Item (QR)", value: "REGISTER_QR_ITEM" },
+    { label: "Edited Registered Item (QR)", value: "UPDATE_QR_ITEM" },
+    { label: "Deleted Registered Item (QR)", value: "DELETE_QR_ITEM" },
     { label: "Logged In", value: "LOGIN" },
     { label: "Created Report", value: "CREATE_REPORT" },
     { label: "Updated Report", value: "UPDATE_REPORT" },
@@ -61,7 +69,7 @@ const ACTION_TYPE_FILTERS = [
 ];
 
 // Which action types belong to each active-role context. Selecting an
-// Active Role narrows the Action Type pills to that role's list.
+// Accessed Role narrows the Action Type pills to that role's list.
 // "ALL" shows the full union list.
 const ACTION_TYPES_BY_ROLE = {
     super_admin: [
@@ -98,6 +106,12 @@ const ACTION_TYPES_BY_ROLE = {
         "REVERT_CLAIM",
         "REOPEN_REPORT",
         "DISPOSED_ITEM",
+        "RESET_PASSWORD",
+        "RESPOND_FEEDBACK",
+        "EDIT_FEEDBACK_RESPONSE",
+        "DELETE_FEEDBACK_RESPONSE",
+        "ARCHIVE_FEEDBACK",
+        "RESTORE_FEEDBACK",
         "EXPORT_CSV",
         "EXPORT_PDF",
     ],
@@ -106,6 +120,10 @@ const ACTION_TYPES_BY_ROLE = {
         "CREATE_REPORT",
         "UPDATE_REPORT",
         "CANCEL_REPORT",
+        "RESET_PASSWORD",
+        "REGISTER_QR_ITEM",
+        "UPDATE_QR_ITEM",
+        "DELETE_QR_ITEM",
     ],
 };
 
@@ -129,6 +147,14 @@ const ACTION_TYPE_COLORS = {
     LOCK_ACCOUNT: "bg-[#F9ECEC] text-[#C0392B]",
     UNLOCK_ACCOUNT: "bg-[#E6F1FB] text-[#2980B9]",
     RESET_PASSWORD: "bg-[#F9ECEC] text-[#C0392B]",
+    RESPOND_FEEDBACK: "bg-[#E8F5E9] text-[#2E7D32]",
+    EDIT_FEEDBACK_RESPONSE: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DELETE_FEEDBACK_RESPONSE: "bg-[#F9ECEC] text-[#C0392B]",
+    ARCHIVE_FEEDBACK: "bg-[#FFF3CD] text-[#856404]",
+    RESTORE_FEEDBACK: "bg-[#E8F5E9] text-[#2E7D32]",
+    REGISTER_QR_ITEM: "bg-[#E8F5E9] text-[#2E7D32]",
+    UPDATE_QR_ITEM: "bg-[#EDE7F6] text-[#6A1B9A]",
+    DELETE_QR_ITEM: "bg-[#F9ECEC] text-[#C0392B]",
     LOGIN: "bg-[#E8F5E9] text-[#2E7D32]",
     CREATE_REPORT: "bg-[#E6F1FB] text-[#2980B9]",
     UPDATE_REPORT: "bg-[#EDE7F6] text-[#6A1B9A]",
@@ -168,6 +194,12 @@ const formatUserLevel = (userLevel = "") => {
     return USER_LEVEL_LABELS[userLevel] || formatActionType(userLevel);
 };
 
+const ACTION_TYPE_LABELS = Object.fromEntries(
+    ACTION_TYPE_FILTERS.map(({ value, label }) => [value, label])
+);
+const formatLogActionType = (actionType = "") =>
+    ACTION_TYPE_LABELS[actionType] || formatActionType(actionType);
+
 // Local YYYY-MM-DD (toISOString() uses UTC, which is off by a day for part of
 // the day in timezones ahead of/behind UTC).
 const toLocalISODate = (d = new Date()) => {
@@ -179,8 +211,6 @@ const toLocalISODate = (d = new Date()) => {
 
 export default function SuperAdminActionLogs() {
     const API_URL = import.meta.env.VITE_API_URL;
-
-    const superAdminUserId = localStorage.getItem("user_id");
 
     const [logs, setLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -228,7 +258,11 @@ export default function SuperAdminActionLogs() {
     const formatLogId = (id) => `LOG-${String(id).padStart(5, "0")}`;
     const formatRecordId = (entityType, entityId) => {
         if (!entityType || !entityId) return "N/A";
-        const prefix = entityType.slice(0, 3).toUpperCase();
+        const prefix = {
+            USER: "USR",
+            FEEDBACK: "FB",
+            QR_ITEM: "QR",
+        }[entityType.toUpperCase()] || entityType.slice(0, 3).toUpperCase();
         return `${prefix}-${String(entityId).padStart(5, "0")}`;
     };
 
@@ -236,7 +270,7 @@ export default function SuperAdminActionLogs() {
         try {
             setIsLoading(true);
             setIsLogs(true);
-            const response = await fetchWithAuth(`${API_URL}/api/action-logs/user/${superAdminUserId}`);
+            const response = await fetchWithAuth(`${API_URL}/api/action-logs`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -257,7 +291,7 @@ export default function SuperAdminActionLogs() {
         fetchLogs();
     }, []);
 
-    // Action Type pills visible for the currently selected Active Role.
+    // Action Type pills visible for the currently selected Accessed Role.
     const visibleActionFilters = useMemo(() => {
         if (selectedUserLevel === "ALL") return ACTION_TYPE_FILTERS;
         const allowed = ACTION_TYPES_BY_ROLE[selectedUserLevel] || [];
@@ -309,7 +343,7 @@ export default function SuperAdminActionLogs() {
         return logs?.filter((log) => {
             const matchesSearch =
                 search.trim() === "" ||
-                formatActionType(log.action_type).toLowerCase().includes(search.toLowerCase()) ||
+                formatLogActionType(log.action_type).toLowerCase().includes(search.toLowerCase()) ||
                 formatUserLevel(log.user_level).toLowerCase().includes(search.toLowerCase()) ||
                 formatRecordId(log.entity_type, log.entity_id).toLowerCase().includes(search.toLowerCase()) ||
                 log.description?.toLowerCase().includes(search.toLowerCase());
@@ -348,7 +382,7 @@ export default function SuperAdminActionLogs() {
         return [
             formatLogId(log.action_log_id),
             formatDateTime(log.created_at),
-            formatActionType(log.action_type),
+            formatLogActionType(log.action_type),
             formatRecordId(log.entity_type, log.entity_id),
             log.description || "No additional details.",
             performedBy,
@@ -501,7 +535,7 @@ export default function SuperAdminActionLogs() {
                                 <div className="flex flex-col md:flex-row gap-6">
                                     <div className="flex-1 flex flex-col gap-5">
                                         <div className="flex flex-col gap-3">
-                                            <p className="text-sm font-semibold text-[#1A1208]">Active Role</p>
+                                            <p className="text-sm font-semibold text-[#1A1208]">Accessed Role</p>
                                             <div className="flex flex-wrap gap-2">
                                                 <button
                                                     type="button"
@@ -527,7 +561,7 @@ export default function SuperAdminActionLogs() {
                                             </div>
                                             {selectedUserLevel !== "ALL" && (
                                                 <p className="text-xs text-[#9A8F7C]">
-                                                    Active Role: {formatUserLevel(selectedUserLevel)}
+                                                    Accessed Role: {formatUserLevel(selectedUserLevel)}
                                                 </p>
                                             )}
                                         </div>
@@ -647,7 +681,7 @@ export default function SuperAdminActionLogs() {
                                             <th className="w-10 whitespace-nowrap"></th>
                                             <th className="w-24 whitespace-nowrap">LOG ID</th>
                                             <th className="w-40">TIMESTAMP</th>
-                                            <th className="w-40 whitespace-nowrap">ACTIVE ROLE</th>
+                                            <th className="w-40 whitespace-nowrap">ACCESSED ROLE</th>
                                             <th className="w-52 whitespace-nowrap">ACTION TYPE</th>
                                             <th className="w-32">AFFECTED RECORD</th>
                                             <th className="w-full">
@@ -710,7 +744,7 @@ export default function SuperAdminActionLogs() {
                                                                     className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block
                                                             ${getActionTypeColor(log.action_type)}`}
                                                                 >
-                                                                    {formatActionType(log.action_type)}
+                                                                    {formatLogActionType(log.action_type)}
                                                                 </span>
                                                             </td>
 
@@ -825,7 +859,6 @@ export default function SuperAdminActionLogs() {
                 <ExportModal
                     title="Export Action Logs"
                     endpoint="/api/export/action-logs"
-                    queryParams={{ superAdminUserId }}
                     filenamePrefix="ACTION_LOGS"
                     onClose={() => setIsExportModalOpen(false)}
                     onUpdate={fetchLogs}

@@ -1,21 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { CircleAlert } from "lucide-react";
-import PageLabel from "../components/PageLabel";
-import PageLabelWithReturn from "../components/PageLabelWithReturn";
-import HorizontalBreak from "../components/HorizontalBreak";
-import Loading from "../components/Loading";
 import AlertDialog from "../components/AlertDialog";
-import Toast from "../components/Toast";
-import heart from "../assets/heart.png";
+import Toast from "../user-native/Toast";
+import happyHeart from "../assets/native/happy-heart.png";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import UploadCard from "../components/report_components/UploadCard";
-import LocationGroup from "../components/report_components/LocationGroup";
 import PhotoSheet from "../components/report_components/PhotoSheet";
 import WebcamCaptureModal from "../components/report_components/WebcamCaptureModal";
-import Field from "../components/report_components/Field";
-import ActionButton from "../components/report_components/ActionButton";
+import AppHeader from "../user-native/AppHeader";
+import Icon from "../user-native/Icon";
+import {
+  Dropdown,
+  FieldError,
+  FormTitle,
+  FormTitleRow,
+  NextSection,
+  SectionTitle,
+  SubTitle,
+  TextBox,
+} from "../user-native/form";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 import { sanitizeText, minLengthMessage } from "../utils/textValidation";
 import { isMobileDevice } from "../utils/isMobileDevice";
@@ -35,8 +39,8 @@ const MIN_LENGTHS = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
-const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />);
-const showToastLight = (message) => toast.custom(() => <Toast message={message}  />);
+const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 2000 });
+const showToastLight = (message) => toast.custom(() => <Toast message={message}  />, { duration: 2000 });
 
 const sanitizeInput = sanitizeText;
 
@@ -46,6 +50,43 @@ async function fetchJson(url) {
   if (!res.ok) throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
   return data;
 }
+
+// Exact match first, then a partial match either way round (same rule as the
+// mobile app) so "Electronic" or "Electronics device" still picks "Electronics".
+function matchCategoryFromAi(aiCategory, categoryList) {
+  const normalized = String(aiCategory ?? "").trim().toLowerCase();
+  if (!normalized || !categoryList?.length) return null;
+
+  const names = categoryList.map((c) => ({ c, name: String(c.category_name ?? "").toLowerCase() }));
+  const exact = names.find((n) => n.name === normalized);
+  if (exact) return exact.c;
+
+  const partial = names.find(
+    (n) => n.name && (normalized.includes(n.name) || n.name.includes(normalized))
+  );
+  return partial ? partial.c : null;
+}
+
+// location_lost is stored as a JSON array by the web and as a comma-joined
+// string by the mobile app, so both shapes have to load into the edit form.
+function parseLocationLost(value) {
+  if (!value) return [];
+
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    parsed = String(value).split(",");
+  }
+
+  return (Array.isArray(parsed) ? parsed : [parsed])
+    .map((l) => String(l ?? "").trim())
+    .filter(Boolean);
+}
+
+const isCantRemember = (loc) => /^can'?t remember$/i.test(loc);
+
+const NON_EDITABLE_STATUSES = ["cancelled", "resolved", "archived"];
 
 function validatePage1({ categoryId, itemName, description, contents }) {
   const errors = {};
@@ -98,20 +139,6 @@ const isTimeNotFuture = (dateStr, timeStr) => {
   return !!chosen && chosen <= new Date();
 };
 
-const fieldClass = (hasError, extra = "") =>
-  `w-full rounded-lg border px-3 text-base text-[#333] bg-white outline-none placeholder:text-[#8C7A70] focus:border-primary disabled:bg-white disabled:opacity-80 ${hasError ? "border-[#C62828]" : "border-[#DDD9CF]"
-  } ${extra}`;
-
-
-function SectionHeading({ children }) {
-  return (
-    <h2 className="text-[17px] font-bold text-black border-b border-black px-2.5 pt-5 pb-4 mb-5">
-      {children}
-    </h2>
-  );
-}
-
-
 export default function Report() {
   const navigate = useNavigate();
   const { id, reportId, mode } = useParams();
@@ -133,14 +160,20 @@ export default function Report() {
   const [contents, setContents] = useState("");
   const [errors, setErrors] = useState({});
 
-  const [dateLost, setDateLost] = useState("");
-  const [timeLost, setTimeLost] = useState("");
+  // The native app pre-fills the date and time with "now" for a new report
+  const [dateLost, setDateLost] = useState(() => (id || mode === "view" ? "" : todayLocalISO()));
+  const [timeLost, setTimeLost] = useState(() => {
+    if (id || mode === "view") return "";
+    const now = new Date();
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
   const [selectedLocations, setSelectedLocations] = useState([]);
   const [rawLocations, setRawLocations] = useState([]);
   const [cantRemember, setCantRemember] = useState(false);
   const [specificLocation, setSpecificLocation] = useState("");
   const [openLocations, setOpenLocations] = useState(false);
-  const [openGroups, setOpenGroups] = useState({ college: false, shared: false, gates: false });
+  const [openSub, setOpenSub] = useState(null);
+  const [alertInfo, setAlertInfo] = useState(null);
 
   const [createdReportID, setCreatedReportID] = useState(null);
   const [nextPage, setNextPage] = useState(false);
@@ -177,7 +210,7 @@ export default function Report() {
       },
       {
         id: "shared",
-        title: "Shared Spaces",
+        title: "Shared Student Spaces",
         items: sharedSpaces.map((s) => ({ key: s.shared_space_id, name: s.shared_space_name })),
       },
       {
@@ -189,11 +222,7 @@ export default function Report() {
     [offices, sharedSpaces, gates]
   );
 
-  const locationLabel = (() => {
-    if (totalLocations === 0) return "Select Locations";
-    if (totalLocations === 1) return cantRemember ? "Can't remember" : selectedLocations[0];
-    return `Locations (${totalLocations})`;
-  })();
+
 
   const navBack = () => {
     if (mode === "view" && reportId) navigate(`/notifications/${reportId}/verify`);
@@ -235,7 +264,13 @@ export default function Report() {
         return;
       }
 
-
+      // Cancelled / resolved reports are read-only (the report history hides
+      // Edit for them); block the direct /report/:id URL too.
+      if (!viewOnly && NON_EDITABLE_STATUSES.includes(String(data.status ?? "").toLowerCase())) {
+        showToast("This report can no longer be edited.");
+        navigate(`/profile/report-history/${userID}`);
+        return;
+      }
 
       setItemName(data.item_name || "");
       setDescription(data.description || "");
@@ -258,21 +293,14 @@ export default function Report() {
       let originalCantRemember = false;
       let originalLocations = [];
       if (data.location_lost) {
-        let parsed;
-        try {
-          parsed = JSON.parse(data.location_lost);
-        } catch {
-          parsed = [data.location_lost];
-        }
+        const parsed = parseLocationLost(data.location_lost);
 
-        if (Array.isArray(parsed)) {
-          if (parsed.includes("Can't Remember")) {
-            originalCantRemember = true;
-            setCantRemember(true);
-          } else {
-            originalLocations = parsed;
-            setRawLocations(parsed);
-          }
+        if (parsed.some(isCantRemember)) {
+          originalCantRemember = true;
+          setCantRemember(true);
+        } else {
+          originalLocations = parsed;
+          setRawLocations(parsed);
         }
       }
 
@@ -308,17 +336,25 @@ export default function Report() {
   useEffect(() => {
     if (rawLocations.length === 0) return;
 
-    const known = new Set(
-      locationGroups.flatMap((g) => g.items.map((i) => i.name?.trim().toLowerCase())).filter(Boolean)
+    // lower-cased name -> the list's own spelling, so ticks match whatever
+    // casing the report was saved with
+    const known = new Map(
+      locationGroups
+        .flatMap((g) => g.items.map((i) => i.name?.trim()))
+        .filter(Boolean)
+        .map((name) => [name.toLowerCase(), name])
     );
     if (known.size === 0) return;
 
-    setSelectedLocations(rawLocations.filter((loc) => known.has(loc.trim().toLowerCase())));
+    setSelectedLocations(
+      [...new Set(rawLocations.map((loc) => known.get(loc.trim().toLowerCase())).filter(Boolean))]
+    );
   }, [rawLocations, locationGroups]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [nextPage, submitted]);
+
 
   useEffect(
     () => () => {
@@ -355,22 +391,29 @@ export default function Report() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "AI analysis failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = new Error(data.message || "AI analysis failed");
+        error.status = res.status;
+        throw error;
+      }
 
       setItemName(sanitizeInput(data.itemName, LIMITS.itemName));
       setDescription(sanitizeInput(data.detailedDescription, LIMITS.description));
       setContents(sanitizeInput(data.contents, LIMITS.contents));
       setErrors({});
 
-      const aiCategory = data.category?.toLowerCase();
-      const matched = categories.find((c) => c.category_name?.toLowerCase() === aiCategory);
+      const matched = matchCategoryFromAi(data.category, categories);
       if (matched) setCategoryID(String(matched.category_id));
 
       setScannedFile(file);
     } catch (err) {
       console.error(err);
-      showToast("Failed to auto-fill details. Please fill them out manually.");
+      showToast(
+        err.status === 429
+          ? "You've reached the hourly limit for AI analysis. Please fill out the details manually or try again later."
+          : "Failed to auto-fill details. Please fill them out manually."
+      );
     } finally {
       setIsAnalyzing(false);
     }
@@ -421,7 +464,7 @@ export default function Report() {
 
     if (!valid) {
       setErrors(found);
-      showToast("Please fix the highlighted fields before continuing.");
+      setAlertInfo({ message: "Please fix the highlighted fields before continuing.", label: "Got It" });
       return;
     }
 
@@ -441,7 +484,7 @@ export default function Report() {
   const toggleCantRemember = () => {
     setCantRemember((prev) => !prev);
     setSelectedLocations([]); // "Can't remember" replaces any other choice
-    setOpenGroups({ college: false, shared: false, gates: false });
+    setOpenSub(null);
   };
 
   const buildFormData = () => {
@@ -467,12 +510,12 @@ export default function Report() {
     setShowSubmitConfirmation(false);
 
     if (!timeValid) {
-      showToast("Please input a valid time")
+      setAlertInfo({ message: "Date and time cannot be in the future.", label: "Got It" });
       return
     }
 
     if (selectedLocations.length <= 0 && !cantRemember) {
-      showToast("Please select location lost")
+      setAlertInfo({ message: "Open Select Location and pick at least one place, or choose Can't Remember.", label: "Got It" });
       return
     }
     if (isUpdate) setIsUpdating(true);
@@ -483,11 +526,12 @@ export default function Report() {
         isUpdate ? `${API_URL}/api/lost-reports/${createdReportID}` : `${API_URL}/api/lost-reports`,
         { method: isUpdate ? "PUT" : "POST", body: buildFormData() }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      setRecentReportId(data.report.lost_report_id)
-
+      // Check the response before reading data.report: error bodies have none
       if (!res.ok) throw new Error(data.error || data.message || "Something went wrong");
+
+      setRecentReportId(data.report?.lost_report_id ?? (isUpdate ? createdReportID : undefined));
 
       if (!isUpdate) setCreatedReportID(data.report?.lost_report_id ?? null);
       setSubmitted(true);
@@ -506,7 +550,7 @@ export default function Report() {
     }
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = ({ silent } = {}) => {
     if (reportId) {
       navigate(`/notifications/${reportId}/verify`);
     } else if (id) {
@@ -516,7 +560,7 @@ export default function Report() {
       setNextPage(true);
       setSubmitted(true);
     }
-    showToast("Edit has been cancelled.");
+    if (!silent) showToast("Edit has been cancelled.");
   };
 
   const hasChangedFromOriginal = () => {
@@ -552,8 +596,6 @@ export default function Report() {
             !!itemName.trim() ||
             !!description.trim() ||
             !!contents.trim() ||
-            !!dateLost ||
-            !!timeLost ||
             selectedLocations.length > 0 ||
             cantRemember ||
             !!specificLocation.trim()
@@ -590,474 +632,497 @@ export default function Report() {
 
 
 
-  return (
-    <>
-      <div className={submitted ? "hidden" : ""}>
-        {mode ? (
-          <PageLabelWithReturn
-            label="View Lost Item Report Form"
-            onClick={navBack}
-          />
-        ) : id ? (
-          <PageLabelWithReturn
-            label="Edit Lost Item Report Form"
-            onClick={() =>
-              hasUnsavedChanges ? setIsCancel(true) : handleDiscard()
-            }
-          />
-        ) : (
+  const isFormComplete1 = !!categoryID && !!itemName.trim() && !!description.trim();
+  const isNextDisabled = !isEdit && !viewOnly ? !isFormComplete1 || isAnalyzing : false;
 
-          <PageLabel label="Lost Item Report Form" />
+  const dateDisplay = dateValid || dateLost ? (parseLocal(dateLost)?.toLocaleDateString() ?? "") : "";
+  const timeDisplay = timeLost
+    ? (parseLocal(dateLost || todayLocalISO(), timeLost)?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) ?? "")
+    : "";
 
+  const onTitleBack = () => {
+    if (viewOnly) navBack();
+    else if (hasUnsavedChanges) setIsCancel(true);
+    else handleDiscard({ silent: true }); // nothing was edited, so nothing to announce
+  };
+
+  const confirmMessage = isEdit
+    ? "Are you sure you want to save these changes?"
+    : "Are you sure all report details are correct and ready to be submitted?";
+
+  const outlineBtn = "rounded-[10px] border-[1.5px] border-primary px-[30px] py-2.5 text-primary text-[14px] active:opacity-70 disabled:opacity-50";
+  const solidBtn = "rounded-[10px] bg-primary px-[30px] py-2.5 text-white text-[14px] active:opacity-80 disabled:bg-[#A0A0A0]";
+
+  const pickerRow = (value, iconName, inputProps) => (
+    <div className="px-5">
+      <div className="relative mb-2.5 p-3.5 bg-white border border-[#E0E0E0] rounded-md flex items-center justify-between">
+        <span className="text-[15px] text-[#333]">{value}</span>
+        <Icon family="material" name={iconName} size={24} color="#8B0000" />
+        {!viewOnly && (
+          <input
+            {...inputProps}
+            onClick={(e) => e.currentTarget.showPicker?.()}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
         )}
       </div>
+    </div>
+  );
 
+  const nestedHeader = (title, isOpen, onPress, disabled) => (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={disabled}
+      className={`w-full flex items-center justify-between py-3.5 px-4 border-t border-[#EEEEEE] bg-white ${disabled ? "opacity-50" : ""}`}
+    >
+      <span className={`text-[15px] font-semibold ${disabled ? "text-[#888888]" : "text-[#212121]"}`}>{title}</span>
+      <Icon family="material" name={isOpen ? "keyboard-arrow-down" : "keyboard-arrow-right"} size={22} color="#900014" />
+    </button>
+  );
 
-      <div
-        className={`${submitted
-          ? "bg-(--color-primary) flex flex-col items-center justify-center"
-          : "bg-(--color-secondary)"
-          } min-h-screen px-4`}
-      >
-        {!nextPage && (
-          <div className="pb-24">
-            <SectionHeading>Item Description</SectionHeading>
+  const successBullet = (children) => (
+    <div className="flex mb-2.5 gap-2">
+      <span className="text-[14px] text-[#1a1a1a] mt-px">•</span>
+      <span className="flex-1 text-[14px] text-[#1a1a1a] leading-5 text-left">{children}</span>
+    </div>
+  );
+
+  // ----------------------------- success screen -----------------------------
+  if (submitted && nextPage) {
+    return (
+      <div className="bg-primary min-h-[calc(100vh-70px)] lg:min-h-screen px-6 flex flex-col justify-center">
+        <div className="flex items-center mb-6 gap-4 lg:w-full lg:max-w-[720px] lg:mx-auto">
+          <img src={happyHeart} alt="" className="w-[110px] h-[110px] shrink-0 object-contain" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[22px] font-extrabold text-white mb-2">{isEdit ? "Report Updated!" : "Report Successful!"}</p>
+            <p className="text-[13px] text-white/85 leading-5">
+              {isEdit
+                ? "Your lost item report has been updated. We'll continue searching and notify you if we find a potential match."
+                : "We've secured your lost report and immediately started searching for a match. Rest assured, we'll notify you if we find it."}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 lg:w-full lg:max-w-[720px] lg:mx-auto">
+          <p className="text-[16px] font-extrabold text-[#1a1a1a] mb-3.5">What happens next?</p>
+
+          {successBullet(`Your ${isEdit ? "updated" : "detailed"} description has been ${isEdit ? "saved to" : "added to"} our records.`)}
+          {successBullet("Our system is now automatically searching and comparing your report against all old and newly found items.")}
+          {successBullet("We will notify you immediately via email or in-app notifications if a potential match is reported by a finder.")}
+
+          <div className="h-px bg-black/[0.08] mt-2" />
+
+          <div className={`flex items-center mt-4 px-1 ${isEdit ? "justify-between" : "justify-center py-1"}`}>
+            {isEdit && (
+              <button
+                type="button"
+                className="flex items-center active:opacity-40"
+                onClick={() => {
+                  // Already on /report/:id for this report, so navigating there is a no-op and
+                  // would leave the success screen up. Reset to page 1 and re-sync originalReport
+                  // so the form isn't instantly considered dirty.
+                  setSubmitted(false);
+                  setNextPage(false);
+                  fetchLostReport(recentReportId);
+                }}
+              >
+                <Icon family="mci" name="pencil-outline" size={14} color="#8B0000" />
+                <span className="text-[13px] font-semibold text-primary whitespace-pre">  Edit Report</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="active:opacity-40"
+              onClick={() => navigate(`/profile/report-history/${userID}`)}
+            >
+              <span className="text-[13px] font-semibold text-primary whitespace-pre">
+                {isEdit ? "Report History  →" : "View Report History  →"}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="narrow-body bg-[#FFF1E0] min-h-[calc(100vh-70px)] lg:min-h-screen pb-10 flex flex-col">
+        <AppHeader
+          redDesktop
+          title="Report"
+          desktopTitle={id || mode ? (viewOnly ? "Report Details" : "Edit Lost Item Report") : "Lost Item Report Form"}
+          onBack={id || mode ? onTitleBack : undefined}
+        />
+
+        {id || mode ? (
+          <FormTitleRow onBack={onTitleBack}>{viewOnly ? "Report Details" : "Edit Lost Item Report"}</FormTitleRow>
+        ) : (
+          <FormTitle>Lost Item Report Form</FormTitle>
+        )}
+
+        {isLoadingReport && !originalReport && (
+          <div className="flex justify-center py-20">
+            <div className="w-9 h-9 border-[3px] border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* ---------------------------- PAGE 1 ---------------------------- */}
+        {!nextPage && !(isLoadingReport && !originalReport) && (
+          <>
+            <SubTitle>Item Description</SubTitle>
 
             <UploadCard
               image={image}
               isLoading={isAnalyzing}
               viewOnly={viewOnly}
-              canScan={selectedFile instanceof File && !isAnalyzing && selectedFile !== scannedFile}
+              canScan={!!(selectedFile instanceof File) && !isAnalyzing && selectedFile !== scannedFile}
               onScan={() => analyzeImage(selectedFile)}
               onOpenPicker={() => setShowImageOptions(true)}
             />
 
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleFileChange}
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+            <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+            {viewOnly && (
+              <>
+                <SectionTitle>Report ID</SectionTitle>
+                <div className="px-5">
+                  <p className="bg-white rounded-lg px-3 h-[50px] leading-[50px] text-[16px] border border-black/[0.08]">
+                    {`RPT-${String(id).padStart(5, "0")}`}
+                  </p>
+                </div>
+              </>
+            )}
+
+            <SectionTitle required={!viewOnly}>Category</SectionTitle>
+            <Dropdown
+              value={categoryID}
+              options={categories.map((c) => ({ value: String(c.category_id), label: c.category_name }))}
+              placeholder={
+                categories.length === 0 ? "Loading categories..." : isEdit || viewOnly ? "Select a category..." : "Select Category"
+              }
+              disabled={viewOnly || categories.length === 0 || isAnalyzing}
+              viewOnly={viewOnly}
+              error={!!errors.category}
+              onChange={(val) => {
+                setCategoryID(val);
+                clearError("category");
+              }}
             />
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
+            <FieldError message={errors.category} />
+
+            <SectionTitle required={!viewOnly}>Item Name</SectionTitle>
+            <TextBox
+              type="text"
+              value={itemName}
+              maxLength={LIMITS.itemName}
+              disabled={viewOnly || isAnalyzing}
+              viewOnly={viewOnly}
+              placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
+              error={!!errors.itemName}
+              onChange={(e) => {
+                setItemName(sanitizeInput(e.target.value, LIMITS.itemName));
+                clearError("itemName");
+              }}
             />
+            <FieldError message={errors.itemName} />
 
-            <Field label="Category" htmlFor="category" required error={errors.category}>
-              <div className="relative">
-<select
-  id="category"
-  value={categoryID}
-  disabled={viewOnly || categories.length === 0 || isAnalyzing}
-  onChange={(e) => {
-    setCategoryID(e.target.value);
-    clearError("category");
-  }}
-  className={fieldClass(
-    !!errors.category,
-    "h-12.5 appearance-none pr-10 disabled:opacity-60"
-  )}
-  style={{
-    color: categoryID === "" ? "#8C7A70" : "#000000",
-  }}
->
-  <option value="" className="text-[#8C7A70]">
-    {categories.length === 0
-      ? "Loading categories..."
-      : "Select Category"}
-  </option>
+            <SectionTitle required={!viewOnly}>Detailed Description</SectionTitle>
+            <TextBox
+              multiline
+              value={description}
+              maxLength={LIMITS.description}
+              disabled={viewOnly || isAnalyzing}
+              viewOnly={viewOnly}
+              placeholder="Brand, Model, Size, Color, Material, etc."
+              error={!!errors.description}
+              onChange={(e) => {
+                setDescription(sanitizeInput(e.target.value, LIMITS.description));
+                clearError("description");
+              }}
+            />
+            <FieldError message={errors.description} />
 
-  {categories.map((cat) => (
-    <option
-      key={cat.category_id}
-      value={String(cat.category_id)}
-      className="text-black"
-    >
-      {cat.category_name}
-    </option>
-  ))}
-</select>
-                <i className="fa-solid fa-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-primary" />
-              </div>
-            </Field>
+            <SectionTitle>Contents (if applicable)</SectionTitle>
+            <TextBox
+              type="text"
+              value={viewOnly ? contents || "—" : contents}
+              maxLength={LIMITS.contents}
+              disabled={viewOnly || isAnalyzing}
+              viewOnly={viewOnly}
+              placeholder="e.g., wallet contents, keys, notes..."
+              error={!!errors.contents}
+              onChange={(e) => {
+                setContents(sanitizeInput(e.target.value, LIMITS.contents));
+                clearError("contents");
+              }}
+            />
+            <FieldError message={errors.contents} />
 
-            <Field
-              label="Item Name"
-              htmlFor="item-name"
-              required
-              error={errors.itemName}
-              count={itemName.length}
-              max={LIMITS.itemName}
-            >
-              <input
-                id="item-name"
-                type="text"
-                value={itemName}
-                maxLength={LIMITS.itemName}
-                disabled={viewOnly || isAnalyzing}
-                placeholder="e.g., iPhone 13 Pro Max, Bag, Umbrella"
-                onChange={(e) => {
-                  setItemName(sanitizeInput(e.target.value, LIMITS.itemName));
-                  clearError("itemName");
-                }}
-                className={fieldClass(!!errors.itemName, "h-12.5")}
-              />
-            </Field>
-
-            <Field
-              label="Detailed Description"
-              htmlFor="description"
-              required
-              error={errors.description}
-              count={description.length}
-              max={LIMITS.description}
-            >
-              <textarea
-                id="description"
-                value={description}
-                maxLength={LIMITS.description}
-                disabled={viewOnly || isAnalyzing}
-                placeholder="Brand, Model, Size, Color, Material, etc."
-                onChange={(e) => {
-                  setDescription(sanitizeInput(e.target.value, LIMITS.description));
-                  clearError("description");
-                }}
-                className={fieldClass(!!errors.description, "h-35 py-3 resize-none")}
-              />
-            </Field>
-
-            <Field
-              label="Contents (if applicable)"
-              htmlFor="contents"
-              error={errors.contents}
-              count={contents.length}
-              max={LIMITS.contents}
-            >
-              <input
-                id="contents"
-                type="text"
-                value={contents}
-                maxLength={LIMITS.contents}
-                disabled={viewOnly || isAnalyzing}
-                placeholder="e.g., Cash amount, ID name"
-                onChange={(e) => {
-                  setContents(sanitizeInput(e.target.value, LIMITS.contents));
-                  clearError("contents");
-                }}
-                className={fieldClass(!!errors.contents, "h-12.5")}
-              />
-            </Field>
-
-            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/24">
-              <p className="text-sm font-bold">Page 1 out of 2</p>
-
-              <div className="flex gap-2.5">
-                {isEdit && !mode ? (
-                  <ActionButton
-                    variant="outline"
-                    disabled={isAnalyzing}
-                    onClick={() => (hasUnsavedChanges ? setIsCancel(true) : handleDiscard())}
-                  >
-                    Cancel
-                  </ActionButton>
-                ) : (
-                  !viewOnly && (
-                    <ActionButton variant="outline" danger disabled={isAnalyzing} onClick={() => setShowClearConfirm(true)}>
-                      Clear All
-                    </ActionButton>
-                  )
-                )}
-                <ActionButton onClick={handleNext}>Next</ActionButton>
-              </div>
-            </div>
-          </div>
+            <NextSection label="Page 1 out of 2">
+              {viewOnly ? null : isEdit ? (
+                <button type="button" className={outlineBtn} disabled={isAnalyzing} onClick={onTitleBack}>
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isAnalyzing}
+                  onClick={() => setShowClearConfirm(true)}
+                  className="rounded-[10px] border border-[#C62828] py-2.5 px-5 text-[#C62828] text-[14px] font-semibold active:opacity-70 disabled:opacity-50"
+                >
+                  Clear All
+                </button>
+              )}
+              <button type="button" className={solidBtn} disabled={isNextDisabled} onClick={handleNext}>
+                Next
+              </button>
+            </NextSection>
+          </>
         )}
 
         {/* ---------------------------- PAGE 2 ---------------------------- */}
         {nextPage && !submitted && (
-          <div className="pb-24">
-            <SectionHeading>When & Where</SectionHeading>
+          <>
+            <SubTitle>When & Where</SubTitle>
 
-            <Field
-              label="Date Lost"
-              htmlFor="date-lost"
-              required
-              error={dateLost && !dateValid ? "Date cannot be in the future." : null}
-            >
-              <input
-                id="date-lost"
-                type="date"
-                value={dateLost}
-                max={todayLocalISO()}
-                disabled={viewOnly}
-                onChange={(e) => handleDateChange(e.target.value)}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                className={fieldClass(!!dateLost && !dateValid, "h-12.5")}
-              />
-            </Field>
+            <SectionTitle required={!viewOnly}>Date Lost</SectionTitle>
+            {pickerRow(dateDisplay, "calendar-month", {
+              type: "date",
+              value: dateLost,
+              max: todayLocalISO(),
+              onChange: (e) => handleDateChange(e.target.value),
+              "aria-label": "Date lost",
+            })}
 
-            <Field
-              label="Time Lost"
-              htmlFor="time-lost"
-              required
-              error={dateValid && timeLost && !timeValid ? "Time cannot be in the future." : null}
-              hint={!dateValid ? "Enter a valid date first." : null}
-            >
-              <input
-                id="time-lost"
-                type="time"
-                value={timeLost}
-                disabled={!dateValid || viewOnly}
-                onChange={(e) => setTimeLost(e.target.value)}
-                className={fieldClass(dateValid && !!timeLost && !timeValid, "h-12.5")}
-              />
-            </Field>
+            <SectionTitle required={!viewOnly}>Time Lost</SectionTitle>
+            {pickerRow(timeDisplay, "access-time", {
+              type: "time",
+              value: timeLost,
+              disabled: !dateValid,
+              onChange: (e) => setTimeLost(e.target.value),
+              "aria-label": "Time lost",
+            })}
+            <FieldError
+              message={
+                dateLost && !dateValid
+                  ? "Date and time cannot be in the future."
+                  : dateValid && timeLost && !timeValid
+                    ? "Date and time cannot be in the future."
+                    : null
+              }
+            />
 
-            <Field label="Location Lost" required>
+            <SectionTitle required={!viewOnly}>Select Location</SectionTitle>
+            <div className="mx-5">
               <button
                 type="button"
                 disabled={viewOnly}
                 onClick={() => setOpenLocations((prev) => !prev)}
-                className={fieldClass(false, "h-12.5 flex items-center justify-between text-left text-sm")}
+                className={`w-full flex items-center justify-between p-3.5 bg-white border border-[#E0E0E0] rounded-md ${viewOnly ? "" : "disabled:bg-[#E2D7CC]"} ${
+                  openLocations ? "rounded-b-none border-b-0" : ""
+                }`}
               >
-                <span className={`truncate ${totalLocations === 0 ? "text-[#8C7A70]" : ""}`}>
-                  {locationLabel}
+                <span className="text-[15px] font-semibold text-[#A2938A]">Select Location</span>
+                <span className={`flex transition-transform duration-300 ${openLocations ? "rotate-180" : ""}`}>
+                  <Icon family="material" name="keyboard-arrow-down" size={24} color={openLocations ? "#900014" : "#8B0000"} />
                 </span>
-                <i
-                  className={`fa-solid fa-chevron-${openLocations ? "up" : "down"} ml-2 text-sm text-primary shrink-0`}
-                />
               </button>
 
               {openLocations && (
-                <div className="mt-2 rounded-xl border border-primary bg-white p-2 flex flex-col gap-2">
+                <div className="bg-white border-x border-b border-[#E0E0E0] rounded-b-md">
                   {locationGroups.map((group) => (
-                    <LocationGroup
-                      key={group.id}
-                      group={group}
-                      selectedLocations={selectedLocations}
-                      open={openGroups[group.id]}
-                      onToggleOpen={() =>
-                        setOpenGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
-                      }
-                      onToggleItem={toggleLocation}
-                      disabled={cantRemember}
-                      readOnly={viewOnly}
-                    />
+                    <div key={group.id}>
+                      {nestedHeader(
+                        group.id === "shared" ? "Shared Student Spaces" : group.title,
+                        openSub === group.id,
+                        () => setOpenSub((prev) => (prev === group.id ? null : group.id)),
+                        cantRemember
+                      )}
+                      {openSub === group.id && (
+                        <div className="bg-[#F9F9F9] py-1.5 border-t border-[#EEEEEE]">
+                          {group.items.map((item) => {
+                            const checked = selectedLocations.includes(item.name);
+                            return (
+                              <button
+                                key={item.key}
+                                type="button"
+                                disabled={viewOnly}
+                                onClick={() => toggleLocation(item.name)}
+                                className="w-full flex items-center py-2.5 px-6 text-left active:opacity-70"
+                              >
+                                <Icon
+                                  family="material"
+                                  name={checked ? "check-box" : "check-box-outline-blank"}
+                                  size={22}
+                                  color={checked ? "#8B0000" : "#757575"}
+                                />
+                                <span className="ml-3 text-[15px] text-[#212121]">{item.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   ))}
 
-                  <hr className="my-1 border-gray-200" />
-
-                  <label
-                    className={`cursor-pointer flex items-center gap-2 text-xs p-2 rounded-md font-medium w-full ${cantRemember ? "bg-[#e5d4b8] text-primary" : "bg-[#F2F2F2]"
-                      }`}
+                  <button
+                    type="button"
+                    disabled={viewOnly}
+                    onClick={toggleCantRemember}
+                    className="w-full flex items-center justify-between py-3.5 px-4 border-t border-[#EEEEEE] bg-white rounded-b-md"
                   >
-                    <input
-                      type="checkbox"
-                      checked={cantRemember}
-                      onChange={toggleCantRemember}
-                      disabled={viewOnly}
-                      className="w-4 h-4 accent-primary cursor-pointer ml-1"
+                    <span className="text-[15px] font-semibold text-[#212121]">Can't Remember</span>
+                    <Icon
+                      family="material"
+                      name={cantRemember ? "radio-button-checked" : "radio-button-unchecked"}
+                      size={22}
+                      color="#900014"
                     />
-                    Can't remember the location
-                  </label>
+                  </button>
                 </div>
               )}
-            </Field>
+            </div>
 
-            <Field
-              label="Specific Location"
-              htmlFor="specific-location"
-              count={specificLocation.length}
-              max={LIMITS.specificLocation}
-            >
+            <p className="text-[13px] text-[#1a1a1a] mx-5 mt-1">
+              {cantRemember
+                ? "Selected: Can't Remember"
+                : selectedLocations.length > 0
+                  ? `Selected: ${selectedLocations.join(", ")}`
+                  : "No location selected yet."}
+            </p>
+
+            <SectionTitle>Specific Location (Optional)</SectionTitle>
+            <div className="px-5">
               <input
-                id="specific-location"
                 type="text"
                 value={specificLocation}
                 maxLength={LIMITS.specificLocation}
                 disabled={viewOnly}
-                placeholder="e.g., 2nd Floor, Room A, near stairs, etc."
-                onChange={(e) =>
-                  setSpecificLocation(sanitizeInput(e.target.value, LIMITS.specificLocation))
-                }
-                className={fieldClass(false, "h-12.5")}
+                placeholder="e.g., 2nd floor hallway, near the vending machine"
+                onChange={(e) => setSpecificLocation(sanitizeInput(e.target.value, LIMITS.specificLocation))}
+                className={`block w-full mb-2.5 px-3.5 h-[50px] text-[15px] text-[#333] bg-white border border-[#E0E0E0] rounded-md outline-none placeholder:text-[#8C7A70] ${viewOnly ? "" : "disabled:bg-[#E2D7CC]"}`}
               />
-            </Field>
+            </div>
 
-            <div className="bg-primary/20 text-primary-content w-full my-3 rounded-md">
-              <div className="card-body">
-                <div className="w-full flex items-center">
-                  <CircleAlert className="size-4 mr-2" />
-                  <p className="card-title text-sm">What happens next?</p>
+            {!viewOnly && (
+              <div className="bg-[#E3D5CA] rounded-lg p-4 mx-5 mt-7 mb-3">
+                <div className="flex items-center mb-2.5">
+                  <span className="mr-2 flex">
+                    <Icon family="feather" name="info" size={20} color="#000000" />
+                  </span>
+                  <p className="text-[16px] font-bold text-black">What happens next?</p>
                 </div>
-                <p className="text-primary text-xs">
-                  We’ll check for matching found items and notify you if we find a potential match.
-                  You’ll receive updates via the notification bell.
+                <p className="text-[14px] text-primary leading-5 pl-[29px]">
+                  We’ll check for matching found items and notify you if we find a potential match. You’ll receive updates via the notification bell.
                 </p>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center justify-between mt-5 py-7 border-t border-black/24">
-              <p className="text-sm font-bold">Page 2 out of 2</p>
-
-              <div className="flex gap-2.5">
-                <ActionButton variant="outline" onClick={() => setNextPage(false)}>
-                  Back
-                </ActionButton>
-                {!viewOnly && (
-                  <ActionButton
-                    disabled={isEdit ? !timeValid || !hasUnsavedChanges : !timeValid || totalLocations === 0}
-                    onClick={() => setShowSubmitConfirmation(true)}
-                  >
-                    {isEdit ? "Confirm" : "Submit"}
-                  </ActionButton>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --------------------------- SUCCESS ---------------------------- */}
-        {submitted && nextPage && (
-          <div className="h-fit w-fit px- flex flex-col gap-8 ">
-            <div className="h-28 max-w-md flex gap-2 justify-evenly">
-              <img className="h-full w-2/5" src={heart} alt="smiley heart" />
-              <div className="flex flex-col gap-2 h-full w-full">
-                <p className="text-white font-bold text-md">{isEdit? "Report Updated!" : "Report Successful!"}</p>
-                <p className="text-white/70 font-bold text-xs text-justify">
-                  We've secured your lost report and immediately started searching for a match. Rest
-                  assured, we'll notify you if we find it.
-                </p>
-              </div>
-            </div>
-
-            <div className="h-full w-full rounded-xl bg-white px-3">
-              <div className="h-full max-w-md flex flex-col gap-2 p-4">
-                <p className="font-bold text-xs">What happens next?</p>
-                <div className="pl-5 flex flex-col gap-2">
-                  <li className="text-xs">Your detailed description has been added to our records.</li>
-                  <li className="text-xs">
-                    Our system is now automatically searching and comparing your report against all
-                    old and newly found items.
-                  </li>
-                  <li className="text-xs">
-                    We will notify you immediately via email or in-app notifications if a potential
-                    match is reported by a finder.
-                  </li>
-                </div>
-              </div>
-
-              <HorizontalBreak />
-
-              <div className={`flex ${isEdit? "justify-between" : "justify-center"} items-center px-5 py-3 font-medium`}>
-                {isEdit &&
+            <NextSection label="Page 2 out of 2" tight>
+              <button
+                type="button"
+                disabled={isSubmitting || isUpdating}
+                onClick={() => setNextPage(false)}
+                className="rounded-[14px] border-[1.5px] border-[#900014] bg-transparent py-3 px-7 text-[#900014] text-[15px] font-medium active:opacity-70 disabled:opacity-70 disabled:border-[#A0A0A0] disabled:text-[#A0A0A0]"
+              >
+                {isEdit || viewOnly ? "Back to Page 1" : "Back"}
+              </button>
+              {!viewOnly && (
                 <button
                   type="button"
-                  className="flex items-center gap-1 "
-                  onClick={() => {
-                    // Already on /report/:id for this report, so navigating
-                    // there is a no-op and would leave the success screen up.
-                    // Reset to page 1 and re-sync originalReport so the form
-                    // isn't instantly considered dirty.
-                    setSubmitted(false);
-                    setNextPage(false);
-                    fetchLostReport(recentReportId);
-                  }}
+                  disabled={
+                    isSubmitting ||
+                    isUpdating ||
+                    (isEdit ? !timeValid || !hasUnsavedChanges : !timeValid || totalLocations === 0)
+                  }
+                  onClick={() => setShowSubmitConfirmation(true)}
+                  className="rounded-[14px] bg-[#900014] py-3 px-[26px] min-w-[100px] flex items-center justify-center text-white text-[15px] font-medium active:opacity-80 disabled:bg-[#A0A0A0] disabled:opacity-70"
                 >
-                  <i className="fa-solid fa-pen text-primary text-[10px] md:text-xs"></i>
-                  <span className="text-xs text-primary">Edit Report</span>
-                  
+                  {isSubmitting || isUpdating ? (
+                    <span className="inline-block w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : isEdit ? (
+                    "Confirm"
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
-
-                }
-                <button
-                  type="button"
-                  className="flex items-center gap-1"
-                  onClick={() => navigate(`/profile/report-history/${userID}`)}
-                >
-                  <span className="text-xs text-primary">{isEdit? "Report History" : "Go to my Report History"}</span>
-                  <i className="fa-solid fa-arrow-right text-primary text-[10px] md:text-xs" />
-                </button>
-                
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ------------------------ overlays & dialogs ------------------------ */}
-        {isSubmitting && <Loading label="Creating Lost Report" />}
-        {isUpdating && <Loading label="Updating Lost Report" />}
-
-        {isCancel && (
-          <AlertDialog
-            message="Discard changes? Unsaved edits will be lost."
-            b1Label="Keep Editing"
-            b2Label="Discard"
-            b1OnClick={() => setIsCancel(false)}
-            b2OnClick={handleDiscard}
-          />
-        )}
-
-        {showClearConfirm && (
-          <AlertDialog
-            message="Clear all entered data? This action cannot be undone."
-            b1Label="Cancel"
-            b2Label="Clear"
-            b1OnClick={() => setShowClearConfirm(false)}
-            b2OnClick={confirmClearAll}
-          />
-        )}
-
-        {showSubmitConfirmation && (
-          <AlertDialog
-            message="Please review the information for accuracy before submission."
-            b1Label="Cancel"
-            b2Label={isEdit ? "Update" : "Submit"}
-            b1OnClick={() => setShowSubmitConfirmation(false)}
-            b2OnClick={() => saveReport(isEdit)}
-          />
-        )}
-
-        {showImageOptions && (
-          <PhotoSheet
-            hasPhoto={hasPhoto}
-            onClose={() => setShowImageOptions(false)}
-            onTake={() => {
-              setShowImageOptions(false);
-              if (isMobileDevice()) {
-                cameraInputRef.current?.click();
-              } else {
-                setShowWebcamCapture(true);
-              }
-            }}
-            onChoose={() => {
-              setShowImageOptions(false);
-              galleryInputRef.current?.click();
-            }}
-            onRemove={() => {
-              setShowImageOptions(false);
-              clearPhoto();
-            }}
-          />
-        )}
-
-        {showWebcamCapture && (
-          <WebcamCaptureModal
-            onClose={() => setShowWebcamCapture(false)}
-            onCapture={(file) => {
-              setShowWebcamCapture(false);
-              setPhoto(file);
-            }}
-          />
+              )}
+            </NextSection>
+          </>
         )}
       </div>
 
-      {isLoadingReport && <Loading />}
+      {/* ------------------------ overlays & dialogs ------------------------ */}
+      {isCancel && (
+        <AlertDialog
+          message="Discard changes? Unsaved edits will be lost."
+          b1Label="Keep Editing"
+          b2Label="Discard"
+          b1OnClick={() => setIsCancel(false)}
+          b2OnClick={handleDiscard}
+        />
+      )}
+
+      {showClearConfirm && (
+        <AlertDialog
+          message="Clear all entered data? This action cannot be undone."
+          b1Label="Cancel"
+          b2Label="Clear"
+          b1OnClick={() => setShowClearConfirm(false)}
+          b2OnClick={confirmClearAll}
+        />
+      )}
+
+      {showSubmitConfirmation && (
+        <AlertDialog
+          message={confirmMessage}
+          b1Label={isEdit ? "Cancel" : "Review"}
+          b2Label={isEdit ? "Save" : "Submit"}
+          b1OnClick={() => setShowSubmitConfirmation(false)}
+          b2OnClick={() => saveReport(isEdit)}
+        />
+      )}
+
+      {alertInfo && (
+        <AlertDialog message={alertInfo.message} b1Label={alertInfo.label || "Got It"} b1OnClick={() => setAlertInfo(null)} />
+      )}
+
+      {showImageOptions && (
+        <PhotoSheet
+          hasPhoto={hasPhoto}
+          onClose={() => setShowImageOptions(false)}
+          onTake={() => {
+            setShowImageOptions(false);
+            if (isMobileDevice()) {
+              cameraInputRef.current?.click();
+            } else {
+              setShowWebcamCapture(true);
+            }
+          }}
+          onChoose={() => {
+            setShowImageOptions(false);
+            galleryInputRef.current?.click();
+          }}
+          onRemove={() => {
+            setShowImageOptions(false);
+            clearPhoto();
+          }}
+        />
+      )}
+
+      {showWebcamCapture && (
+        <WebcamCaptureModal
+          onClose={() => setShowWebcamCapture(false)}
+          onCapture={(file) => {
+            setShowWebcamCapture(false);
+            setPhoto(file);
+          }}
+        />
+      )}
     </>
   );
 }

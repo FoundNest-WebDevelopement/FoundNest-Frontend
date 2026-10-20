@@ -6,6 +6,7 @@ import Find from "./pages/Find";
 import Profile from "./pages/Profile";
 import Notification from "./pages/Notification";
 import Login from "./pages/Login";
+import LandingPage from "./pages/LandingPage";
 import ForgotPassword from "./pages/ForgotPassword";
 
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
@@ -40,7 +41,7 @@ function Layout() {
     <>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 

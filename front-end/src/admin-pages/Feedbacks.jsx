@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import { Eye, X, Pencil, Search, Download, Trash2 } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import ConfirmDialog from "../global-components/ConfirmDialog";
 import AdminDateInput from "../admin-components/AdminDateInput";
 
@@ -157,7 +155,7 @@ export default function Feedbacks() {
             );
             setSelectedReview((prev) => ({ ...prev, ...data.review }));
             setIsEditingResponse(false);
-            toast.success("Response submitted successfully.");
+            toast.success("Response Edited successfully.");
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to submit response.");
@@ -303,43 +301,26 @@ export default function Feedbacks() {
         setCurrentPage(1);
     };
 
-    const handleExportPDF = () => {
-        const doc = new jsPDF();
-        const officeName = localStorage.getItem("office_name") || "Office";
+    const handleExportPDF = async () => {
+        const params = new URLSearchParams({ format: "pdf", scope: exportScope });
+        if (exportScope === "filtered") {
+            params.set("ids", reviewsToExport.map((review) => review.review_id).join(","));
+        }
 
-        doc.setFontSize(16);
-        doc.text(`${officeName} - Feedbacks Report`, 14, 16);
-        doc.setFontSize(10);
-        doc.text(
-            `Generated: ${new Date().toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-            })}`,
-            14,
-            22
-        );
+        const response = await fetchWithAuth(`${API_URL}/api/export/feedbacks?${params}`);
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to export feedbacks.");
+        }
 
-        const tableRows = reviewsToExport.map((review) => [
-            `FB-${String(review.review_id).padStart(5, "0")}`,
-            review.student_number || review.email,
-            "★".repeat(review.rating) + "☆".repeat(5 - review.rating),
-            review.review_text || "",
-            formatDate(review.created_at),
-            getStatus(review).charAt(0).toUpperCase() + getStatus(review).slice(1),
-        ]);
-
-        autoTable(doc, {
-            startY: 28,
-            head: [["Feedback ID", "From", "Rating", "Subject", "Date Submitted", "Status"]],
-            body: tableRows,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [153, 0, 0] },
-        });
-
-        doc.save(`feedbacks-report-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`);
+        const pdfBlob = await response.blob();
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `feedbacks-report-${exportScope === "all" ? "ALL" : "FILTERED"}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
-
     const csvEscape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
     const handleExportCSV = () => {
@@ -367,21 +348,25 @@ export default function Feedbacks() {
         URL.revokeObjectURL(url);
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
         if (!isExportValid) {
             return;
         }
 
-        if (exportFormat === "pdf") {
-            handleExportPDF();
-        } else {
-            handleExportCSV();
+        try {
+            if (exportFormat === "pdf") {
+                await handleExportPDF();
+            } else {
+                handleExportCSV();
+            }
+
+            setIsExportModalOpen(false);
+            setExportScope("filtered");
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || "Failed to export feedbacks.");
         }
-
-        setIsExportModalOpen(false);
-        setExportScope("filtered");
     };
-
     const handleCloseExportModal = () => {
         setIsExportModalOpen(false);
         setExportScope("filtered");
@@ -641,9 +626,9 @@ export default function Feedbacks() {
                             {/* User info */}
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                    {selectedReview.profile_image_url ? (
+                                    {(selectedReview.reviewer_profile_image_url || selectedReview.profile_image_url) ? (
                                         <img
-                                            src={selectedReview.profile_image_url}
+                                            src={selectedReview.reviewer_profile_image_url || selectedReview.profile_image_url}
                                             alt=""
                                             className="w-full h-full object-cover"
                                         />
