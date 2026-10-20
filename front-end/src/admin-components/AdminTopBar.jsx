@@ -14,11 +14,21 @@ export default function AdminTopBar({ tabName }) {
     localStorage.getItem("first_name") +
     " " +
     localStorage.getItem("last_name");
-  const imageUrl = localStorage.getItem("profile_image_url") || null;
+
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const notifRef = useRef(null);
+      const firstName = localStorage.getItem("first_name")?.trim() || "";
+    const initial = firstName.charAt(0).toUpperCase() || "?";
+    const storedImageUrl = localStorage.getItem("profile_image_url");
+    const imageUrl =
+    storedImageUrl &&
+    storedImageUrl !== "null" &&
+    storedImageUrl !== "undefined" &&
+    storedImageUrl.trim() !== ""
+        ? storedImageUrl.trim()
+        : null;
 
   const userId = localStorage.getItem("user_id");
   const role = localStorage.getItem("role");
@@ -198,13 +208,19 @@ export default function AdminTopBar({ tabName }) {
               )}
             </div>
             <div className="flex items-center justify-center p-2 rounded-xl gap-2 border-3 border-[#F9ECEC] bg-[#F9ECEC]/30">
-              {imageUrl ?
-                <div className="p-0.5 rounded-full border-green-500 border">
-                  <img src={imageUrl} alt="Profile Picture" className="h-6 rounded-full" />
-                </div>
-                :
-                <i className="fa-regular fa-circle-user text-[#1A1208] text-2xl"></i>
-              }
+              {imageUrl ? (
+                                <div className="p-0.5 rounded-full border border-green-500">
+                                    <img
+                                        src={imageUrl}
+                                        alt="Profile Picture"
+                                        className="h-7 w-7 rounded-full object-cover"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                                    {initial}
+                                </div>
+                            )}
 
               <p className="text-sm text-[#1A1208]">{fullName}</p>
             </div>
