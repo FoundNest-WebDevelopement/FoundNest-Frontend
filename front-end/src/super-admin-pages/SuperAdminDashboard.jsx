@@ -78,18 +78,22 @@ const CENTER_METRICS = [
 // Pivots the per-center rows (one row per office, a column per metric) into
 // one row per metric with one column per office — what Recharts needs to
 // render a grouped (not stacked) bar per metric, one bar per center.
+// Keyed by office_id, not office_name: two centers can share a name, and a
+// name key made the second one overwrite the first one's values.
+const centerKey = (center) => `office_${center.office_id}`;
+
 function buildGroupedCenterData(centers) {
     return CENTER_METRICS.map((metric) => {
         const row = { metric: metric.label };
         centers.forEach((center) => {
-            row[center.office_name] = center[metric.key] ?? 0;
+            row[centerKey(center)] = center[metric.key] ?? 0;
         });
         return row;
     });
 }
 
 // Lists every center's value for the hovered metric, colored to match its
-// bar — same pattern as TrendTooltip above, just keyed by office name
+// bar — same pattern as TrendTooltip above, just keyed by office id
 // instead of a fixed series list.
 function GroupedBarTooltip({ active, payload, label, centers }) {
     if (!active || !payload || payload.length === 0) return null;
@@ -101,7 +105,7 @@ function GroupedBarTooltip({ active, payload, label, centers }) {
             <p style={{ fontWeight: 600, margin: "0 0 4px" }}>{label}</p>
             {centers.map((center, index) => (
                 <p key={center.office_id} style={{ margin: 0, color: CENTER_COLORS[index % CENTER_COLORS.length] }}>
-                    {center.office_name}: {valueByOffice[center.office_name] ?? 0}
+                    {center.office_name}: {valueByOffice[centerKey(center)] ?? 0}
                 </p>
             ))}
         </div>
@@ -127,7 +131,8 @@ function GroupedCenterPerformanceChart({ centers }) {
                             {centers.map((center, index) => (
                                 <Bar
                                     key={center.office_id}
-                                    dataKey={center.office_name}
+                                    dataKey={centerKey(center)}
+                                    name={center.office_name}
                                     fill={CENTER_COLORS[index % CENTER_COLORS.length]}
                                     radius={[4, 4, 0, 0]}
                                 />
