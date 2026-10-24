@@ -7,6 +7,7 @@ import ImageViewer from "../user-native/ImageViewer";
 import HowToClaimSheet from "../user-native/HowToClaimSheet";
 import SafeImage from "../user-native/SafeImage";
 import { MatchIndicator, effectiveMatchType } from "../components/MatchScoreBadge";
+import { attachMatchScores, fetchUserNotifications } from "../utils/matchScores";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -103,14 +104,19 @@ export default function MatchDetails() {
   const fetchMatchDetails = async () => {
     try {
       setError(null);
-      const response = await fetchWithAuth(`${API_URL}/api/match-records/${id}/match`);
+      const [response, notifs] = await Promise.all([
+        fetchWithAuth(`${API_URL}/api/match-records/${id}/match`),
+        fetchUserNotifications(userId),
+      ]);
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch match");
       }
 
-      setMatch(data);
+      // Like the native app, the score and type come from the notification row for this match
+      const [merged] = attachMatchScores([{ ...data, match_id: data.match_id ?? id }], notifs);
+      setMatch({ ...merged, lost_image_url: merged.lost_image_url ?? merged.lost_item_image });
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to fetch match");
