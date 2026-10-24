@@ -5,6 +5,7 @@ import StackHeader from "../user-native/StackHeader";
 import Icon from "../user-native/Icon";
 import EmptyNest from "../user-native/EmptyNest";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { attachMatchScores, fetchUserNotifications } from "../utils/matchScores";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const STATUS_OPTIONS = ["open", "cancelled", "resolved"];
@@ -112,14 +113,16 @@ export default function ReportHistory() {
     let ignore = false;
     const candidates = reports.filter((r) => getStatus(r) !== "cancelled");
 
-    Promise.all(
-      candidates.map((r) =>
+    Promise.all([
+      fetchUserNotifications(id),
+      ...candidates.map((r) =>
         fetchWithAuth(`${API_URL}/api/match-records/${r.lost_report_id}/lost-report`)
           .then((res) => (res.ok ? res.json() : []))
           .then((data) => [r.lost_report_id, Array.isArray(data) ? data : []])
           .catch(() => [r.lost_report_id, []])
-      )
-    ).then((entries) => {
+      ),
+    ]).then(([notifs, ...rows]) => {
+      const entries = rows.map(([reportId, list]) => [reportId, attachMatchScores(list, notifs)]);
       if (ignore) return;
       setMatchesByReport(Object.fromEntries(entries));
       setMatchesLoaded(true);
