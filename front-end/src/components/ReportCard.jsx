@@ -5,6 +5,7 @@ import Toast from "../user-native/Toast";
 import Icon from "../user-native/Icon";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import SafeImage from "../user-native/SafeImage";
+import MatchScoreBadge, { effectiveMatchType } from "./MatchScoreBadge";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -106,6 +107,12 @@ function MatchCard({ match, label, readState, onClick }) {
           ) : (
             <ImageFallback className="w-full h-full" size={28} />
           )}
+
+          <MatchScoreBadge
+            score={match.match_score_percentage}
+            matchType={effectiveMatchType(match)}
+            className="absolute bottom-2 left-2"
+          />
 
           {match.found_category_name && (
             <span

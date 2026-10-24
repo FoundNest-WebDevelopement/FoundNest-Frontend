@@ -6,6 +6,7 @@ import Icon from "../user-native/Icon";
 import ImageViewer from "../user-native/ImageViewer";
 import HowToClaimSheet from "../user-native/HowToClaimSheet";
 import SafeImage from "../user-native/SafeImage";
+import { MatchIndicator, effectiveMatchType } from "../components/MatchScoreBadge";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -196,6 +197,8 @@ export default function MatchDetails() {
       <div className="px-4 pt-1.5 pb-12 lg:pt-6 flex flex-col">
         <SectionDivider>Image Comparison</SectionDivider>
 
+        {effectiveMatchType(match) === "IMAGE_MATCH" && <MatchIndicator match={match} />}
+
         <div className="bg-white rounded-2xl p-3 mb-2" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <div className="flex gap-3">
             <CompareImage uri={match.lost_image_url} label="Your Image" alt={match.lost_item_name} onOpen={setViewerUri} />
@@ -204,6 +207,8 @@ export default function MatchDetails() {
         </div>
 
         <SectionDivider>Item Description Comparison</SectionDivider>
+
+        {effectiveMatchType(match) === "TEXT_MATCH" && <MatchIndicator match={match} />}
 
         <div className="bg-white rounded-xl overflow-hidden border border-black/[0.08] mb-2">
           <div className="flex border-b border-black/[0.08]">
