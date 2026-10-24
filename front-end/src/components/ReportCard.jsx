@@ -22,22 +22,6 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 };
 
-// The read state of a match lives on its notification (is_read). Every card on the history
-// page needs it, so the list is fetched once and shared for a few seconds.
-let notificationsCache = { at: 0, promise: null };
-function loadNotifications() {
-  const userId = localStorage.getItem("user_id");
-  if (!userId) return Promise.resolve([]);
-  if (notificationsCache.promise && Date.now() - notificationsCache.at < 4000) return notificationsCache.promise;
-
-  const promise = fetchWithAuth(`${API_URL}/api/notifications/user/${userId}`)
-    .then((res) => (res.ok ? res.json() : []))
-    .then((data) => (Array.isArray(data) ? data : []))
-    .catch(() => []);
-  notificationsCache = { at: Date.now(), promise };
-  return promise;
-}
-
 const showToast = (message) => toast.custom(() => <Toast message={message} solid={true} />, { duration: 2000 });
 
 function ImageFallback({ className, size }) {
@@ -64,28 +48,7 @@ function StatusBadge({ kind, reason }) {
   );
 }
 
-// "New" (red) for an unread match notification, "Viewed" (grey) once it has been read
-function ReadMarker({ state }) {
-  if (!state) return null;
-  const unread = state === "unread";
-  return (
-    <span
-      className={`absolute top-2 left-2 z-[1] flex items-center gap-1 rounded-[20px] px-2 py-[3px] text-[10px] font-bold ${
-        unread ? "bg-[#EF4444] text-white" : "bg-white/90 text-[#6B5A52]"
-      }`}
-      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
-    >
-      {unread ? (
-        <span className="w-1.5 h-1.5 rounded-full bg-white" />
-      ) : (
-        <Icon name="checkmark-done" size={12} color="#6B5A52" />
-      )}
-      {unread ? "New" : "Viewed"}
-    </span>
-  );
-}
-
-function MatchCard({ match, label, readState, onClick }) {
+function MatchCard({ match, label, onClick }) {
   return (
     <div className="w-[47%]">
       <p className="text-[12px] font-extrabold text-[#1a1a1a] mb-1.5">{label}</p>
@@ -96,7 +59,6 @@ function MatchCard({ match, label, readState, onClick }) {
         className="block w-full text-left bg-[#FAF6F2] rounded-xl overflow-hidden border border-black/6 active:opacity-75"
       >
         <div className="relative w-full aspect-square">
-          <ReadMarker state={readState} />
           {match.found_image_url ? (
             <SafeImage
               src={match.found_image_url}
@@ -111,7 +73,7 @@ function MatchCard({ match, label, readState, onClick }) {
           <MatchScoreBadge
             score={match.match_score_percentage}
             matchType={effectiveMatchType(match)}
-            className="absolute bottom-2 left-2"
+            className="absolute top-2 left-2"
           />
 
           {match.found_category_name && (
@@ -235,7 +197,6 @@ export default function ReportCard({
   const [openCancel, setOpenCancel] = useState(false);
   const [selectedReason, setSelectedReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
-  const [readByMatch, setReadByMatch] = useState({});
 
   // Callers that only pass dateCancelled still get the right status
   const reportStatus = status ?? (dateCancelled ? "cancelled" : "open");
@@ -272,31 +233,6 @@ export default function ReportCard({
       ignore = true;
     };
   }, [reportId, isCancelled, matchesManaged]);
-
-  // Which of this report's matches have been read (from the notifications)
-  useEffect(() => {
-    if (!reportId || isCancelled) return;
-    let ignore = false;
-    loadNotifications().then((list) => {
-      if (ignore) return;
-      const map = {};
-      list.forEach((n) => {
-        if (n.match_id == null || String(n.lost_report_id) !== String(reportId)) return;
-        // several notifications can point at one match: it counts as unread if any is
-        map[n.match_id] = map[n.match_id] === "unread" || !n.is_read ? "unread" : "read";
-      });
-      setReadByMatch(map);
-    });
-    return () => {
-      ignore = true;
-    };
-  }, [reportId, isCancelled]);
-
-  const readStateOf = (match) => {
-    if (typeof match.is_read === "boolean") return match.is_read ? "read" : "unread";
-    return readByMatch[match.match_id] ?? null;
-  };
-  const unreadCount = matches.filter((m) => readStateOf(m) === "unread").length;
 
   const closeModal = () => {
     setSelectedReason("");
@@ -365,11 +301,6 @@ export default function ReportCard({
               className="flex items-center justify-center gap-1.5 mx-3.5 mb-3 py-[11px] rounded-[10px] bg-[#F5C518] active:opacity-80"
             >
               <span className="text-[14px] font-bold text-primary">{openMatches ? "Hide Matches" : "View Matches"}</span>
-              {!openMatches && unreadCount > 0 && (
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
               <Icon name={openMatches ? "chevron-up" : "chevron-down"} size={18} color="#8B0000" />
             </button>
           </>
@@ -382,7 +313,6 @@ export default function ReportCard({
                 key={match.match_id ?? match.found_report_id}
                 match={match}
                 label={`Potential Match ${index + 1}`}
-                readState={readStateOf(match)}
                 onClick={() => navigate(matchPath(match.match_id))}
               />
             ))}
